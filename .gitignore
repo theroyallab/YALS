@@ -8,11 +8,13 @@
 *.orig
 *.pyc
 *.swp
+*.gguf
 
 # End of https://www.toptal.com/developers/gitignore/api/deno
 
 # C++ ignores
 cmake-build-debug-*
+cmake-build-debug*
 
 # Lib
 lib/*

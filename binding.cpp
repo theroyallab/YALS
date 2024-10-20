@@ -21,7 +21,7 @@ struct ReadbackBuffer
 {
     unsigned lastReadbackIndex {0};
     bool done {false};
-    std::vector<char*>* data{};
+    std::vector<char*>* data = new std::vector<char*>();
 };
 
 bool IsReadbackBufferDone(void* readbackBufferPtr)
@@ -31,10 +31,7 @@ bool IsReadbackBufferDone(void* readbackBufferPtr)
 
 void* CreateReadbackBuffer()
 {
-    return new ReadbackBuffer {
-        .lastReadbackIndex = 0,
-        .data = new std::vector<char*>()
-    };
+    return new ReadbackBuffer {};
 }
 
 void WriteToReadbackBuffer(void* readbackBufferPtr, char* stringData)

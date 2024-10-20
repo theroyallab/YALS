@@ -4,9 +4,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(DenoCppInterop)
 
-#add_compile_definitions(GGML_USE_CUDA)
-#add_compile_definitions(GGML_USE_CUBLAS)
-
 include(FetchContent)
 FetchContent_Declare(
         llama

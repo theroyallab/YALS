@@ -269,8 +269,7 @@ function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function readFromBuffer(lib: Deno.DynamicLibrary<typeof libInterface>, readbackBuffer: Deno.PointerValue) {
-    const encoder = new TextEncoder();
+async function* readFromBuffer(lib: Deno.DynamicLibrary<typeof libInterface>, readbackBuffer: Deno.PointerValue): AsyncGenerator<string, void, unknown>  {
     while (!isReadbackBufferDone(lib, readbackBuffer)) {
         const nextString = readNextFromReadbackBuffer(lib, readbackBuffer);
         if (nextString === null) {
@@ -278,7 +277,7 @@ async function readFromBuffer(lib: Deno.DynamicLibrary<typeof libInterface>, rea
             await sleep(10);
             continue;
         }
-        Deno.stdout.writeSync(encoder.encode(nextString));
+        yield nextString;
     }
 }
 
@@ -294,10 +293,7 @@ if (!libSuffix) {
     throw new Error(`Unsupported operating system: ${Deno.build.os}`);
 }
 
-const dllPath = `${Deno.cwd()}/lib`
-Deno.env.set("PATH", `${Deno.env.get("PATH")};${dllPath}`)
-
-const libPath = `${dllPath}/${libName}.${libSuffix}`;
+const libPath = `/home/blackroot/Desktop/YALS/lib/deno_cpp_binding.so`;
 try {
     console.log(`Attempting to load library from: ${libPath}`);
 
@@ -310,7 +306,7 @@ try {
     console.log("Readback buffer created.");
 
     // FIXME: Make this passable via config
-    const modelPath = "D:/koboldcpp/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf";
+    const modelPath = "/home/blackroot/Desktop/YALS/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf";
     const numberGpuLayers = 40;
     const contextLength = 2048;
     const numBatches = 1;
@@ -342,7 +338,10 @@ try {
     lib.symbols.InferToReadbackBuffer(llamaModel, sampler, context, readbackBuffer, Deno.UnsafePointer.of(promptPtr), 2000);
 
     // Read from the read buffer
-    await readFromBuffer(lib, readbackBuffer);
+    for await (const nextString of readFromBuffer(lib, readbackBuffer)) {
+        const encoder = new TextEncoder();
+        Deno.stdout.writeSync(encoder.encode(nextString));
+    }
     const endTime = performance.now();
 
     // Log T/s
