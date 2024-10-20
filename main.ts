@@ -244,41 +244,42 @@ class SamplerBuilder {
     }
 }
 
-function createReadbackBuffer(lib: Deno.DynamicLibrary<typeof libInterface>): Deno.PointerValue {
-    return lib.symbols.CreateReadbackBuffer();
-}
+class ReadbackBuffer {
+  private lib: Deno.DynamicLibrary<typeof libInterface>;
+  public bufferPtr: Deno.PointerValue;
 
-function readNextFromReadbackBuffer(lib: Deno.DynamicLibrary<typeof libInterface>, bufferPtr: Deno.PointerValue): string | null {
-    const stringPtr = lib.symbols.ReadbackNext(bufferPtr);
+  constructor(lib: Deno.DynamicLibrary<typeof libInterface>) {
+    this.lib = lib;
+    this.bufferPtr = this.lib.symbols.CreateReadbackBuffer();
+  }
 
+  private readNext(): string | null {
+    const stringPtr = this.lib.symbols.ReadbackNext(this.bufferPtr);
     if (stringPtr === null) {
-        return null;
+      return null;
     }
-
     const cString = new Deno.UnsafePointerView(stringPtr);
     return cString.getCString();
-}
-function isReadbackBufferDone(
-    lib: Deno.DynamicLibrary<typeof libInterface>,
-    readbackBufferPtr: Deno.PointerValue
-): boolean {
-    return lib.symbols.IsReadbackBufferDone(readbackBufferPtr);
-}
+  }
 
-function sleep(ms: number): Promise<void> {
+  private isDone(): boolean {
+    return this.lib.symbols.IsReadbackBufferDone(this.bufferPtr);
+  }
+
+  private static sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
-}
+  }
 
-async function* readFromBuffer(lib: Deno.DynamicLibrary<typeof libInterface>, readbackBuffer: Deno.PointerValue): AsyncGenerator<string, void, unknown>  {
-    while (!isReadbackBufferDone(lib, readbackBuffer)) {
-        const nextString = readNextFromReadbackBuffer(lib, readbackBuffer);
-        if (nextString === null) {
-            // Wait for 50ms before checking again
-            await sleep(10);
-            continue;
-        }
-        yield nextString;
-    }
+  async *read(): AsyncGenerator<string, void, unknown> {
+    do {
+      const nextString = this.readNext();
+      if (nextString === null) {
+        await ReadbackBuffer.sleep(10);
+        continue;
+      }
+      yield nextString;
+    } while (!this.isDone());
+  }
 }
 
 // Define the library name and path
@@ -302,7 +303,6 @@ try {
     console.log("Library loaded successfully.");
 
     // Buffer for streaming
-    const readbackBuffer = createReadbackBuffer(lib);
     console.log("Readback buffer created.");
 
     // FIXME: Make this passable via config
@@ -334,11 +334,13 @@ try {
     const prompt = "Hello, how are you?";
     const promptPtr = new TextEncoder().encode(prompt + "\0");
 
+    const readbackBuffer = new ReadbackBuffer(lib);
+
     const startTime = performance.now();
-    lib.symbols.InferToReadbackBuffer(llamaModel, sampler, context, readbackBuffer, Deno.UnsafePointer.of(promptPtr), 2000);
+    lib.symbols.InferToReadbackBuffer(llamaModel, sampler, context, readbackBuffer.bufferPtr, Deno.UnsafePointer.of(promptPtr), 2000);
 
     // Read from the read buffer
-    for await (const nextString of readFromBuffer(lib, readbackBuffer)) {
+    for await (const nextString of readbackBuffer.read()) {
         const encoder = new TextEncoder();
         Deno.stdout.writeSync(encoder.encode(nextString));
     }
