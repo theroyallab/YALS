@@ -274,7 +274,7 @@ void Infer(
             nDecode += 1;
         }
     }
-    llama_perf_sampler_print(sampler);
+    std::cout << std::endl;
     llama_perf_context_print(context);
 }
 
@@ -323,7 +323,7 @@ void InferToReadbackBuffer(
     }
     static_cast<ReadbackBuffer*>(readbackBufferPtr)->done = true;
 
-    llama_perf_sampler_print(sampler);
+    std::cout << std::endl;
     llama_perf_context_print(context);
 }
 

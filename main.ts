@@ -362,7 +362,7 @@ try {
         .distSampler(1337)
         .build();
 
-    const prompt = "Hello, how are you?";
+    const prompt = "Once upon a time";
     const promptPtr = new TextEncoder().encode(prompt + "\0");
 
     const readbackBuffer = new ReadbackBuffer(lib);
