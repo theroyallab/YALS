@@ -249,14 +249,12 @@ void Infer(
     int nDecode = 0;
     llama_token newTokenId;
     //inference
-    for (int tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; ++tokenPosition ) {
+    for (int tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; tokenPosition += batch.n_tokens) {
         // evaluate the current batch with the transformer model
         if (llama_decode(context, batch)) {
             std::cerr << "error: failed to eval, return code 1 in Infer()" << std::endl;
             return;
         }
-
-        tokenPosition += batch.n_tokens;
 
         // sample the next token
         {
@@ -276,6 +274,8 @@ void Infer(
             nDecode += 1;
         }
     }
+    llama_perf_sampler_print(sampler);
+    llama_perf_context_print(context);
 }
 
 void InferToReadbackBuffer(
@@ -298,14 +298,12 @@ void InferToReadbackBuffer(
     llama_token newTokenId;
     int tokenPosition = 0;
     //inference
-    for (tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; ++tokenPosition ) {
+    for (tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; tokenPosition += batch.n_tokens ) {
         // evaluate the current batch with the transformer model
         if (llama_decode(context, batch)) {
             std::cerr << "error: failed to eval, return code 1 in Infer()" << std::endl;
             return;
         }
-
-        tokenPosition += batch.n_tokens;
 
         // sample the next token
         {

@@ -367,7 +367,6 @@ try {
 
     const readbackBuffer = new ReadbackBuffer(lib);
 
-    const startTime = performance.now();
     lib.symbols.InferToReadbackBuffer(llamaModel, sampler, context, readbackBuffer.bufferPtr, Deno.UnsafePointer.of(promptPtr), 2000);
 
     // Read from the read buffer
@@ -375,17 +374,6 @@ try {
         const encoder = new TextEncoder();
         Deno.stdout.writeSync(encoder.encode(nextString));
     }
-    const endTime = performance.now();
-
-    // Log T/s
-    console.log("\n\n\n\n");
-
-    const totalTimeSeconds = (endTime - startTime) / 1000; // Convert to seconds
-    const tokensPerSecond = 2000 / totalTimeSeconds;
-
-    console.log(`\n\nTotal time: ${totalTimeSeconds.toFixed(2)} seconds`);
-    console.log(`Tokens generated: ${2000}`);
-    console.log(`Tokens per second: ${tokensPerSecond.toFixed(2)}`);
 
     // Close the library when done
     lib.close();
