@@ -63,7 +63,7 @@ void* InitiateCtx(void* llamaModel, const unsigned contextLength, const unsigned
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = contextLength;
     ctx_params.n_batch = numBatches;
-    ctx_params.no_perf = true;
+    ctx_params.no_perf = false;
     llama_context* ctx = llama_new_context_with_model(model, ctx_params);
 
     if (ctx == nullptr) {
@@ -77,7 +77,7 @@ void* InitiateCtx(void* llamaModel, const unsigned contextLength, const unsigned
 void* MakeSampler()
 {
     llama_sampler_chain_params lparams = llama_sampler_chain_default_params();
-    lparams.no_perf = true;
+    lparams.no_perf = false;
     const auto sampler = llama_sampler_chain_init(lparams);
     return sampler;
 }
@@ -324,6 +324,9 @@ void InferToReadbackBuffer(
         }
     }
     static_cast<ReadbackBuffer*>(readbackBufferPtr)->done = true;
+
+    llama_perf_sampler_print(sampler);
+    llama_perf_context_print(context);
 }
 
 void FreeSampler(llama_sampler* sampler)

@@ -1,4 +1,4 @@
-modelPath: "./models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+modelPath: "/home/blackroot/Desktop/YALS/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
 numberGpuLayers: 40
 contextLength: 2048
 numBatches: 1
