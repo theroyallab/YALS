@@ -142,7 +142,11 @@ class SamplerBuilder {
     }
 
     grammarSampler(model: Deno.PointerValue, grammar: string, root: string): this {
-        this.sampler = this.lib.symbols.GrammarSampler(this.sampler, model, grammar, root);
+        const grammarPtr = new TextEncoder().encode(grammar + "\0");
+        const rootPtr = new TextEncoder().encode(root + "\0");
+        this.sampler = this.lib.symbols.GrammarSampler(
+            this.sampler, model, Deno.UnsafePointer.of(grammarPtr), Deno.UnsafePointer.of(rootPtr)
+        );
         return this;
     }
 
@@ -175,12 +179,12 @@ class SamplerBuilder {
         // Get a pointer to the buffer
         const ptr = Deno.UnsafePointer.of(buffer);
 
-        this.sampler = this.lib.symbols.LogitBiasSampler(this.sampler, this.model, nBias, ptr);
+        this.sampler = this.lib.symbols.LogitBiasSampler(this.sampler, this.model, BigInt(nBias), ptr);
         return this;
     }
 
     minPSampler(minP: number, minKeep: number): this {
-        this.sampler = this.lib.symbols.MinPSampler(this.sampler, minP, minKeep);
+        this.sampler = this.lib.symbols.MinPSampler(this.sampler, minP, BigInt(minKeep));
         return this;
     }
 
@@ -205,7 +209,7 @@ class SamplerBuilder {
     }
 
     tailFreeSampler(z: number, minKeep: number): this {
-        this.sampler = this.lib.symbols.TailFreeSampler(this.sampler, z, minKeep);
+        this.sampler = this.lib.symbols.TailFreeSampler(this.sampler, z, BigInt(minKeep));
         return this;
     }
 
@@ -225,17 +229,17 @@ class SamplerBuilder {
     }
 
     topP(p: number, minKeep: number): this {
-        this.sampler = this.lib.symbols.TopPSampler(this.sampler, p, minKeep);
+        this.sampler = this.lib.symbols.TopPSampler(this.sampler, p, BigInt(minKeep));
         return this;
     }
 
     typicalSampler(typicalP: number, minKeep: number): this {
-        this.sampler = this.lib.symbols.TypicalSampler(this.sampler, typicalP, minKeep);
+        this.sampler = this.lib.symbols.TypicalSampler(this.sampler, typicalP, BigInt(minKeep));
         return this;
     }
 
     xtcSampler(xtcProbability: number, xtcThreshold: number, minKeep: number, seed: number): this {
-        this.sampler = this.lib.symbols.XtcSampler(this.sampler, xtcProbability, xtcThreshold, minKeep, seed);
+        this.sampler = this.lib.symbols.XtcSampler(this.sampler, xtcProbability, xtcThreshold, BigInt(minKeep), seed);
         return this;
     }
 
@@ -284,17 +288,12 @@ class ReadbackBuffer {
 
 // Define the library name and path
 const libName = "deno_cpp_binding";
-const libSuffix = {
-    "windows": "dll",
-    "darwin": "dylib",
-    "linux": "so"
-}[Deno.build.os];
 
-if (!libSuffix) {
-    throw new Error(`Unsupported operating system: ${Deno.build.os}`);
-}
+// Set DLL path
+const dllPath = `${Deno.cwd()}/lib`;
+Deno.env.set("PATH", `${Deno.env.get("PATH")};${dllPath}`);
 
-const libPath = `/home/blackroot/Desktop/YALS/lib/deno_cpp_binding.so`;
+const libPath = `${dllPath}/${libName}.dll`;
 try {
     console.log(`Attempting to load library from: ${libPath}`);
 
@@ -306,7 +305,7 @@ try {
     console.log("Readback buffer created.");
 
     // FIXME: Make this passable via config
-    const modelPath = "/home/blackroot/Desktop/YALS/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf";
+    const modelPath = "D:/koboldcpp/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf";
     const numberGpuLayers = 40;
     const contextLength = 2048;
     const numBatches = 1;
@@ -360,5 +359,5 @@ try {
     lib.close();
     console.log("Library closed.");
 } catch (error) {
-    console.error("Error:", error.message);
+    console.error("Error:", (error as Error).message);
 }
