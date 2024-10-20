@@ -1,3 +1,5 @@
+import { parse as parseYaml } from "https://deno.land/std@0.224.0/yaml/mod.ts";
+
 interface LogitBias {
     token: number;  // This corresponds to llama_token (int32_t)
     bias: number;   // This corresponds to float
@@ -319,11 +321,26 @@ try {
     // Buffer for streaming
     console.log("Readback buffer created.");
 
-    // FIXME: Make this passable via config
-    const modelPath = "D:/koboldcpp/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf";
-    const numberGpuLayers = 40;
-    const contextLength = 2048;
-    const numBatches = 1;
+    // Read YAML config
+    let configFile: string;
+    // Surely there's a better way to do this in TS
+    try {
+        configFile = await Deno.readTextFile("./config.yaml");
+    } catch {
+        try {
+            configFile = await Deno.readTextFile("./config.yml");
+        } catch {
+            throw new Error("No YAML config file found.");
+        }
+    }
+    const config = parseYaml(configFile) as {
+        modelPath: string;
+        numberGpuLayers: number;
+        contextLength: number;
+        numBatches: number;
+    };
+
+    const { modelPath, numberGpuLayers, contextLength, numBatches } = config;
     const modelPathPtr = new TextEncoder().encode(modelPath + "\0");
 
     const llamaModel = lib.symbols.LoadModel(
