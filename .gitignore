@@ -26,3 +26,6 @@ lib/*
 models/*
 venv/*
 .venv/*
+
+*.yaml
+*.yml
