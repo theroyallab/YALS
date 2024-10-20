@@ -36,7 +36,12 @@ if(STDCLANG)
 endif()
 
 add_library(deno_cpp_binding SHARED
-        binding.cpp
+        src/binding.cpp
+)
+
+target_include_directories(deno_cpp_binding
+        SYSTEM PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/include
 )
 
 target_include_directories(deno_cpp_binding
