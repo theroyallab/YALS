@@ -4,8 +4,6 @@
 #include <optional>
 #include <vector>
 #include <cstring>
-#include <regex>
-#include <sstream>
 #include <iomanip>
 
 void* LoadModel(const char *modelPath, int numberGpuLayers)
@@ -29,7 +27,7 @@ void PrintPerformanceInfo(const llama_context* context) {
 
     std::cout << "\n\n" << std::fixed << std::setprecision(2)
               << "Prompt Processing: " << prompt_tok_per_sec << " tok/s, "
-              << "Text Generation: " << gen_tok_per_sec << " tok/s" << std::endl;
+              << "Text Generation: " << gen_tok_per_sec << " tok/s" << "\n" << std::endl;
 }
 
 struct ReadbackBuffer
