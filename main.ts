@@ -289,11 +289,26 @@ class ReadbackBuffer {
 // Define the library name and path
 const libName = "deno_cpp_binding";
 
-// Set DLL path
-const dllPath = `${Deno.cwd()}/lib`;
-Deno.env.set("PATH", `${Deno.env.get("PATH")};${dllPath}`);
+// Set library path
+const libPath = (() => {
+    const cwd = Deno.cwd();
+    const libDir = `${cwd}/lib`;
+    
+    switch (Deno.build.os) {
+        case "windows":
+            Deno.env.set("PATH", `${Deno.env.get("PATH")};${libDir}`);
+            return `${libDir}/${libName}.dll`;
+        case "linux":
+            Deno.env.set("LD_LIBRARY_PATH", `${Deno.env.get("LD_LIBRARY_PATH")}:${libDir}`);
+            return `${libDir}/${libName}.so`;
+        case "darwin":
+            Deno.env.set("DYLD_LIBRARY_PATH", `${Deno.env.get("DYLD_LIBRARY_PATH")}:${libDir}`);
+            return `${libDir}/${libName}.dylib`;
+        default:
+            throw new Error(`Unsupported operating system: ${Deno.build.os}`);
+    }
+})();
 
-const libPath = `${dllPath}/${libName}.dll`;
 try {
     console.log(`Attempting to load library from: ${libPath}`);
 
