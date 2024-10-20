@@ -322,7 +322,17 @@ try {
     console.log("Readback buffer created.");
 
     // Read YAML config
-    const configFile = await Deno.readTextFile("./config.yaml");
+    let configFile: string;
+    // Surely there's a better way to do this in TS
+    try {
+        configFile = await Deno.readTextFile("./config.yaml");
+    } catch {
+        try {
+            configFile = await Deno.readTextFile("./config.yml");
+        } catch {
+            throw new Error("No YAML config file found.");
+        }
+    }
     const config = parseYaml(configFile) as {
         modelPath: string;
         numberGpuLayers: number;
