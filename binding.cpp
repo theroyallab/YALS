@@ -3,6 +3,7 @@
 #include <iostream>
 #include <optional>
 #include <vector>
+#include <cstring>
 
 void* LoadModel(const char *modelPath, int numberGpuLayers)
 {

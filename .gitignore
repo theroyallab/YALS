@@ -19,3 +19,10 @@ cmake-build-debug*
 # Lib
 lib/*
 !lib/add_your_library.txt
+
+# build
+build/*
+lib/*
+models/*
+venv/*
+.venv/*
