@@ -1,4 +1,4 @@
-import { parse as parseYaml } from "https://deno.land/std@0.224.0/yaml/mod.ts";
+import { parse as parseYaml } from "@std/yaml";
 
 interface LogitBias {
     token: number;  // This corresponds to llama_token (int32_t)
