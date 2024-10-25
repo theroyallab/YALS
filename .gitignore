@@ -17,8 +17,8 @@ cmake-build-debug-*
 cmake-build-debug*
 
 # Lib
-lib/*
-!lib/add_your_library.txt
+bindings/lib/*
+!bindings/lib/add_your_library.txt
 
 # build
 build/*

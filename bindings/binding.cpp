@@ -6,10 +6,17 @@
 #include <cstring>
 #include <iomanip>
 
+void TestPrint(const char *text)
+{
+    std::cout << text << std::endl;
+}
+
 void* LoadModel(const char *modelPath, int numberGpuLayers)
 {
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = numberGpuLayers;
+
+    std::cout << modelPath << std::endl;
 
     llama_model* model = llama_load_model_from_file(modelPath, model_params);
 
