@@ -35,15 +35,14 @@ extern "C" {
     void* TopPSampler(void* sampler, float topP, size_t minKeep);
     void* TypicalSampler(void* sampler, float typicalP, size_t minKeep);
     void* XtcSampler(void* sampler, float xtcProbability, float xtcThreshold, size_t minKeep, uint32_t seed);
+    void* DrySampler(void* sampler, const llama_model* model, float multiplier,
+                     float base, size_t allowed_length, size_t penalty_last_n,
+                     const char** sequence_breakers, size_t n_breakers);
     /* SAMPLERS
-     * */
+        * */
 
-    void Infer(
-        void* llamaModelPtr,
-        void* samplerPtr,
-        void* contextPtr,
-        const char *prompt,
-        unsigned numberTokensToPredict);
+    void Infer(void *llamaModelPtr, void *samplerPtr, void *contextPtr,
+                const char *prompt, unsigned numberTokensToPredict);
 
     void InferToReadbackBuffer(
         void* llamaModelPtr,

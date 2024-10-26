@@ -95,6 +95,10 @@ const libInterface = {
         parameters: ["pointer", "f32", "f32", "usize", "u32"],  // void* sampler, float xtcProbability, float xtcThreshold, size_t minKeep, uint32_t seed
         result: "pointer" as const  // void*
     },
+    DrySampler: {
+        parameters: ["pointer", "pointer", "f32", "f32", "u64", "u64", "pointer", "u64"], // void* sampler, const llama_model* model, float multiplier, float base, size_t allowed_length, size_t penalty_last_n, const char* const* sequence_breakers, size_t n_breakers
+        result: "pointer" as const // void*
+    },
     Infer: {
         parameters: [
             "pointer",  // void* llamaModelPtr
@@ -186,6 +190,49 @@ class SamplerBuilder {
         const ptr = Deno.UnsafePointer.of(buffer);
 
         this.sampler = this.lib.symbols.LogitBiasSampler(this.sampler, this.model, BigInt(nBias), ptr);
+        return this;
+    }
+
+    drySampler(
+        multiplier: number,
+        base: number,
+        allowedLength: number,
+        penaltyLastN: number,
+        sequenceBreakers: string[] = []
+    ): this {
+        //cstring
+        const nullTerminatedBreakers = sequenceBreakers.map(str => str + '\0');
+
+        //breakers
+        const encodedBreakers = nullTerminatedBreakers.map(str =>
+            new TextEncoder().encode(str)
+        );
+
+        //make a pointer for each breakers e.g. char*
+        const breakerPtrs = encodedBreakers.map(encoded =>
+            Deno.UnsafePointer.of(encoded)
+        );
+
+        // make a char[]* buffer
+        const ptrArrayBuffer = new ArrayBuffer(breakerPtrs.length * 8);
+        const ptrArray = new BigUint64Array(ptrArrayBuffer);
+
+        // Put each pointer into an array, e.g: char[]*
+        breakerPtrs.forEach((ptr, index) => {
+            ptrArray[index] = BigInt(Deno.UnsafePointer.value(ptr));
+        });
+
+        this.sampler = this.lib.symbols.DrySampler(
+            this.sampler,
+            this.model,
+            multiplier,
+            base,
+            BigInt(allowedLength),
+            BigInt(penaltyLastN),
+            Deno.UnsafePointer.of(ptrArrayBuffer),
+            BigInt(sequenceBreakers.length)
+        );
+
         return this;
     }
 
@@ -362,6 +409,7 @@ export async function setupBindings() {
         .tempSampler(15.0)
         .topK(40)
         .distSampler(1337)
+        .drySampler(1.0, 0.5, 32, 64, ["\n", "."])
         .build();
 
     const prompt = "Once upon a time";

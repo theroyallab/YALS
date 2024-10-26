@@ -115,6 +115,20 @@ void* GrammarSampler(void* sampler, const llama_model* model, const char* gramma
     return sampler;
 }
 
+void* DrySampler(void* sampler, const llama_model* model, float multiplier,
+                 float base, size_t allowed_length, size_t penalty_last_n,
+                 const char** sequence_breakers, size_t n_breakers)
+{
+    llama_sampler_chain_add(
+        static_cast<llama_sampler*>(sampler),
+        llama_sampler_init_dry(
+            model, multiplier, base, allowed_length,
+            penalty_last_n, sequence_breakers, n_breakers
+        )
+    );
+    return sampler;
+}
+
 // Typically used as the last sampler in the chain
 void* GreedySampler(void* sampler)
 {
