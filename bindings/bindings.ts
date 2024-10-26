@@ -406,10 +406,10 @@ export async function setupBindings() {
     // GreedySampler
     const samplerBuilder = new SamplerBuilder(lib, llamaModel);
     const sampler = samplerBuilder
-        .tempSampler(15.0)
+        .tempSampler(1.0)
         .topK(40)
         .distSampler(1337)
-        .drySampler(1.0, 0.5, 32, 64, ["\n", "."])
+        .drySampler(0.8, 1.75, 3, 1024, ["\n", ";", "\"", "*"])
         .build();
 
     const prompt = "Once upon a time";
