@@ -1,5 +1,3 @@
-import { parse as parseYaml } from "@std/yaml";
-
 interface LogitBias {
     token: number;  // This corresponds to llama_token (int32_t)
     bias: number;   // This corresponds to float
@@ -137,7 +135,7 @@ const libInterface = {
     },
 } as const;
 
-class SamplerBuilder {
+export class SamplerBuilder {
     private sampler: Deno.PointerValue;
     private readonly model: Deno.PointerValue;
 
@@ -301,7 +299,7 @@ class SamplerBuilder {
     }
 }
 
-class ReadbackBuffer {
+export class ReadbackBuffer {
   private lib: Deno.DynamicLibrary<typeof libInterface>;
   public bufferPtr: Deno.PointerValue;
 
@@ -339,7 +337,7 @@ class ReadbackBuffer {
   }
 }
 
-export async function setupBindings() {
+function setup() {
     const libName = "deno_cpp_binding";
 
     const libDir = `${Deno.cwd()}/bindings/lib/`;
@@ -362,69 +360,7 @@ export async function setupBindings() {
             throw new Error(`Unsupported operating system: ${Deno.build.os}`);
     }
 
-    console.log(`Attempting to load library from ${libPath}`);
-
-    // Load the library
-    const lib: Deno.DynamicLibrary<typeof libInterface> = Deno.dlopen(libPath, libInterface);
-    console.log("Library loaded successfully.");
-
-    // Read YAML config
-    let configFile: string;
-
-    // Surely there's a better way to do this in TS
-    try {
-        configFile = await Deno.readTextFile("./config.yaml");
-    } catch {
-        try {
-            configFile = await Deno.readTextFile("./config.yml");
-        } catch {
-            throw new Error("No YAML config file found.");
-        }
-    }
-    const config = parseYaml(configFile) as {
-        modelPath: string;
-        numberGpuLayers: number;
-        contextLength: number;
-        numBatches: number;
-    };
-
-    const { modelPath, numberGpuLayers, contextLength, numBatches } = config;
-    const modelPathPtr = new TextEncoder().encode(modelPath + "\0");
-
-
-    const llamaModel = await lib.symbols.LoadModel(
-        Deno.UnsafePointer.of(modelPathPtr),
-        numberGpuLayers
-    );
-
-    const context = await lib.symbols.InitiateCtx(
-        llamaModel,
-        contextLength,
-        numBatches
-    );
-
-    // GreedySampler
-    const samplerBuilder = new SamplerBuilder(lib, llamaModel);
-    const sampler = samplerBuilder
-        .tempSampler(1.0)
-        .topK(40)
-        .distSampler(1337)
-        .drySampler(0.8, 1.75, 3, 1024, ["\n", ";", "\"", "*"])
-        .build();
-
-    const prompt = "Once upon a time";
-    const promptPtr = new TextEncoder().encode(prompt + "\0");
-
-    const readbackBuffer = new ReadbackBuffer(lib);
-
-    lib.symbols.InferToReadbackBuffer(llamaModel, sampler, context, readbackBuffer.bufferPtr, Deno.UnsafePointer.of(promptPtr), 2000);
-
-    // Read from the read buffer
-    for await (const nextString of readbackBuffer.read()) {
-        const encoder = new TextEncoder();
-        Deno.stdout.writeSync(encoder.encode(nextString));
-    }
-
-    // Close the library when done
-    lib.close();
+    return Deno.dlopen(libPath, libInterface);
 }
+
+export const lib = setup();
