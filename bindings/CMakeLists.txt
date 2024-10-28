@@ -24,7 +24,6 @@ set(LLAMA_BUILD_SERVER OFF CACHE BOOL "llama.cpp: build server" FORCE)
 # Enable GGML_CUDA by default
 # TODO: Switch this off in production
 #set(GGML_CUDA ON CACHE BOOL "Enable CUDA" FORCE)
-#set(GGML_STATIC ON CACHE BOOL "Static build" FORCE)
 
 FetchContent_MakeAvailable(llama)
 
