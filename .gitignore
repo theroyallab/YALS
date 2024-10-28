@@ -1,5 +1,6 @@
 ### Deno ###
-/.idea/
+/.idea
+*/.idea/
 /.vscode/
 
 /node_modules
@@ -13,8 +14,8 @@
 # End of https://www.toptal.com/developers/gitignore/api/deno
 
 # C++ ignores
-cmake-build-debug-*
 cmake-build-debug*
+*/cmake-build-debug*
 
 # Lib
 bindings/lib/*
