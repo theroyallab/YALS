@@ -1,9 +1,8 @@
 import { parse as parseYaml } from "@std/yaml";
-import { lib, SamplerBuilder, ReadbackBuffer } from "./bindings/bindings.ts";
+import { lib, ReadbackBuffer, SamplerBuilder } from "./bindings/bindings.ts";
 
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 if (import.meta.main) {
-    //await setupBindings();
     // Read YAML config
     let configFile: string;
 
@@ -29,13 +28,13 @@ if (import.meta.main) {
 
     const llamaModel = await lib.symbols.LoadModel(
         Deno.UnsafePointer.of(modelPathPtr),
-        numberGpuLayers
+        numberGpuLayers,
     );
 
     const context = await lib.symbols.InitiateCtx(
         llamaModel,
         contextLength,
-        numBatches
+        numBatches,
     );
 
     // GreedySampler
@@ -51,7 +50,15 @@ if (import.meta.main) {
 
     const readbackBuffer = new ReadbackBuffer(lib);
 
-    lib.symbols.InferToReadbackBuffer(llamaModel, sampler, context, readbackBuffer.bufferPtr, Deno.UnsafePointer.of(promptPtr), 150);
+    // Don't await due to async generator
+    lib.symbols.InferToReadbackBuffer(
+        llamaModel,
+        sampler,
+        context,
+        readbackBuffer.bufferPtr,
+        Deno.UnsafePointer.of(promptPtr),
+        150,
+    );
 
     // Read from the read buffer
     for await (const nextString of readbackBuffer.read()) {

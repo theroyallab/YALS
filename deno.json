@@ -5,5 +5,10 @@
   "imports": {
     "@std/assert": "jsr:@std/assert@1",
     "@std/yaml": "jsr:@std/yaml@^1.0.5"
+  },
+  "fmt": {
+    "indentWidth": 4,
+    "semiColons": true,
+    "include": ["**/*.ts"]
   }
 }
