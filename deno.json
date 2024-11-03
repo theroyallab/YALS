@@ -1,6 +1,8 @@
 {
   "tasks": {
-    "dev": "deno run --watch main.ts"
+    "dev": "deno run -A --watch main.ts",
+    "start": "deno run --allow-read --allow-env --allow-net --allow-ffi main.ts",
+    "compile": "deno compile --allow-read --allow-env --allow-net --allow-ffi main.ts"
   },
   "imports": {
     "@hono/zod-openapi": "npm:@hono/zod-openapi@^0.16.4",
