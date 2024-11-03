@@ -1,6 +1,7 @@
 import { parse as parseYaml } from "@std/yaml";
 import { lib, ReadbackBuffer, SamplerBuilder } from "./bindings/bindings.ts";
 import { createApi } from "./api/server.ts";
+import { setupLogger } from "./common/logging.ts";
 
 async function startup() {
     // Read YAML config
@@ -71,6 +72,7 @@ async function startup() {
 }
 
 if (import.meta.main) {
+    await setupLogger();
     //await startup();
     createApi();
 }
