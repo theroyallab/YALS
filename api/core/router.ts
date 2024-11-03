@@ -1,11 +1,23 @@
-import { Hono } from "hono";
+import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { TestSchema } from "./types/test.ts";
+import jsonContent from "stoker/openapi/helpers/json-content";
 
-const router = new Hono();
+const router = new OpenAPIHono();
 
-router.get(
-    "/hello",
+const helloRoute = createRoute({
+    method: "get",
+    path: "/hello",
+    responses: {
+        200: jsonContent(TestSchema, "Say hello!"),
+    },
+});
+
+router.openapi(
+    helloRoute,
     (c) => {
-        return c.text("Hello");
+        return c.json({
+            name: "Hi there!",
+        }, 200);
     },
 );
 
