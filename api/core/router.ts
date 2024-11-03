@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 
-const router = new Hono()
+const router = new Hono();
 
 router.get(
-    '/hello',
+    "/hello",
     (c) => {
-        return c.text("Hello")
-    }
-)
+        return c.text("Hello");
+    },
+);
 
 export default router;
