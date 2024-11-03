@@ -1,8 +1,8 @@
 import { parse as parseYaml } from "@std/yaml";
 import { lib, ReadbackBuffer, SamplerBuilder } from "./bindings/bindings.ts";
+import { createApi } from "./api/server.ts";
 
-// Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
-if (import.meta.main) {
+async function startup() {
     // Read YAML config
     let configFile: string;
 
@@ -68,4 +68,9 @@ if (import.meta.main) {
 
     // Close the library when done
     lib.close();
+}
+
+if (import.meta.main) {
+    //await startup();
+    createApi();
 }
