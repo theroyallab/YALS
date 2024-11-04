@@ -2,6 +2,7 @@
   "version": "4",
   "specifiers": {
     "jsr:@logtape/logtape@~0.7.1": "0.7.1",
+    "jsr:@std/async@^1.0.8": "1.0.8",
     "jsr:@std/yaml@^1.0.5": "1.0.5",
     "npm:@hono/zod-openapi@~0.16.4": "0.16.4_hono@4.6.8_zod@3.23.8",
     "npm:@huggingface/jinja@~0.3.2": "0.3.2",
@@ -13,6 +14,9 @@
   "jsr": {
     "@logtape/logtape@0.7.1": {
       "integrity": "225f02016752f011bc9a74eea8bb95e77ab35169abbad87cfd21db0579316105"
+    },
+    "@std/async@1.0.8": {
+      "integrity": "c057c5211a0f1d12e7dcd111ab430091301b8d64b4250052a79d277383bc3ba7"
     },
     "@std/yaml@1.0.5": {
       "integrity": "71ba3d334305ee2149391931508b2c293a8490f94a337eef3a09cade1a2a2742"
@@ -103,6 +107,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@logtape/logtape@~0.7.1",
+      "jsr:@std/async@^1.0.8",
       "jsr:@std/yaml@^1.0.5",
       "npm:@hono/zod-openapi@~0.16.4",
       "npm:@huggingface/jinja@~0.3.2",

@@ -1,3 +1,4 @@
+import { delay } from "@std/async";
 import llamaSymbols from "./symbols.ts";
 
 // TODO: Move this somewhere else
@@ -295,15 +296,11 @@ export class ReadbackBuffer {
         return lib.symbols.IsReadbackBufferDone(this.bufferPtr);
     }
 
-    private static sleep(ms: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-    }
-
     async *read(): AsyncGenerator<string, void, unknown> {
         do {
             const nextString = await this.readNext();
             if (nextString === null) {
-                await ReadbackBuffer.sleep(10);
+                await delay(10);
                 continue;
             }
             yield nextString;
