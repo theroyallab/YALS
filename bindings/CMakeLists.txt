@@ -57,7 +57,7 @@ target_link_libraries(deno_cpp_binding PRIVATE llama)
 set_target_properties(deno_cpp_binding PROPERTIES
         OUTPUT_NAME "deno_cpp_binding"
         PREFIX ""
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/lib"
+        LIBRARY_OUTPUT_DIRECTORY "../${CMAKE_CURRENT_SOURCE_DIR}/lib"
 )
 
 # Windows options
@@ -75,7 +75,7 @@ if(WIN32)
     add_custom_command(TARGET deno_cpp_binding POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
             ${DLL_FILES}
-            ${CMAKE_CURRENT_SOURCE_DIR}/lib
+            ../${CMAKE_CURRENT_SOURCE_DIR}/lib
             COMMENT "Copying DLLs to lib"
     )
 endif()

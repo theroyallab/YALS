@@ -302,7 +302,7 @@ export class ReadbackBuffer {
 function setup() {
     const libName = "deno_cpp_binding";
 
-    const libDir = `${Deno.cwd()}/bindings/lib/`;
+    const libDir = `${Deno.cwd()}/lib/`;
     let libPath = libDir;
 
     switch (Deno.build.os) {

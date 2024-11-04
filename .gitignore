@@ -18,12 +18,11 @@ cmake-build-debug*
 */cmake-build-debug*
 
 # Lib
-bindings/lib/*
-!bindings/lib/add_your_library.txt
+lib/*
+!lib/add_libs_here.txt
 
 # build
 build/*
-lib/*
 models/*
 venv/*
 .venv/*
