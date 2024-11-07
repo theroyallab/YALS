@@ -3,8 +3,9 @@ import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { defaultHook } from "stoker/openapi";
 import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
 import {
-    CompletionsRequest,
-    CompletionsResponse,
+    CompletionRequest,
+    CompletionRespChoice,
+    CompletionResponse,
 } from "./types/completions.ts";
 import { model } from "../../common/model.ts";
 
@@ -17,12 +18,12 @@ const completionsRoute = createRoute({
     path: "/v1/completions",
     request: {
         body: jsonContentRequired(
-            CompletionsRequest,
+            CompletionRequest,
             "Request for a completion",
         ),
     },
     responses: {
-        200: jsonContent(CompletionsResponse, "Response to completions"),
+        200: jsonContent(CompletionResponse, "Response to completions"),
     },
 });
 
@@ -35,7 +36,17 @@ router.openapi(
 
         const params = c.req.valid("json");
         const result = await model.generate(params.prompt) ?? "";
-        return c.json({ result: result });
+        const completionChoice = await CompletionRespChoice.parseAsync({
+            text: result,
+            index: 0,
+        });
+
+        return c.json(
+            await CompletionResponse.parseAsync({
+                choices: [completionChoice],
+                model: "test",
+            }),
+        );
     },
 );
 

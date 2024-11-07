@@ -1,26 +1,33 @@
+import { HTTPException } from "hono/http-exception";
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { TestSchema } from "./types/test.ts";
 import { defaultHook } from "stoker/openapi";
-import { jsonContent } from "stoker/openapi/helpers";
+import { model } from "../../common/model.ts";
 
 const router = new OpenAPIHono({
     defaultHook: defaultHook,
 });
 
-const helloRoute = createRoute({
+const unloadRoute = createRoute({
     method: "get",
-    path: "/hello",
+    path: "/v1/model/unload",
     responses: {
-        200: jsonContent(TestSchema, "Say hello!"),
+        200: {
+            description: "Model successfully unloaded"
+        }
     },
 });
 
 router.openapi(
-    helloRoute,
-    (c) => {
-        return c.json({
-            name: "Hi there!",
-        }, 200);
+    unloadRoute,
+    async (c) => {
+        if (!model) {
+            throw new HTTPException(401, { message: "Model is not loaded!" });
+        }
+
+        await model.unload();
+
+        c.status(200);
+        return c.body(null);
     },
 );
 
