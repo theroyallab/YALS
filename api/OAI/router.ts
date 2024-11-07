@@ -1,4 +1,3 @@
-import { HTTPException } from "hono/http-exception";
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { defaultHook } from "stoker/openapi";
 import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
@@ -7,7 +6,7 @@ import {
     CompletionRespChoice,
     CompletionResponse,
 } from "./types/completions.ts";
-import { model } from "../../common/model.ts";
+import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 
 const router = new OpenAPIHono({
     defaultHook: defaultHook,
@@ -22,6 +21,7 @@ const completionsRoute = createRoute({
             "Request for a completion",
         ),
     },
+    middleware: [checkModelMiddleware],
     responses: {
         200: jsonContent(CompletionResponse, "Response to completions"),
     },
@@ -30,12 +30,8 @@ const completionsRoute = createRoute({
 router.openapi(
     completionsRoute,
     async (c) => {
-        if (!model) {
-            throw new HTTPException(401, { message: "Model is not loaded!" });
-        }
-
         const params = c.req.valid("json");
-        const result = await model.generate(params.prompt) ?? "";
+        const result = await c.var.model.generate(params.prompt);
         const completionChoice = await CompletionRespChoice.parseAsync({
             text: result,
             index: 0,

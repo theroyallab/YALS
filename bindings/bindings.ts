@@ -308,7 +308,7 @@ export class ReadbackBuffer {
     }
 }
 
-export class ModelContainer {
+export class Model {
     model: Deno.PointerValue;
     context: Deno.PointerValue;
 
@@ -330,7 +330,7 @@ export class ModelContainer {
             1,
         );
 
-        return new ModelContainer(model, context);
+        return new Model(model, context);
     }
 
     async unload() {
