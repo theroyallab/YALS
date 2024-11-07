@@ -1,4 +1,4 @@
-import { Model } from "../bindings/bindings.ts";
+import { Model } from "@/bindings/bindings.ts";
 
 export let model: Model | undefined = undefined;
 export async function loadModel(modelPath: string, gpuLayers: number) {

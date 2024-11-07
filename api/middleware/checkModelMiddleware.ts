@@ -1,6 +1,6 @@
 import { HTTPException } from "hono/http-exception";
 import { createMiddleware } from "hono/factory";
-import { model } from "../../common/modelContainer.ts";
+import { model } from "@/common/modelContainer.ts";
 
 // Middleware for checking if the model exists
 // Sends a validated version of the model via Hono's ctx

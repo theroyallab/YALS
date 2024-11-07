@@ -1,6 +1,7 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { defaultHook } from "stoker/openapi";
 import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
+
 import {
     CompletionRequest,
     CompletionRespChoice,

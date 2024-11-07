@@ -1,7 +1,8 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { defaultHook } from "stoker/openapi";
+import { model } from "@/common/modelContainer.ts";
+
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
-import { model } from "../../common/modelContainer.ts";
 
 const router = new OpenAPIHono({
     defaultHook: defaultHook,

@@ -5,6 +5,7 @@
     "compile": "deno compile --allow-read --allow-env --allow-net --allow-ffi main.ts"
   },
   "imports": {
+    "@/": "./",
     "@hono/zod-openapi": "npm:@hono/zod-openapi@^0.16.4",
     "@huggingface/jinja": "npm:@huggingface/jinja@^0.3.2",
     "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.5.158",
