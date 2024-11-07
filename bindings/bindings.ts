@@ -333,6 +333,11 @@ export class ModelContainer {
         return new ModelContainer(model, context);
     }
 
+    async unload() {
+        await lib.symbols.FreeModel(this.model);
+        await lib.symbols.FreeCtx(this.context);
+    }
+
     async generate(prompt: string): Promise<string> {
         const samplerBuilder = new SamplerBuilder(this.model);
         samplerBuilder.tempSampler(1.0);

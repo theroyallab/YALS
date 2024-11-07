@@ -9,6 +9,9 @@ extern "C" {
     void TestPrint(const char *text);
     void* LoadModel(const char *modelPath, int numberGpuLayers);
     void* InitiateCtx(void* llamaModel, unsigned contextLength, unsigned numBatches);
+    void FreeSampler(llama_sampler* sampler);
+    void FreeModel(llama_model* model);
+    void FreeCtx(llama_context* ctx);
 
     void* CreateReadbackBuffer();
     void* ReadbackNext(void* readbackBufferPtr);

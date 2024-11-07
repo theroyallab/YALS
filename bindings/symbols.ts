@@ -16,6 +16,21 @@ export default {
         result: "pointer" as const, // void*
         nonblocking: true,
     },
+    FreeSampler: {
+        parameters: ["pointer"],
+        result: "void",
+        nonblocking: true,
+    },
+    FreeCtx: {
+        parameters: ["pointer"],
+        result: "void",
+        nonblocking: true,
+    },
+    FreeModel: {
+        parameters: ["pointer"],
+        result: "void",
+        nonblocking: true,
+    },
     MakeSampler: {
         parameters: [],
         result: "pointer" as const, // void*
