@@ -1,6 +1,5 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { defaultHook } from "stoker/openapi";
-import { model } from "@/common/modelContainer.ts";
 
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 
@@ -22,7 +21,7 @@ const unloadRoute = createRoute({
 router.openapi(
     unloadRoute,
     async (c) => {
-        await model?.unload();
+        await c.var.model.unload();
 
         c.status(200);
         return c.body(null);
