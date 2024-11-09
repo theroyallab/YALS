@@ -20,6 +20,7 @@
   "fmt": {
     "indentWidth": 4,
     "semiColons": true,
-    "include": ["**/*.ts"]
+    "include": ["**/*.ts"],
+    "lineWidth": 80
   }
 }
