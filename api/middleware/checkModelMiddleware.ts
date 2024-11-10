@@ -1,6 +1,14 @@
 import { HTTPException } from "hono/http-exception";
 import { createMiddleware } from "hono/factory";
 import { model } from "@/common/modelContainer.ts";
+import { Model } from "@/bindings/bindings.ts";
+
+// Define interface for custom variables
+declare module "hono" {
+    interface ContextVariableMap {
+        model: Model;
+    }
+}
 
 // Middleware for checking if the model exists
 // Sends a validated version of the model via Hono's ctx

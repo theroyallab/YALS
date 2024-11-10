@@ -6,7 +6,7 @@
   },
   "imports": {
     "@/": "./",
-    "@hono/zod-openapi": "npm:@hono/zod-openapi@^0.16.4",
+    "hono-openapi": "npm:@bdashore3/hono-openapi@^0.1.5",
     "@huggingface/jinja": "npm:@huggingface/jinja@^0.3.2",
     "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.5.158",
     "@std/async": "jsr:@std/async@^1.0.8",
@@ -15,7 +15,8 @@
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
     "hono": "npm:hono@^4.6.8",
     "stoker": "npm:stoker@^1.3.0",
-    "zod": "npm:zod@^3.23.8"
+    "zod": "npm:zod@^3.23.8",
+    "zod-openapi": "npm:zod-openapi@^4.0.0"
   },
   "fmt": {
     "indentWidth": 4,

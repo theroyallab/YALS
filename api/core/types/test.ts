@@ -1,4 +1,5 @@
-import { z } from "@hono/zod-openapi";
+import "zod-openapi/extend";
+import { z } from "zod";
 
 export const TestSchema = z.object({
     name: z.string().openapi({

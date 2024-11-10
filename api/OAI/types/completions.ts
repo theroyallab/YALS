@@ -1,4 +1,5 @@
-import { z } from "@hono/zod-openapi";
+import "zod-openapi/extend";
+import { z } from "zod";
 
 const maxTokensType = z.number().gte(0).optional();
 const banEosTokenType = z.boolean().optional();

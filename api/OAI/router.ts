@@ -1,6 +1,6 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { defaultHook } from "stoker/openapi";
-import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
+import { Hono } from "hono";
+import { describeRoute } from "hono-openapi";
+import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import {
     CompletionRequest,
@@ -9,27 +9,26 @@ import {
 } from "./types/completions.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 
-const router = new OpenAPIHono({
-    defaultHook: defaultHook,
-});
+const router = new Hono();
 
-const completionsRoute = createRoute({
-    method: "post",
-    path: "/v1/completions",
-    request: {
-        body: jsonContentRequired(
-            CompletionRequest,
-            "Request for a completion",
-        ),
-    },
-    middleware: [checkModelMiddleware],
+const completionsRoute = describeRoute({
     responses: {
-        200: jsonContent(CompletionResponse, "Response to completions"),
+        200: {
+            description: "Response to completions",
+            content: {
+                "application/json": {
+                    schema: resolver(CompletionResponse),
+                },
+            },
+        },
     },
 });
 
-router.openapi(
+router.post(
+    "/v1/completions",
     completionsRoute,
+    checkModelMiddleware,
+    zValidator("json", CompletionRequest),
     async (c) => {
         const params = c.req.valid("json");
         const result = await c.var.model.generate(params.prompt, params);

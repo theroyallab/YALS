@@ -1,16 +1,11 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { defaultHook } from "stoker/openapi";
+import { Hono } from "hono";
+import { describeRoute } from "hono-openapi";
 
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 
-const router = new OpenAPIHono({
-    defaultHook: defaultHook,
-});
+const router = new Hono();
 
-const unloadRoute = createRoute({
-    method: "get",
-    path: "/v1/model/unload",
-    middleware: [checkModelMiddleware],
+const unloadRoute = describeRoute({
     responses: {
         200: {
             description: "Model successfully unloaded",
@@ -18,8 +13,9 @@ const unloadRoute = createRoute({
     },
 });
 
-router.openapi(
+router.post(
     unloadRoute,
+    checkModelMiddleware,
     async (c) => {
         await c.var.model.unload();
 

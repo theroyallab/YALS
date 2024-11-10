@@ -1,10 +1,11 @@
 import { logger as loggerMiddleware } from "hono/logger";
 import { cors } from "hono/cors";
 import { getLogger } from "logtape";
-import { OpenAPIHono } from "@hono/zod-openapi";
 import { apiReference } from "@scalar/hono-api-reference";
-import { defaultHook } from "stoker/openapi";
 import { notFound, onError } from "stoker/middlewares";
+
+import { Hono } from "hono";
+import { openAPISpecs } from "hono-openapi";
 
 import core from "./core/router.ts";
 import oai from "./OAI/router.ts";
@@ -12,9 +13,7 @@ import oai from "./OAI/router.ts";
 const logger = getLogger("YALS");
 
 export function createApi() {
-    const app = new OpenAPIHono({
-        defaultHook: defaultHook,
-    });
+    const app = new Hono();
 
     // TODO: Use a custom middleware instead of overriding Hono's logger
     const printToLogtape = (message: string, ...rest: string[]) => {
@@ -30,13 +29,18 @@ export function createApi() {
     app.route("/", oai);
 
     // OpenAPI documentation
-    app.doc("/openapi.json", {
-        openapi: "3.0.0",
-        info: {
-            version: "0.0.1",
-            title: "YALS",
-        },
-    });
+    app.get(
+        "/openapi.json",
+        openAPISpecs(app, {
+            documentation: {
+                openapi: "3.0.0",
+                info: {
+                    version: "0.0.1",
+                    title: "YALS",
+                },
+            },
+        }),
+    );
 
     app.get(
         "/reference",
