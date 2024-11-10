@@ -10,6 +10,7 @@ const GenerationOptionsSchema = z.object({
     grammar_string: z.string().optional(),
     add_bos_token: z.boolean().default(true),
     skip_special_tokens: z.boolean().default(true),
+    seed: z.number().optional(),
 
     // max token aliases
     max_tokens: maxTokensType
@@ -131,6 +132,7 @@ const DrySchema = z.object({
     })
     .transform((obj) => {
         return {
+            ...obj,
             dry_range: obj.dry_range ?? obj.dry_penalty_last_n ?? 0,
         };
     });
@@ -190,7 +192,7 @@ const MirostatSchema = z.object({
     });
 
 // Construct from aliased sampler requests
-const BaseSamplerRequest = GenerationOptionsSchema
+export const BaseSamplerRequest = GenerationOptionsSchema
     .and(TemperatureSamplerSchema)
     .and(AlphabetSamplerSchema)
     .and(PenaltySamplerSchema)
@@ -198,6 +200,8 @@ const BaseSamplerRequest = GenerationOptionsSchema
     .and(XtcSchema)
     .and(DynatempSchema)
     .and(MirostatSchema);
+
+export type BaseSamplerRequest = z.infer<typeof BaseSamplerRequest>;
 
 export const CompletionResponseFormat = z.object({
     type: z.string().default("text"),

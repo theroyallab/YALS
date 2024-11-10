@@ -1,5 +1,6 @@
 import { delay } from "@std/async";
 import llamaSymbols from "./symbols.ts";
+import type { BaseSamplerRequest } from "@/api/OAI/types/completions.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -338,13 +339,49 @@ export class Model {
         await lib.symbols.FreeCtx(this.context);
     }
 
-    async generate(prompt: string): Promise<string> {
+    async generate(
+        prompt: string,
+        params: BaseSamplerRequest,
+    ): Promise<string> {
         const samplerBuilder = new SamplerBuilder(this.model);
-        samplerBuilder.tempSampler(1.0);
-        samplerBuilder.topK(40);
-        samplerBuilder.distSampler(1337);
-        const sampler = samplerBuilder.build();
+        const seed = params.seed ??
+            Math.floor(Math.random() * (0xFFFFFFFF + 1));
 
+        if (!params.temperature_last) {
+            samplerBuilder.tempSampler(params.temperature);
+        }
+
+        samplerBuilder.topK(params.top_k);
+        samplerBuilder.topP(params.top_p, 1);
+        samplerBuilder.minPSampler(params.min_p, 1);
+        samplerBuilder.typicalSampler(params.typical, 1);
+
+        // TODO: Add guards
+        if (params.xtc_probability > 0) {
+            samplerBuilder.xtcSampler(
+                params.xtc_probability,
+                params.xtc_threshold,
+                1,
+                seed,
+            );
+        }
+
+        if (params.dry_multiplier > 0) {
+            samplerBuilder.drySampler(
+                params.dry_multiplier,
+                params.dry_base,
+                params.dry_allowed_length,
+                params.dry_range,
+                params.dry_sequence_breakers as string[],
+            );
+        }
+
+        if (params.temperature_last) {
+            samplerBuilder.tempSampler(params.temperature);
+        }
+
+        samplerBuilder.distSampler(seed);
+        const sampler = samplerBuilder.build();
         const promptPtr = new TextEncoder().encode(prompt + "\0");
 
         const readbackBuffer = new ReadbackBuffer();
@@ -355,7 +392,7 @@ export class Model {
             this.context,
             readbackBuffer.bufferPtr,
             Deno.UnsafePointer.of(promptPtr),
-            150,
+            params.max_tokens ?? 150,
         );
 
         // Read from the read buffer

@@ -32,7 +32,7 @@ router.openapi(
     completionsRoute,
     async (c) => {
         const params = c.req.valid("json");
-        const result = await c.var.model.generate(params.prompt);
+        const result = await c.var.model.generate(params.prompt, params);
         const completionChoice = await CompletionRespChoice.parseAsync({
             text: result,
             index: 0,
