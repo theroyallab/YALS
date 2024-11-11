@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
+import * as modelContainer from "@/common/modelContainer.ts";
 
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 
@@ -14,10 +15,11 @@ const unloadRoute = describeRoute({
 });
 
 router.post(
+    "/v1/unload",
     unloadRoute,
     checkModelMiddleware,
     async (c) => {
-        await c.var.model.unload();
+        await modelContainer.unloadModel();
 
         c.status(200);
         return c.body(null);
