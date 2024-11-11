@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
-import { resolver, validator as zValidator } from "hono-openapi/zod";
+import { validator as zValidator } from "hono-openapi/zod";
+import { jsonContent } from "@/common/networking.ts";
 
 import {
     CompletionRequest,
@@ -13,14 +14,7 @@ const router = new Hono();
 
 const completionsRoute = describeRoute({
     responses: {
-        200: {
-            description: "Response to completions",
-            content: {
-                "application/json": {
-                    schema: resolver(CompletionResponse),
-                },
-            },
-        },
+        200: jsonContent(CompletionResponse, "Response to completions"),
     },
 });
 

@@ -1,8 +1,8 @@
-import { logger as loggerMiddleware } from "hono/logger";
 import { cors } from "hono/cors";
+import { logger as loggerMiddleware } from "hono/logger";
+import { StatusCode } from "hono/utils/http-status";
 import { getLogger } from "logtape";
 import { apiReference } from "@scalar/hono-api-reference";
-import { notFound, onError } from "stoker/middlewares";
 
 import { Hono } from "hono";
 import { openAPISpecs } from "hono-openapi";
@@ -51,9 +51,27 @@ export function createApi() {
         }),
     );
 
-    // TODO: Create custom handlers
-    app.onError(onError);
-    app.notFound(notFound);
+    // Error handling
+    // Originally from the Stoker package
+    app.onError((err, c) => {
+        const currentStatus = "status" in err
+            ? err.status
+            : c.newResponse(null).status;
+        const statusCode = currentStatus != 200
+            ? (currentStatus as StatusCode)
+            : 500;
+
+        return c.json({
+            message: err.message,
+            stack: err.stack,
+        }, statusCode);
+    });
+
+    app.notFound((c) => {
+        return c.json({
+            message: `Method or path not found - ${c.req.method} ${c.req.path}`,
+        }, 404);
+    });
 
     // Serve
     Deno.serve({
