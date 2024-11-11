@@ -1,5 +1,7 @@
 import { delay } from "@std/async";
-import type { BaseSamplerRequest } from "@/common/sampling.ts";
+import { parse, ParsedPath } from "@std/path";
+import { BaseSamplerRequest } from "@/common/sampling.ts";
+
 import llamaSymbols from "./symbols.ts";
 
 // TODO: Move this somewhere else
@@ -312,10 +314,16 @@ export class ReadbackBuffer {
 export class Model {
     model: Deno.PointerValue;
     context: Deno.PointerValue;
+    path: ParsedPath;
 
-    private constructor(model: Deno.PointerValue, context: Deno.PointerValue) {
+    private constructor(
+        model: Deno.PointerValue,
+        context: Deno.PointerValue,
+        path: ParsedPath,
+    ) {
         this.model = model;
         this.context = context;
+        this.path = path;
     }
 
     static async init(modelPath: string, gpuLayers: number) {
@@ -331,7 +339,8 @@ export class Model {
             1,
         );
 
-        return new Model(model, context);
+        const path = parse(modelPath);
+        return new Model(model, context, path);
     }
 
     async unload() {
