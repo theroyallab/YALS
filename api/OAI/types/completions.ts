@@ -19,6 +19,8 @@ export const CompletionRequest = z.object({
         description: "Completion Request parameters",
     });
 
+export type CompletionRequest = z.infer<typeof CompletionRequest>;
+
 export const CompletionRespChoice = z.object({
     index: z.number().default(0),
     finish_reason: z.string().optional(),

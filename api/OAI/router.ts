@@ -1,14 +1,12 @@
 import { Hono } from "hono";
+import { streamSSE } from "hono/streaming";
 import { describeRoute } from "hono-openapi";
 import { validator as zValidator } from "hono-openapi/zod";
 import { jsonContent } from "@/common/networking.ts";
 
-import {
-    CompletionRequest,
-    CompletionRespChoice,
-    CompletionResponse,
-} from "./types/completions.ts";
+import { CompletionRequest, CompletionResponse } from "./types/completions.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
+import { generateCompletion, streamCompletion } from "./utils/completion.ts";
 
 const router = new Hono();
 
@@ -25,18 +23,18 @@ router.post(
     zValidator("json", CompletionRequest),
     async (c) => {
         const params = c.req.valid("json");
-        const result = await c.var.model.generate(params.prompt, params);
-        const completionChoice = await CompletionRespChoice.parseAsync({
-            text: result,
-            index: 0,
-        });
 
-        return c.json(
-            await CompletionResponse.parseAsync({
-                choices: [completionChoice],
-                model: "test",
-            }),
-        );
+        if (params.stream) {
+            return streamSSE(c, async (stream) => {
+                await streamCompletion(stream, c.var.model, params);
+            });
+        } else {
+            const completionResult = await generateCompletion(
+                c.var.model,
+                params,
+            );
+            return c.json(completionResult);
+        }
     },
 );
 

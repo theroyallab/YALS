@@ -339,10 +339,20 @@ export class Model {
         await lib.symbols.FreeCtx(this.context);
     }
 
-    async generate(
+    async generate(prompt: string, params: BaseSamplerRequest) {
+        let result = "";
+        const generator = this.generateGen(prompt, params);
+        for await (const chunk of generator) {
+            result += chunk;
+        }
+
+        return result;
+    }
+
+    async *generateGen(
         prompt: string,
         params: BaseSamplerRequest,
-    ): Promise<string> {
+    ) {
         const samplerBuilder = new SamplerBuilder(this.model);
         const seed = params.seed ??
             Math.floor(Math.random() * (0xFFFFFFFF + 1));
@@ -396,11 +406,8 @@ export class Model {
         );
 
         // Read from the read buffer
-        let result = "";
-        for await (const nextString of readbackBuffer.read()) {
-            result += nextString;
+        for await (const chunk of readbackBuffer.read()) {
+            yield chunk;
         }
-
-        return result;
     }
 }
