@@ -1,6 +1,6 @@
 import { delay } from "@std/async";
+import type { BaseSamplerRequest } from "@/common/sampling.ts";
 import llamaSymbols from "./symbols.ts";
-import type { BaseSamplerRequest } from "@/api/OAI/types/completions.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
