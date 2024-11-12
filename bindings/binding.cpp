@@ -1,9 +1,9 @@
 #include "binding.h"
 #include <iostream>
 #include <optional>
-#include <vector>
 #include <cstring>
 #include <iomanip>
+#include <vector>
 
 void TestPrint(const char* text)
 {
@@ -291,7 +291,7 @@ std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaM
     return tokenizedPrompt;
 }
 
-void InferToReadbackBuffer(
+std::string InferToReadbackBuffer(
     const llama_model* model,
     llama_sampler* sampler,
     llama_context* context,
@@ -305,9 +305,9 @@ void InferToReadbackBuffer(
     llama_batch batch = llama_batch_get_one(promptTokens.data(), promptTokens.size());
 
     llama_token newTokenId;
-    int tokenPosition = 0;
+    std::string response;
     //inference
-    for (tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; tokenPosition += batch.n_tokens ) {
+    for (int tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; tokenPosition += batch.n_tokens) {
         int n_ctx = llama_n_ctx(context);
         int n_ctx_used = llama_get_kv_cache_used_cells(context);
         if (n_ctx_used + batch.n_tokens > n_ctx) {
@@ -332,12 +332,56 @@ void InferToReadbackBuffer(
 
             auto piece = TokenToPiece(model, newTokenId).value();
             WriteToReadbackBuffer(readbackBufferPtr, strdup(piece.c_str()));
+            response += piece;
 
             // prepare the next batch with the sampled token
             batch = llama_batch_get_one(&newTokenId, 1);
         }
     }
-    readbackBufferPtr->done = true;
     
     PrintPerformanceInfo(context);
+    readbackBufferPtr->done = true;
+    return response;
+}
+
+void InferChat(const llama_model* model,
+    llama_sampler* sampler,
+    llama_context* context,
+    ReadbackBuffer* readbackBufferPtr,
+    const char* nextMessage,
+    const unsigned numberTokensToPredict)
+{
+    /*
+    typedef struct llama_chat_message {
+        const char * role;
+        const char * content;
+    };
+    */
+
+    auto messages = std::vector<llama_chat_message>();
+    std::string formatted;
+    formatted.reserve(llama_n_ctx(context));
+    int prev_len = formatted.size();
+    messages.push_back({"user", strdup(nextMessage)});
+
+    int new_len = llama_chat_apply_template(model, nullptr,
+        messages.data(), messages.size(), true, formatted.data(),formatted.size());
+    if (new_len > static_cast<int>(formatted.size())) {
+        formatted.resize(new_len);
+        new_len = llama_chat_apply_template(model, nullptr,
+            messages.data(), messages.size(), true, formatted.data(),formatted.size());
+    }
+
+    if (new_len < 0) {
+        std::cerr << "Context size exceeded, must abort." << std::endl;
+        return;
+    }
+
+    std::string prompt(formatted.begin() + prev_len, formatted.begin() + new_len);
+
+    const auto response = InferToReadbackBuffer(model, sampler, context, readbackBufferPtr, prompt.c_str(), numberTokensToPredict);
+
+    messages.push_back({"assistant", strdup(response.c_str())});
+
+    readbackBufferPtr->done = true;
 }

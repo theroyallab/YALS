@@ -417,11 +417,11 @@ export class Model {
 
         samplerBuilder.distSampler(seed);
         const sampler = samplerBuilder.build();
-        const promptPtr = new TextEncoder().encode(prompt + "\0");
 
+        const promptPtr = new TextEncoder().encode(prompt + "\0");
         const readbackBuffer = new ReadbackBuffer();
 
-        lib.symbols.InferToReadbackBuffer(
+        lib.symbols.InferChat(
             this.model,
             sampler,
             this.context,

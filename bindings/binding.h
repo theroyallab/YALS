@@ -54,13 +54,12 @@ extern "C" {
     /* SAMPLERS
         * */
 
-    void InferToReadbackBuffer(
-        const llama_model* model,
+    void InferChat(const llama_model* model,
         llama_sampler* sampler,
         llama_context* context,
         ReadbackBuffer* readbackBufferPtr,
-        const char *prompt,
-        unsigned numberTokensToPredict);
+        const char* nextMessage,
+        const unsigned numberTokensToPredict);
 
 #ifdef __cplusplus
 }

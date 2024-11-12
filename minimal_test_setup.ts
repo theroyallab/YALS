@@ -5,8 +5,8 @@ await loadModel("/home/blackroot/Desktop/YALS/Meta-Llama-3-8B-Instruct-Q4_K_M.gg
 
 const samplerRequest = BaseSamplerRequest.parse({
     temperature: 1.2,
-    top_k: 0,
-    top_p: 0.9,
+    top_k: 40,
+    top_p: 1,
     max_tokens: 35
 });
 

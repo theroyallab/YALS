@@ -135,18 +135,6 @@ export default {
         ], // void* sampler, const llama_model* model, float multiplier, float base, int32_t allowed_length, int32_t penalty_last_n, const char* const* sequence_breakers, size_t n_breakers
         result: "pointer" as const, // void*
     },
-    InferToReadbackBuffer: {
-        parameters: [
-            "pointer", // void* llamaModelPtr
-            "pointer", // void* samplerPtr
-            "pointer", // void* contextPtr
-            "pointer", // void* readbackBufferPtr
-            "pointer", // const char* prompt
-            "u32", // const unsigned numberTokensToPredict
-        ],
-        result: "void" as const,
-        nonblocking: true,
-    },
     CreateReadbackBuffer: {
         parameters: [],
         result: "pointer" as const, // void*
@@ -159,5 +147,17 @@ export default {
     IsReadbackBufferDone: {
         parameters: ["pointer"], // void* readbackBufferPtr
         result: "bool" as const,
+    },
+    InferChat: {
+        parameters: [
+            "pointer", // const llama_model* model
+            "pointer", // llama_sampler* sampler
+            "pointer", // llama_context* context
+            "pointer", // ReadbackBuffer* readbackBufferPtr
+            "pointer", // const char* nextMessage
+            "u32",    // const unsigned numberTokensToPredict
+        ],
+        result: "void" as const,
+        nonblocking: true,
     },
 } as const;
