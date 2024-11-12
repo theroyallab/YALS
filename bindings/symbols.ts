@@ -51,10 +51,6 @@ export default {
         parameters: ["pointer", "pointer"], // void* sampler, const llama_model* model
         result: "pointer" as const, // void*
     },
-    InfillSampler: {
-        parameters: ["pointer", "pointer"], // void* sampler, const llama_model* model
-        result: "pointer" as const, // void*
-    },
     LogitBiasSampler: {
         parameters: ["pointer", "pointer", "usize", "pointer"], // void* sampler, const llama_model* model, size_t nBias, const llama_logit_bias* logitBias
         result: "pointer" as const, // void*
