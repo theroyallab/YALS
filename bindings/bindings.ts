@@ -360,25 +360,6 @@ export class Model {
         const seed = params.seed ??
             Math.floor(Math.random() * (0xFFFFFFFF + 1));
 
-        if (!params.temperature_last) {
-            samplerBuilder.tempSampler(params.temperature);
-        }
-
-        samplerBuilder.topK(params.top_k);
-        samplerBuilder.topP(params.top_p, 1);
-        samplerBuilder.minPSampler(params.min_p, 1);
-        samplerBuilder.typicalSampler(params.typical, 1);
-
-        // TODO: Add guards
-        if (params.xtc_probability > 0) {
-            samplerBuilder.xtcSampler(
-                params.xtc_probability,
-                params.xtc_threshold,
-                1,
-                seed,
-            );
-        }
-
         if (params.dry_multiplier > 0) {
             samplerBuilder.drySampler(
                 params.dry_multiplier,
@@ -388,6 +369,47 @@ export class Model {
                 params.dry_sequence_breakers as string[],
             );
         }
+
+        const logitBias: LogitBias[] = [];
+        if (params.logit_bias) {
+            for (const [tokenId, bias] of Object.entries(params.logit_bias)) {
+                logitBias.push({
+                    token: parseInt(tokenId),
+                    bias: bias,
+                });
+            }
+        }
+
+        if (params.banned_tokens) {
+            const banned_tokens = params.banned_tokens as number[];
+
+            for (const tokenId of banned_tokens) {
+                logitBias.push({
+                    token: tokenId,
+                    bias: -100,
+                });
+            }
+        }
+
+        if (!params.temperature_last) {
+            samplerBuilder.tempSampler(params.temperature);
+        }
+
+        samplerBuilder.topK(params.top_k);
+        samplerBuilder.topP(params.top_p, 1);
+        samplerBuilder.minPSampler(params.min_p, 1);
+        samplerBuilder.typicalSampler(params.typical, 1);
+
+        if (params.xtc_probability > 0) {
+            samplerBuilder.xtcSampler(
+                params.xtc_probability,
+                params.xtc_threshold,
+                1,
+                seed,
+            );
+        }
+
+        samplerBuilder.logitBiasSampler(logitBias);
 
         if (params.temperature_last) {
             samplerBuilder.tempSampler(params.temperature);

@@ -7,11 +7,16 @@ const stopStringsType = z.union([
     z.string(),
     z.array(z.union([z.number(), z.string()])),
 ]).optional();
+const bannedTokensType = z.union([
+    z.array(z.number()),
+    z.string(),
+]).optional();
 const GenerationOptionsSchema = z.object({
     grammar_string: z.string().optional(),
     add_bos_token: z.boolean().default(true),
     skip_special_tokens: z.boolean().default(true),
     seed: z.number().optional(),
+    logit_bias: z.record(z.string(), z.number()).default({}),
 
     // max token aliases
     max_tokens: maxTokensType
@@ -33,6 +38,13 @@ const GenerationOptionsSchema = z.object({
             description: "Aliases: stop_sequence",
         }),
     stop_sequence: stopStringsType,
+
+    // banned_tokens aliases
+    banned_tokens: bannedTokensType
+        .openapi({
+            description: "Aliases: custom_token_bans",
+        }),
+    custom_token_bans: bannedTokensType,
 })
     .openapi({
         "description": "Generation options",
@@ -43,6 +55,7 @@ const GenerationOptionsSchema = z.object({
             max_tokens: obj.max_tokens ?? obj.max_length,
             ban_eos_token: obj.ban_eos_token ?? obj.ignore_eos ?? false,
             stop: obj.stop ?? obj.stop_sequence ?? [],
+            banned_tokens: obj.banned_tokens ?? obj.custom_token_bans ?? [],
         };
     });
 
@@ -75,7 +88,6 @@ const AlphabetSamplerSchema = z.object({
     });
 
 const repetitionPenaltyType = z.number().gt(0).optional();
-const penaltyRangeType = z.number().optional();
 const PenaltySamplerSchema = z.object({
     frequency_penalty: z.number().gte(0).default(0),
     presence_penalty: z.number().gte(0).default(0),
@@ -86,16 +98,6 @@ const PenaltySamplerSchema = z.object({
             description: "Aliases: rep_pen",
         }),
     rep_pen: repetitionPenaltyType,
-
-    // penalty_range aliases
-    penalty_range: penaltyRangeType
-        .openapi({
-            description:
-                "Aliases: repetition_range, repetition_penalty_range, rep_pen_range",
-        }),
-    repetition_range: penaltyRangeType,
-    repetition_penalty_range: penaltyRangeType,
-    rep_pen_range: penaltyRangeType,
 })
     .openapi({
         description: "Penalty samplers",
@@ -104,11 +106,6 @@ const PenaltySamplerSchema = z.object({
         return {
             ...obj,
             repetition_penalty: obj.repetition_penalty ?? obj.rep_pen ?? 1,
-            penalty_range: obj.penalty_range ??
-                obj.repetition_range ??
-                obj.repetition_penalty_range ??
-                obj.rep_pen_range ??
-                -1,
         };
     });
 
