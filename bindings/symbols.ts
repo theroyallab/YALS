@@ -16,6 +16,18 @@ export default {
         result: "pointer" as const, // void*
         nonblocking: true,
     },
+    BosToken: {
+        parameters: [
+            "pointer", // llama_model* model
+        ],
+        result: "i32" as const, // llama_token
+    },
+    EosToken: {
+        parameters: [
+            "pointer", // llama_model* model
+        ],
+        result: "i32" as const, // llama_token
+    },
     FreeSampler: {
         parameters: ["pointer"],
         result: "void",

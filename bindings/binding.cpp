@@ -20,6 +20,48 @@ void* LoadModel(const char *modelPath, int numberGpuLayers)
     return model;
 }
 
+void* InitiateCtx(void* llamaModel, const unsigned contextLength, const unsigned numBatches)
+{
+    auto* model = static_cast<llama_model*>(llamaModel);
+    llama_context_params ctx_params = llama_context_default_params();
+    ctx_params.n_ctx = contextLength;
+    ctx_params.n_batch = numBatches;
+    ctx_params.no_perf = false;
+    llama_context* ctx = llama_new_context_with_model(model, ctx_params);
+
+    if (ctx == nullptr) {
+        std::cerr << "error: couldn't make llama ctx in InitiateCtx()" << std::endl;
+        return nullptr;
+    }
+
+    return ctx;
+}
+
+llama_token BosToken(const llama_model* model)
+{
+    return llama_token_bos(model);
+}
+
+llama_token EosToken(const llama_model* model)
+{
+    return llama_token_eos(model);
+}
+
+void FreeSampler(llama_sampler* sampler)
+{
+    llama_sampler_free(sampler);
+}
+
+void FreeCtx(llama_context* ctx)
+{
+    llama_free(ctx);
+}
+
+void FreeModel(llama_model* model)
+{
+    llama_free_model(model);
+}
+
 void PrintPerformanceInfo(const llama_context* context) {
     const auto data = llama_perf_context(context);
 
@@ -68,23 +110,6 @@ void* ReadbackNext(void* readbackBufferPtr)
     buffer->lastReadbackIndex++;
 
     return stringPtr;
-}
-
-void* InitiateCtx(void* llamaModel, const unsigned contextLength, const unsigned numBatches)
-{
-    auto* model = static_cast<llama_model*>(llamaModel);
-    llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = contextLength;
-    ctx_params.n_batch = numBatches;
-    ctx_params.no_perf = false;
-    llama_context* ctx = llama_new_context_with_model(model, ctx_params);
-
-    if (ctx == nullptr) {
-        std::cerr << "error: couldn't make llama ctx in InitiateCtx()" << std::endl;
-        return nullptr;
-    }
-
-    return ctx;
 }
 
 void* MakeSampler()
@@ -348,19 +373,4 @@ void InferToReadbackBuffer(
     static_cast<ReadbackBuffer*>(readbackBufferPtr)->done = true;
     
     PrintPerformanceInfo(context);
-}
-
-void FreeSampler(llama_sampler* sampler)
-{
-    llama_sampler_free(sampler);
-}
-
-void FreeCtx(llama_context* ctx)
-{
-    llama_free(ctx);
-}
-
-void FreeModel(llama_model* model)
-{
-    llama_free_model(model);
 }

@@ -9,6 +9,8 @@ extern "C" {
     void TestPrint(const char *text);
     void* LoadModel(const char *modelPath, int numberGpuLayers);
     void* InitiateCtx(void* llamaModel, unsigned contextLength, unsigned numBatches);
+    llama_token BosToken(const llama_model* model);
+    llama_token EosToken(const llama_model* model);
     void FreeSampler(llama_sampler* sampler);
     void FreeModel(llama_model* model);
     void FreeCtx(llama_context* ctx);
