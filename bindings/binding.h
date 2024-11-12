@@ -27,10 +27,9 @@ extern "C" {
     void* InfillSampler(void* sampler, const llama_model* model);
     void* LogitBiasSampler(void* sampler, const llama_model* model, size_t nBias, const llama_logit_bias* logitBias);
     void* MinPSampler(void* sampler, float minP, size_t minKeep);
-    void* MirostatSampler(void* sampler, int nVocab, uint32_t seed, float tau, float eta, int m);
+    void* MirostatSampler(void* sampler, void* llamaModel, uint32_t seed, float tau, float eta, int m);
     void* MirostatV2Sampler(void* sampler, uint32_t seed, float tau, float eta);
-    void* PenaltiesSampler(void* sampler, int nVocab, llama_token eosToken, llama_token nlToken, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos);
-    void* SoftmaxSampler(void* sampler);
+    void* PenaltiesSampler(void* sampler, void* llamaModel, llama_token nlToken, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos);
     void* TailFreeSampler(void* sampler, float z, size_t minKeep);
     void* TempSampler(void* sampler, float temp);
     void* TempExtSampler(void* sampler, float temp, float dynatempRange, float dynatempExponent);

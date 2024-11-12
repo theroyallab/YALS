@@ -51,8 +51,12 @@ export default {
         parameters: ["pointer", "pointer"], // void* sampler, const llama_model* model
         result: "pointer" as const, // void*
     },
+    InfillSampler: {
+        parameters: ["pointer", "pointer"], // void* sampler, const llama_model* model
+        result: "pointer" as const, // void*
+    },
     LogitBiasSampler: {
-        parameters: ["pointer", "pointer", "usize", "pointer"], // void* sampler, const struct llama_model* model, size_t nBias, const llama_logit_bias* logitBias
+        parameters: ["pointer", "pointer", "usize", "pointer"], // void* sampler, const llama_model* model, size_t nBias, const llama_logit_bias* logitBias
         result: "pointer" as const, // void*
     },
     MinPSampler: {
@@ -60,7 +64,7 @@ export default {
         result: "pointer" as const, // void*
     },
     MirostatSampler: {
-        parameters: ["pointer", "i32", "u32", "f32", "f32", "i32"], // void* sampler, int nVocab, uint32_t seed, float tau, float eta, int m
+        parameters: ["pointer", "pointer", "u32", "f32", "f32", "i32"], // void* sampler, void* llamaModel, uint32_t seed, float tau, float eta, int m
         result: "pointer" as const, // void*
     },
     MirostatV2Sampler: {
@@ -80,10 +84,6 @@ export default {
             "bool",
             "bool",
         ], // void* sampler, int nVocab, llama_token eosToken, llama_token nlToken, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos
-        result: "pointer" as const, // void*
-    },
-    SoftmaxSampler: {
-        parameters: ["pointer"], // void* sampler
         result: "pointer" as const, // void*
     },
     TailFreeSampler: {

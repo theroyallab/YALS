@@ -90,7 +90,6 @@ export class SamplerBuilder {
         const view = new DataView(buffer);
 
         // Fill the buffer with the logit bias data
-
         // only works for little endian rn
         logitBias.forEach((bias, index) => {
             view.setInt32(index * 8, bias.token, true);
@@ -160,7 +159,6 @@ export class SamplerBuilder {
     }
 
     mirostatSampler(
-        nVocab: number,
         seed: number,
         tau: number,
         eta: number,
@@ -168,7 +166,7 @@ export class SamplerBuilder {
     ) {
         this.sampler = lib.symbols.MirostatSampler(
             this.sampler,
-            nVocab,
+            this.model,
             seed,
             tau,
             eta,
@@ -208,10 +206,6 @@ export class SamplerBuilder {
             penalizeNl,
             ignoreEos,
         );
-    }
-
-    softmaxSampler() {
-        this.sampler = lib.symbols.SoftmaxSampler(this.sampler);
     }
 
     tailFreeSampler(z: number, minKeep: number) {

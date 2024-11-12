@@ -1,5 +1,4 @@
 #include "binding.h"
-
 #include <iostream>
 #include <optional>
 #include <vector>
@@ -16,12 +15,7 @@ void* LoadModel(const char *modelPath, int numberGpuLayers)
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = numberGpuLayers;
 
-    std::cout << modelPath << std::endl;
-
     llama_model* model = llama_load_model_from_file(modelPath, model_params);
-
-    llama_add_bos_token(model);
-    llama_add_eos_token(model);
 
     return model;
 }
@@ -165,8 +159,10 @@ void* MinPSampler(void* sampler, float minP, size_t minKeep)
 }
 
 // Depends on temperature, should be applied after tempSampler
-void* MirostatSampler(void* sampler, int nVocab, uint32_t seed, float tau, float eta, int m)
+void* MirostatSampler(void* sampler, void* llamaModel, uint32_t seed, float tau, float eta, int m)
 {
+    auto* model = static_cast<llama_model*>(llamaModel);
+    int nVocab = llama_n_vocab(model);
     llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_mirostat(nVocab, seed, tau, eta, m));
     return sampler;
 }
@@ -179,16 +175,11 @@ void* MirostatV2Sampler(void* sampler, uint32_t seed, float tau, float eta)
 }
 
 // Typically applied early in the sampling chain
-void* PenaltiesSampler(void* sampler, int nVocab, llama_token eosToken, llama_token nlToken, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos)
+void* PenaltiesSampler(void* sampler, void* llamaModel, llama_token nlToken, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_penalties(nVocab, eosToken, nlToken, penaltyLastN, penaltyRepeat, penaltyFreq, penaltyPresent, penalizeNl, ignoreEos));
-    return sampler;
-}
-
-// Typically applied after other sampling methods and before distSampler
-void* SoftmaxSampler(void* sampler)
-{
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_softmax());
+    auto* model = static_cast<llama_model*>(llamaModel);
+    int nVocab = llama_n_vocab(model);
+    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_penalties(nVocab, LLAMA_TOKEN_NULL, nlToken, penaltyLastN, penaltyRepeat, penaltyFreq, penaltyPresent, penalizeNl, ignoreEos));
     return sampler;
 }
 
