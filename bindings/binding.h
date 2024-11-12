@@ -3,58 +3,71 @@
 #include "llama.h"
 
 #ifdef __cplusplus
+
 extern "C" {
 #endif
+    struct ReadbackBuffer;
 
-    void TestPrint(const char *text);
-    void* LoadModel(const char *modelPath, int numberGpuLayers);
-    void* InitiateCtx(void* llamaModel, unsigned contextLength, unsigned numBatches);
+    void TestPrint(const char* text);
+    llama_model* LoadModel(const char* modelPath, int numberGpuLayers);
+    llama_context* InitiateCtx(llama_model* model, unsigned contextLength, unsigned numBatches);
     llama_token BosToken(const llama_model* model);
     llama_token EosToken(const llama_model* model);
     void FreeSampler(llama_sampler* sampler);
     void FreeModel(llama_model* model);
     void FreeCtx(llama_context* ctx);
 
-    void* CreateReadbackBuffer();
-    void* ReadbackNext(void* readbackBufferPtr);
-    void WriteToReadbackBuffer(void* readbackBufferPtr, char* stringData);
-    bool IsReadbackBufferDone(void* readbackBufferPtr);
+    ReadbackBuffer* CreateReadbackBuffer();
+
+    char* ReadbackNext(ReadbackBuffer *buffer);
+    void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData);
+    bool IsReadbackBufferDone(const ReadbackBuffer* buffer);
 
     /* SAMPLERS
      * */
-    void* MakeSampler();
-    void* DistSampler(void* sampler, uint32_t seed);
-    void* GrammarSampler(void* sampler, const llama_model* model, const char* grammar, const char* root);
-    void* GreedySampler(void* sampler);
-    void* InfillSampler(void* sampler, const llama_model* model);
-    void* LogitBiasSampler(void* sampler, const llama_model* model, size_t nBias, const llama_logit_bias* logitBias);
-    void* MinPSampler(void* sampler, float minP, size_t minKeep);
-    void* MirostatSampler(void* sampler, void* llamaModel, uint32_t seed, float tau, float eta, int m);
-    void* MirostatV2Sampler(void* sampler, uint32_t seed, float tau, float eta);
-    void* PenaltiesSampler(void* sampler, void* llamaModel, llama_token nlToken, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos);
-    void* TailFreeSampler(void* sampler, float z, size_t minKeep);
-    void* TempSampler(void* sampler, float temp);
-    void* TempExtSampler(void* sampler, float temp, float dynatempRange, float dynatempExponent);
-    void* TopKSampler(void* sampler, int topK);
-    void* TopPSampler(void* sampler, float topP, size_t minKeep);
-    void* TypicalSampler(void* sampler, float typicalP, size_t minKeep);
-    void* XtcSampler(void* sampler, float xtcProbability, float xtcThreshold, size_t minKeep, uint32_t seed);
-    void* DrySampler(void* sampler, const llama_model* model, float multiplier,
-                     float base, size_t allowed_length, size_t penalty_last_n,
-                     const char** sequence_breakers, size_t n_breakers);
+    llama_sampler* MakeSampler();
+    llama_sampler* DistSampler(llama_sampler* sampler, uint32_t seed);
+    llama_sampler* GrammarSampler(
+        llama_sampler* sampler, const llama_model* model, const char* grammar, const char* root);
+    llama_sampler* GreedySampler(llama_sampler* sampler);
+    llama_sampler* InfillSampler(llama_sampler* sampler, const llama_model* model);
+    llama_sampler* LogitBiasSampler(
+        llama_sampler* sampler, const llama_model* model, int32_t nBias, const llama_logit_bias* logitBias);
+    llama_sampler* MinPSampler(llama_sampler* sampler, float minP, size_t minKeep);
+    llama_sampler* MirostatSampler(
+        llama_sampler* sampler, const llama_model* model, uint32_t seed, float tau, float eta, int m);
+    llama_sampler* MirostatV2Sampler(llama_sampler* sampler, uint32_t seed, float tau, float eta);
+    llama_sampler* PenaltiesSampler(
+        llama_sampler* sampler, const llama_model* model, llama_token nlToken, int penaltyLastN, float penaltyRepeat,
+        float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos);
+    llama_sampler* TailFreeSampler(llama_sampler* sampler, float z, size_t minKeep);
+    llama_sampler* TempSampler(llama_sampler* sampler, float temp);
+    llama_sampler* TempExtSampler(llama_sampler* sampler, float temp, float dynatempRange, float dynatempExponent);
+    llama_sampler* TopKSampler(llama_sampler* sampler, int topK);
+    llama_sampler* TopPSampler(llama_sampler* sampler, float topP, size_t minKeep);
+    llama_sampler* TypicalSampler(llama_sampler* sampler, float typicalP, size_t minKeep);
+    llama_sampler* XtcSampler(
+        llama_sampler* sampler, float xtcProbability, float xtcThreshold, size_t minKeep, uint32_t seed);
+    llama_sampler* DrySampler(
+        llama_sampler* sampler, const llama_model* model, float multiplier, float base, int32_t allowed_length,
+        int32_t penalty_last_n, const char** sequence_breakers, size_t n_breakers);
     /* SAMPLERS
         * */
 
-    void Infer(void *llamaModelPtr, void *samplerPtr, void *contextPtr,
-                const char *prompt, unsigned numberTokensToPredict);
+    void Infer(
+        const llama_model* model,
+        llama_sampler* sampler,
+        llama_context* context,
+        const char *prompt,
+        unsigned numberTokensToPredict);
 
     void InferToReadbackBuffer(
-        void* llamaModelPtr,
-        void* samplerPtr,
-        void* contextPtr,
-        void* readbackBufferPtr,
+        const llama_model* model,
+        llama_sampler* sampler,
+        llama_context* context,
+        ReadbackBuffer* readbackBufferPtr,
         const char *prompt,
-        const unsigned numberTokensToPredict);
+        unsigned numberTokensToPredict);
 
 #ifdef __cplusplus
 }

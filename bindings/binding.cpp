@@ -5,12 +5,12 @@
 #include <cstring>
 #include <iomanip>
 
-void TestPrint(const char *text)
+void TestPrint(const char* text)
 {
     std::cout << text << std::endl;
 }
 
-void* LoadModel(const char *modelPath, int numberGpuLayers)
+llama_model* LoadModel(const char* modelPath, int numberGpuLayers)
 {
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = numberGpuLayers;
@@ -20,9 +20,8 @@ void* LoadModel(const char *modelPath, int numberGpuLayers)
     return model;
 }
 
-void* InitiateCtx(void* llamaModel, const unsigned contextLength, const unsigned numBatches)
+llama_context* InitiateCtx(llama_model* model, const unsigned contextLength, const unsigned numBatches)
 {
-    auto* model = static_cast<llama_model*>(llamaModel);
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = contextLength;
     ctx_params.n_batch = numBatches;
@@ -65,8 +64,8 @@ void FreeModel(llama_model* model)
 void PrintPerformanceInfo(const llama_context* context) {
     const auto data = llama_perf_context(context);
 
-    float prompt_tok_per_sec = 1e3 / data.t_p_eval_ms * data.n_p_eval;
-    float gen_tok_per_sec = 1e3 / data.t_eval_ms * data.n_eval;
+    const double prompt_tok_per_sec = 1e3 / data.t_p_eval_ms * data.n_p_eval;
+    const double gen_tok_per_sec = 1e3 / data.t_eval_ms * data.n_eval;
 
     std::cout << "\n\n" << std::fixed << std::setprecision(2)
               << "Prompt Processing: " << prompt_tok_per_sec << " tok/s, "
@@ -80,26 +79,23 @@ struct ReadbackBuffer
     std::vector<char*>* data = new std::vector<char*>();
 };
 
-bool IsReadbackBufferDone(void* readbackBufferPtr)
+bool IsReadbackBufferDone(const ReadbackBuffer* buffer)
 {
-    return static_cast<ReadbackBuffer*>(readbackBufferPtr)->done;
+    return buffer->done;
 }
 
-void* CreateReadbackBuffer()
+ReadbackBuffer* CreateReadbackBuffer()
 {
     return new ReadbackBuffer {};
 }
 
-void WriteToReadbackBuffer(void* readbackBufferPtr, char* stringData)
+void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData)
 {
-    auto* buffer = static_cast<ReadbackBuffer*>(readbackBufferPtr);
     buffer->data->push_back(stringData);
 }
 
-void* ReadbackNext(void* readbackBufferPtr)
+char* ReadbackNext(ReadbackBuffer* buffer)
 {
-    auto* buffer = static_cast<ReadbackBuffer*>(readbackBufferPtr);
-
     //we're racing faster than writes or at the end of the buffer.
     if (buffer->lastReadbackIndex >= buffer->data->size())
     {
@@ -112,7 +108,7 @@ void* ReadbackNext(void* readbackBufferPtr)
     return stringPtr;
 }
 
-void* MakeSampler()
+llama_sampler* MakeSampler()
 {
     llama_sampler_chain_params lparams = llama_sampler_chain_default_params();
     lparams.no_perf = false;
@@ -121,25 +117,25 @@ void* MakeSampler()
 }
 
 // Independent of order
-void* DistSampler(void* sampler, uint32_t seed)
+llama_sampler* DistSampler(llama_sampler* sampler, const uint32_t seed)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_dist(seed));
+    llama_sampler_chain_add(sampler, llama_sampler_init_dist(seed));
     return sampler;
 }
 
 // Independent of order
-void* GrammarSampler(void* sampler, const llama_model* model, const char* grammar, const char* root)
+llama_sampler* GrammarSampler(llama_sampler* sampler, const llama_model* model, const char* grammar, const char* root)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_grammar(model, grammar, root));
+    llama_sampler_chain_add(sampler, llama_sampler_init_grammar(model, grammar, root));
     return sampler;
 }
 
-void* DrySampler(void* sampler, const llama_model* model, float multiplier,
-                 float base, size_t allowed_length, size_t penalty_last_n,
-                 const char** sequence_breakers, size_t n_breakers)
+llama_sampler* DrySampler(llama_sampler* sampler, const llama_model* model, const float multiplier,
+                          const float base, const int32_t allowed_length, const int32_t penalty_last_n,
+                          const char** sequence_breakers, const size_t n_breakers)
 {
     llama_sampler_chain_add(
-        static_cast<llama_sampler*>(sampler),
+        sampler,
         llama_sampler_init_dry(
             model, multiplier, base, allowed_length,
             penalty_last_n, sequence_breakers, n_breakers
@@ -149,24 +145,25 @@ void* DrySampler(void* sampler, const llama_model* model, float multiplier,
 }
 
 // Typically used as the last sampler in the chain
-void* GreedySampler(void* sampler)
+llama_sampler* GreedySampler(llama_sampler* sampler)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_greedy());
+    llama_sampler_chain_add(sampler, llama_sampler_init_greedy());
     return sampler;
 }
 
 // Independent of order
-void* InfillSampler(void* sampler, const llama_model* model)
+llama_sampler* InfillSampler(llama_sampler* sampler, const llama_model* model)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_infill(model));
+    llama_sampler_chain_add(sampler, llama_sampler_init_infill(model));
     return sampler;
 }
 
 // Typically applied early in the sampling chain
-void* LogitBiasSampler(void* sampler, const llama_model* model, size_t nBias, const llama_logit_bias* logitBias)
+llama_sampler* LogitBiasSampler(
+    llama_sampler* sampler, const llama_model* model, const int32_t nBias, const llama_logit_bias* logitBias)
 {
     llama_sampler_chain_add(
-        static_cast<llama_sampler*>(sampler),
+        sampler,
         llama_sampler_init_logit_bias(
             llama_n_vocab(model),
             nBias,
@@ -177,90 +174,98 @@ void* LogitBiasSampler(void* sampler, const llama_model* model, size_t nBias, co
 }
 
 // Independent of order, but typically applied after topK or topP
-void* MinPSampler(void* sampler, float minP, size_t minKeep)
+llama_sampler* MinPSampler(llama_sampler* sampler, const float minP, const size_t minKeep)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_min_p(minP, minKeep));
+    llama_sampler_chain_add(sampler, llama_sampler_init_min_p(minP, minKeep));
     return sampler;
 }
 
 // Depends on temperature, should be applied after tempSampler
-void* MirostatSampler(void* sampler, void* llamaModel, uint32_t seed, float tau, float eta, int m)
+llama_sampler* MirostatSampler(
+    llama_sampler* sampler, const llama_model* model, const uint32_t seed,
+    const float tau, const float eta, const int m)
 {
-    auto* model = static_cast<llama_model*>(llamaModel);
-    int nVocab = llama_n_vocab(model);
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_mirostat(nVocab, seed, tau, eta, m));
+    const int nVocab = llama_n_vocab(model);
+    llama_sampler_chain_add(sampler, llama_sampler_init_mirostat(nVocab, seed, tau, eta, m));
     return sampler;
 }
 
 // Depends on temperature, should be applied after tempSampler
-void* MirostatV2Sampler(void* sampler, uint32_t seed, float tau, float eta)
+llama_sampler* MirostatV2Sampler(llama_sampler* sampler, const uint32_t seed, const float tau, const float eta)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_mirostat_v2(seed, tau, eta));
+    llama_sampler_chain_add(sampler, llama_sampler_init_mirostat_v2(seed, tau, eta));
     return sampler;
 }
 
 // Typically applied early in the sampling chain
-void* PenaltiesSampler(void* sampler, void* llamaModel, llama_token nlToken, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos)
+llama_sampler* PenaltiesSampler(llama_sampler* sampler, const llama_model* model,
+                                const llama_token nlToken, const int penaltyLastN, const float penaltyRepeat,
+                                const float penaltyFreq, const float penaltyPresent, const bool penalizeNl,
+                                const bool ignoreEos)
 {
-    auto* model = static_cast<llama_model*>(llamaModel);
-    int nVocab = llama_n_vocab(model);
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_penalties(nVocab, LLAMA_TOKEN_NULL, nlToken, penaltyLastN, penaltyRepeat, penaltyFreq, penaltyPresent, penalizeNl, ignoreEos));
+    const int nVocab = llama_n_vocab(model);
+    llama_sampler_chain_add(sampler, llama_sampler_init_penalties(
+        nVocab, LLAMA_TOKEN_NULL, nlToken, penaltyLastN,
+        penaltyRepeat, penaltyFreq, penaltyPresent, penalizeNl, ignoreEos));
     return sampler;
 }
 
 // Independent of order, but typically applied after topK or topP
-void* TailFreeSampler(void* sampler, float z, size_t minKeep)
+llama_sampler* TailFreeSampler(llama_sampler* sampler, const float z, const size_t minKeep)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_tail_free(z, minKeep));
+    llama_sampler_chain_add(sampler, llama_sampler_init_tail_free(z, minKeep));
     return sampler;
 }
 
 // Typically applied early in the sampling chain
-void* TempSampler(void* sampler, float temp)
+llama_sampler* TempSampler(llama_sampler* sampler, const float temp)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_temp(temp));
+    llama_sampler_chain_add(sampler, llama_sampler_init_temp(temp));
     return sampler;
 }
 
 // Typically applied early in the sampling chain
-void* TempExtSampler(void* sampler, float temp, float dynatempRange, float dynatempExponent)
+llama_sampler* TempExtSampler(
+    llama_sampler* sampler, const float temp, const float dynatempRange, const float dynatempExponent)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_temp_ext(temp, dynatempRange, dynatempExponent));
+    llama_sampler_chain_add(sampler, llama_sampler_init_temp_ext(temp, dynatempRange, dynatempExponent));
     return sampler;
 }
 
 // Typically applied early in the sampling chain
-void* TopKSampler(void* sampler, int topK)
+llama_sampler* TopKSampler(llama_sampler* sampler, const int topK)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_top_k(topK));
+    llama_sampler_chain_add(sampler, llama_sampler_init_top_k(topK));
     return sampler;
 }
 
 // Typically applied after topKSampler
-void* TopPSampler(void* sampler, float topP, size_t minKeep)
+llama_sampler* TopPSampler(llama_sampler* sampler, const float topP, const size_t minKeep)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_top_p(topP, minKeep));
+    llama_sampler_chain_add(sampler, llama_sampler_init_top_p(topP, minKeep));
     return sampler;
 }
 
 // Independent of order, but typically applied after topK or topP
-void* TypicalSampler(void* sampler, float typicalP, size_t minKeep)
+llama_sampler* TypicalSampler(llama_sampler* sampler, const float typicalP, const size_t minKeep)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_typical(typicalP, minKeep));
+    llama_sampler_chain_add(sampler, llama_sampler_init_typical(typicalP, minKeep));
     return sampler;
 }
 
 // Independent of order
-void* XtcSampler(void* sampler, float xtcProbability, float xtcThreshold, size_t minKeep, uint32_t seed)
+llama_sampler* XtcSampler(
+    llama_sampler* sampler, const float xtcProbability, const float xtcThreshold,
+    const size_t minKeep, const uint32_t seed)
 {
-    llama_sampler_chain_add(static_cast<llama_sampler*>(sampler), llama_sampler_init_xtc(xtcProbability, xtcThreshold, minKeep, seed));
+    llama_sampler_chain_add(sampler, llama_sampler_init_xtc(xtcProbability, xtcThreshold, minKeep, seed));
     return sampler;
 }
 
-std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const unsigned id)
+std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const llama_token id)
 {
     char buf[128];
-    int n = llama_token_to_piece(llamaModel, id, buf, sizeof(buf), 0, true);
+    const int n = llama_token_to_piece(llamaModel, id, buf, sizeof(buf), 0, true);
     if (n < 0) {
         std::cerr << "error: failed to convert token to piece in TokenToPiece()" << std::endl;
         return std::nullopt;
@@ -270,9 +275,12 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const uns
 
 std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaModel, const std::string_view& prompt)
 {
-    const int n_prompt = -llama_tokenize(llamaModel, prompt.data(), prompt.size(), nullptr, 0, true, true);
+    const int n_prompt = -llama_tokenize(
+        llamaModel, prompt.data(), prompt.size(),
+        nullptr, 0, true, true);
     std::vector<llama_token> tokenizedPrompt(n_prompt);
-    if (llama_tokenize(llamaModel, prompt.data(), prompt.size(), tokenizedPrompt.data(), tokenizedPrompt.size(), true, true) < 0) {
+    if (llama_tokenize(llamaModel, prompt.data(), prompt.size(),
+        tokenizedPrompt.data(), tokenizedPrompt.size(), true, true) < 0) {
         std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
         return std::nullopt;
     }
@@ -280,17 +288,13 @@ std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaM
 }
 
 void Infer(
-    void* llamaModelPtr,
-    void* samplerPtr,
-    void* contextPtr,
-    const char *prompt,
+    const llama_model* model,
+    llama_sampler* sampler,
+    llama_context* context,
+    const char* prompt,
     const unsigned numberTokensToPredict)
 {
-    const auto llamaModel = static_cast<llama_model*>(llamaModelPtr);
-    const auto sampler = static_cast<llama_sampler*>(samplerPtr);
-    const auto context = static_cast<llama_context*>(contextPtr);
-
-    auto promptTokens = TokenizePrompt(llamaModel, prompt).value();
+    auto promptTokens = TokenizePrompt(model, prompt).value();
 
     const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
     llama_batch batch = llama_batch_get_one(promptTokens.data(), promptTokens.size());
@@ -310,11 +314,11 @@ void Infer(
             newTokenId = llama_sampler_sample(sampler, context, -1);
 
             // is it an end of generation?
-            if (llama_token_is_eog(llamaModel, newTokenId)) {
+            if (llama_token_is_eog(model, newTokenId)) {
                 break;
             }
 
-            std::cout << TokenToPiece(llamaModel, newTokenId).value();
+            std::cout << TokenToPiece(model, newTokenId).value();
             std::flush(std::cout);
 
             // prepare the next batch with the sampled token
@@ -328,18 +332,14 @@ void Infer(
 }
 
 void InferToReadbackBuffer(
-    void* llamaModelPtr,
-    void* samplerPtr,
-    void* contextPtr,
-    void* readbackBufferPtr,
-    const char *prompt,
+    const llama_model* model,
+    llama_sampler* sampler,
+    llama_context* context,
+    ReadbackBuffer* readbackBufferPtr,
+    const char* prompt,
     const unsigned numberTokensToPredict)
 {
-    const auto llamaModel = static_cast<llama_model*>(llamaModelPtr);
-    const auto sampler = static_cast<llama_sampler*>(samplerPtr);
-    const auto context = static_cast<llama_context*>(contextPtr);
-
-    auto promptTokens = TokenizePrompt(llamaModel, prompt).value();
+    auto promptTokens = TokenizePrompt(model, prompt).value();
 
     const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
     llama_batch batch = llama_batch_get_one(promptTokens.data(), promptTokens.size());
@@ -359,18 +359,18 @@ void InferToReadbackBuffer(
             newTokenId = llama_sampler_sample(sampler, context, -1);
 
             // is it an end of generation?
-            if (llama_token_is_eog(llamaModel, newTokenId)) {
+            if (llama_token_is_eog(model, newTokenId)) {
                 break;
             }
 
-            auto piece = TokenToPiece(llamaModel, newTokenId).value();
+            auto piece = TokenToPiece(model, newTokenId).value();
             WriteToReadbackBuffer(readbackBufferPtr, strdup(piece.c_str()));
 
             // prepare the next batch with the sampled token
             batch = llama_batch_get_one(&newTokenId, 1);
         }
     }
-    static_cast<ReadbackBuffer*>(readbackBufferPtr)->done = true;
+    readbackBufferPtr->done = true;
     
     PrintPerformanceInfo(context);
 }

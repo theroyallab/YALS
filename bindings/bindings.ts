@@ -102,7 +102,7 @@ export class SamplerBuilder {
         this.sampler = lib.symbols.LogitBiasSampler(
             this.sampler,
             this.model,
-            BigInt(nBias),
+            nBias,
             ptr,
         );
     }
@@ -143,8 +143,8 @@ export class SamplerBuilder {
             this.model,
             multiplier,
             base,
-            BigInt(allowedLength),
-            BigInt(penaltyLastN),
+            allowedLength,
+            penaltyLastN,
             Deno.UnsafePointer.of(ptrArrayBuffer),
             BigInt(sequenceBreakers.length),
         );

@@ -64,7 +64,7 @@ export default {
         result: "pointer" as const, // void*
     },
     LogitBiasSampler: {
-        parameters: ["pointer", "pointer", "usize", "pointer"], // void* sampler, const llama_model* model, size_t nBias, const llama_logit_bias* logitBias
+        parameters: ["pointer", "pointer", "i32", "pointer"], // void* sampler, const llama_model* model, int32_t nBias, const llama_logit_bias* logitBias
         result: "pointer" as const, // void*
     },
     MinPSampler: {
@@ -128,11 +128,11 @@ export default {
             "pointer",
             "f32",
             "f32",
-            "u64",
-            "u64",
+            "i32",
+            "i32",
             "pointer",
             "u64",
-        ], // void* sampler, const llama_model* model, float multiplier, float base, size_t allowed_length, size_t penalty_last_n, const char* const* sequence_breakers, size_t n_breakers
+        ], // void* sampler, const llama_model* model, float multiplier, float base, int32_t allowed_length, int32_t penalty_last_n, const char* const* sequence_breakers, size_t n_breakers
         result: "pointer" as const, // void*
     },
     Infer: {
