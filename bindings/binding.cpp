@@ -273,8 +273,7 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
     return std::string{buf, static_cast<size_t>(n)};
 }
 
-std::optional<std::vector<llama_token>>
-TokenizePrompt(const llama_model* llamaModel, llama_context* context, const std::string_view& prompt) {
+std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaModel, llama_context* context, const std::string_view& prompt) {
 
     const int n_prompt = -llama_tokenize(llamaModel, prompt.data(), prompt.size(),
                                        nullptr, 0, true, true);
@@ -309,10 +308,17 @@ void InferToReadbackBuffer(
     int tokenPosition = 0;
     //inference
     for (tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; tokenPosition += batch.n_tokens ) {
+        int n_ctx = llama_n_ctx(context);
+        int n_ctx_used = llama_get_kv_cache_used_cells(context);
+        if (n_ctx_used + batch.n_tokens > n_ctx) {
+          std::cerr << "Context size exceeded, must abort." << std::endl;
+          break;
+        }
+
         // evaluate the current batch with the transformer model
         if (llama_decode(context, batch)) {
             std::cerr << "error: failed to eval, return code 1 in Infer()" << std::endl;
-            return;
+            break;
         }
 
         // sample the next token
