@@ -273,62 +273,23 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
     return std::string{buf, static_cast<size_t>(n)};
 }
 
-std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaModel, const std::string_view& prompt)
-{
-    const int n_prompt = -llama_tokenize(
-        llamaModel, prompt.data(), prompt.size(),
-        nullptr, 0, true, true);
+std::optional<std::vector<llama_token>>
+TokenizePrompt(const llama_model* llamaModel, llama_context* context, const std::string_view& prompt) {
+
+    const int n_prompt = -llama_tokenize(llamaModel, prompt.data(), prompt.size(),
+                                       nullptr, 0, true, true);
     std::vector<llama_token> tokenizedPrompt(n_prompt);
+    
+    bool add_bos = llama_get_kv_cache_used_cells(context) == 0;
+
     if (llama_tokenize(llamaModel, prompt.data(), prompt.size(),
-        tokenizedPrompt.data(), tokenizedPrompt.size(), true, true) < 0) {
+        tokenizedPrompt.data(), tokenizedPrompt.size(),
+        add_bos, true) < 0) {
         std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
         return std::nullopt;
     }
+
     return tokenizedPrompt;
-}
-
-void Infer(
-    const llama_model* model,
-    llama_sampler* sampler,
-    llama_context* context,
-    const char* prompt,
-    const unsigned numberTokensToPredict)
-{
-    auto promptTokens = TokenizePrompt(model, prompt).value();
-
-    const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
-    llama_batch batch = llama_batch_get_one(promptTokens.data(), promptTokens.size());
-
-    int nDecode = 0;
-    llama_token newTokenId;
-    //inference
-    for (int tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; tokenPosition += batch.n_tokens) {
-        // evaluate the current batch with the transformer model
-        if (llama_decode(context, batch)) {
-            std::cerr << "error: failed to eval, return code 1 in Infer()" << std::endl;
-            return;
-        }
-
-        // sample the next token
-        {
-            newTokenId = llama_sampler_sample(sampler, context, -1);
-
-            // is it an end of generation?
-            if (llama_token_is_eog(model, newTokenId)) {
-                break;
-            }
-
-            std::cout << TokenToPiece(model, newTokenId).value();
-            std::flush(std::cout);
-
-            // prepare the next batch with the sampled token
-            batch = llama_batch_get_one(&newTokenId, 1);
-
-            nDecode += 1;
-        }
-    }
-
-    PrintPerformanceInfo(context);
 }
 
 void InferToReadbackBuffer(
@@ -339,7 +300,7 @@ void InferToReadbackBuffer(
     const char* prompt,
     const unsigned numberTokensToPredict)
 {
-    auto promptTokens = TokenizePrompt(model, prompt).value();
+    auto promptTokens = TokenizePrompt(model, context, prompt).value();
 
     const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
     llama_batch batch = llama_batch_get_one(promptTokens.data(), promptTokens.size());

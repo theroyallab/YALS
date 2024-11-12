@@ -54,13 +54,6 @@ extern "C" {
     /* SAMPLERS
         * */
 
-    void Infer(
-        const llama_model* model,
-        llama_sampler* sampler,
-        llama_context* context,
-        const char *prompt,
-        unsigned numberTokensToPredict);
-
     void InferToReadbackBuffer(
         const llama_model* model,
         llama_sampler* sampler,

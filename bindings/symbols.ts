@@ -135,17 +135,6 @@ export default {
         ], // void* sampler, const llama_model* model, float multiplier, float base, int32_t allowed_length, int32_t penalty_last_n, const char* const* sequence_breakers, size_t n_breakers
         result: "pointer" as const, // void*
     },
-    Infer: {
-        parameters: [
-            "pointer", // void* llamaModelPtr
-            "pointer", // void* samplerPtr
-            "pointer", // void* contextPtr
-            "pointer", // const char *prompt
-            "u32", // unsigned numberTokensToPredict
-        ],
-        result: "void" as const,
-        nonblocking: true,
-    },
     InferToReadbackBuffer: {
         parameters: [
             "pointer", // void* llamaModelPtr
