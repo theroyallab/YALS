@@ -46,6 +46,11 @@ llama_token EosToken(const llama_model* model)
     return llama_token_eos(model);
 }
 
+llama_token EotToken(const llama_model* model)
+{
+    return llama_token_eot(model);
+}
+
 const char* TokenToString(const llama_model* model, const llama_token token) {
     return llama_token_get_text(model, token);
 }

@@ -28,6 +28,12 @@ export default {
         ],
         result: "i32" as const, // llama_token
     },
+    EotToken: {
+        parameters: [
+            "pointer", // llama_model* model
+        ],
+        result: "i32" as const, // llama_token
+    },
     FreeSampler: {
         parameters: ["pointer"],
         result: "void",

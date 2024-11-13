@@ -13,6 +13,7 @@ extern "C" {
     llama_context* InitiateCtx(llama_model* model, unsigned contextLength, unsigned numBatches);
     llama_token BosToken(const llama_model* model);
     llama_token EosToken(const llama_model* model);
+    llama_token EotToken(const llama_model* model);
     void FreeSampler(llama_sampler* sampler);
     void FreeModel(llama_model* model);
     void FreeCtx(llama_context* ctx);
