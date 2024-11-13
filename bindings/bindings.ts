@@ -292,19 +292,67 @@ export class ReadbackBuffer {
     }
 }
 
+interface Token {
+    id: number;
+    piece: string;
+}
+
+class Tokenizer {
+    bosToken: Token;
+    eosToken: Token;
+    eotToken: Token;
+
+    private constructor(bosToken: Token, eosToken: Token, eotToken: Token) {
+        this.bosToken = bosToken;
+        this.eosToken = eosToken;
+        this.eotToken = eotToken;
+    }
+
+    static async init(model: Deno.PointerValue) {
+        const bosTokenId = lib.symbols.BosToken(model);
+        const eosTokenId = lib.symbols.EosToken(model);
+        const eotTokenId = lib.symbols.EotToken(model);
+
+        const bosTokenPiece = await this.tokenToText(model, bosTokenId);
+        const eosTokenPiece = await this.tokenToText(model, eosTokenId);
+        const eotTokenPiece = await this.tokenToText(model, eotTokenId);
+
+        return new Tokenizer(
+            { id: bosTokenId, piece: bosTokenPiece },
+            { id: eosTokenId, piece: eosTokenPiece },
+            { id: eotTokenId, piece: eotTokenPiece },
+        );
+    }
+
+    static async tokenToText(model: Deno.PointerValue, tokenId: number) {
+        const stringPtr = await lib.symbols.TokenToString(model, tokenId);
+
+        // Empty piece
+        if (stringPtr === null) {
+            return "";
+        }
+
+        const cString = new Deno.UnsafePointerView(stringPtr);
+        return cString.getCString();
+    }
+}
+
 export class Model {
     model: Deno.PointerValue;
     context: Deno.PointerValue;
     path: ParsedPath;
+    tokenizer: Tokenizer;
 
     private constructor(
         model: Deno.PointerValue,
         context: Deno.PointerValue,
         path: ParsedPath,
+        tokenizer: Tokenizer,
     ) {
         this.model = model;
         this.context = context;
         this.path = path;
+        this.tokenizer = tokenizer;
     }
 
     static async init(modelPath: string, gpuLayers: number) {
@@ -321,7 +369,8 @@ export class Model {
         );
 
         const path = parse(modelPath);
-        return new Model(model, context, path);
+        const tokenizer = await Tokenizer.init(model);
+        return new Model(model, context, path, tokenizer);
     }
 
     resetKVCache() {
@@ -354,25 +403,6 @@ export class Model {
         const seed = params.seed ??
             Math.floor(Math.random() * (0xFFFFFFFF + 1));
 
-        samplerBuilder.penaltiesSampler(
-            params.penalty_range,
-            params.repetition_penalty,
-            params.frequency_penalty,
-            params.presence_penalty,
-            true,
-            false,
-        );
-
-        if (params.dry_multiplier > 0) {
-            samplerBuilder.drySampler(
-                params.dry_multiplier,
-                params.dry_base,
-                params.dry_allowed_length,
-                params.dry_range,
-                params.dry_sequence_breakers as string[],
-            );
-        }
-
         const logitBias: LogitBias[] = [];
         if (params.logit_bias) {
             for (const [tokenId, bias] of Object.entries(params.logit_bias)) {
@@ -394,6 +424,36 @@ export class Model {
             }
         }
 
+        if (params.ban_eos_token) {
+            const eogLogitBias: LogitBias[] = [
+                { token: this.tokenizer.eosToken.id, bias: -100 },
+                { token: this.tokenizer.eotToken.id, bias: -100 },
+            ];
+
+            logitBias.push(...eogLogitBias);
+        }
+
+        samplerBuilder.logitBiasSampler(logitBias);
+
+        samplerBuilder.penaltiesSampler(
+            params.penalty_range,
+            params.repetition_penalty,
+            params.frequency_penalty,
+            params.presence_penalty,
+            true,
+            false,
+        );
+
+        if (params.dry_multiplier > 0) {
+            samplerBuilder.drySampler(
+                params.dry_multiplier,
+                params.dry_base,
+                params.dry_allowed_length,
+                params.dry_range,
+                params.dry_sequence_breakers as string[],
+            );
+        }
+
         if (!params.temperature_last) {
             samplerBuilder.tempSampler(params.temperature);
         }
@@ -412,8 +472,6 @@ export class Model {
             );
         }
 
-        samplerBuilder.logitBiasSampler(logitBias);
-
         if (params.temperature_last) {
             samplerBuilder.tempSampler(params.temperature);
         }
@@ -431,6 +489,8 @@ export class Model {
             readbackBuffer.bufferPtr,
             Deno.UnsafePointer.of(promptPtr),
             params.max_tokens ?? 150,
+            params.add_bos_token,
+            !params.skip_special_tokens,
         );
 
         // Read from the read buffer

@@ -61,7 +61,7 @@ extern "C" {
         llama_context* context,
         ReadbackBuffer* readbackBufferPtr,
         const char* nextMessage,
-        const unsigned numberTokensToPredict);
+        unsigned numberTokensToPredict);
 
     const char* InferToReadbackBuffer(
         const llama_model* model,
@@ -69,7 +69,9 @@ extern "C" {
         llama_context* context,
         ReadbackBuffer* readbackBufferPtr,
         const char* prompt,
-        const unsigned numberTokensToPredict);
+        unsigned numberTokensToPredict,
+        bool addSpecial,
+        bool parseSpecial);
 
 #ifdef __cplusplus
 }

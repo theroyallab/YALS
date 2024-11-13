@@ -14,7 +14,7 @@ const bannedTokensType = z.union([
 const GenerationOptionsSchema = z.object({
     grammar_string: z.string().optional(),
     add_bos_token: z.boolean().default(true),
-    skip_special_tokens: z.boolean().default(true),
+    skip_special_tokens: z.boolean().default(false),
     seed: z.number().optional(),
     logit_bias: z.record(z.string(), z.number()).default({}),
 

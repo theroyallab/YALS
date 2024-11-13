@@ -281,10 +281,12 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
     return std::string{buf, static_cast<size_t>(n)};
 }
 
-std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaModel, const llama_context* context, const std::string_view& prompt) {
+std::optional<std::vector<llama_token>> TokenizePrompt(
+    const llama_model* llamaModel, const llama_context* context, const std::string_view& prompt,
+    const bool addSpecial, const bool parseSpecial) {
 
     const int n_prompt = -llama_tokenize(llamaModel, prompt.data(), prompt.size(),
-                                       nullptr, 0, true, true);
+                                       nullptr, 0, addSpecial, parseSpecial);
     std::vector<llama_token> tokenizedPrompt(n_prompt);
     
     bool add_bos = llama_get_kv_cache_used_cells(context) == 0;
@@ -305,9 +307,11 @@ const char* InferToReadbackBuffer(
     llama_context* context,
     ReadbackBuffer* readbackBufferPtr,
     const char* prompt,
-    const unsigned numberTokensToPredict)
+    const unsigned numberTokensToPredict,
+    const bool addSpecial,
+    const bool parseSpecial)
 {
-    auto promptTokens = TokenizePrompt(model, context, prompt).value();
+    auto promptTokens = TokenizePrompt(model, context, prompt, addSpecial, parseSpecial).value();
 
     const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
     llama_batch batch = llama_batch_get_one(promptTokens.data(), promptTokens.size());
@@ -335,6 +339,7 @@ const char* InferToReadbackBuffer(
 
             // is it an end of generation?
             if (llama_token_is_eog(model, newTokenId)) {
+                std::cout << "Ended due to EOG" << std::endl;
                 break;
             }
 
@@ -358,7 +363,9 @@ void InferChat(const llama_model* model,
     llama_context* context,
     ReadbackBuffer* readbackBufferPtr,
     const char* nextMessage,
-    const unsigned numberTokensToPredict)
+    const unsigned numberTokensToPredict,
+    const bool addSpecial,
+    const bool parseSpecial)
 {
     /*
     typedef struct llama_chat_message {
@@ -388,7 +395,8 @@ void InferChat(const llama_model* model,
 
     std::string prompt(formatted.begin() + prev_len, formatted.begin() + new_len);
 
-    const auto response = InferToReadbackBuffer(model, sampler, context, readbackBufferPtr, prompt.c_str(), numberTokensToPredict);
+    const auto response = InferToReadbackBuffer(model, sampler, context, readbackBufferPtr,
+        prompt.c_str(), numberTokensToPredict, addSpecial, parseSpecial);
 
     messages.push_back({"assistant", strdup(response)});
 
