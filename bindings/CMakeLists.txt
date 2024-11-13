@@ -75,7 +75,7 @@ if(WIN32)
     add_custom_command(TARGET deno_cpp_binding POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
             ${DLL_FILES}
-            ../${CMAKE_CURRENT_SOURCE_DIR}/lib
+            ${CMAKE_CURRENT_SOURCE_DIR}/../lib
             COMMENT "Copying DLLs to lib"
     )
 endif()
