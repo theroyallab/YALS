@@ -18,6 +18,7 @@ for (let i = 0; i < 4; i++) {
   console.log("NEXT");
   console.log();
   
+  await model!.resetCacheKVContext();
   for await (const chunk of model!.generateGen("Hi my name is", samplerRequest)) {
     await Deno.stdout.write(encoder.encode(chunk));
     buffer += chunk;

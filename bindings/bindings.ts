@@ -337,6 +337,10 @@ export class Model {
         return new Model(model, context, path);
     }
 
+    async *resetCacheKVContext() {
+        await lib.symbols.ClearContextKVCache(this.model);
+    }
+
     async unload() {
         await lib.symbols.FreeModel(this.model);
         await lib.symbols.FreeCtx(this.context);

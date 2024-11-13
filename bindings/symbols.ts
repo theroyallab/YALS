@@ -38,6 +38,11 @@ export default {
         result: "void",
         nonblocking: true,
     },
+    ClearContextKVCache: {
+        parameters: ["pointer"],
+        result: "void",
+        nonblocking: true,
+    },
     FreeModel: {
         parameters: ["pointer"],
         result: "void",
