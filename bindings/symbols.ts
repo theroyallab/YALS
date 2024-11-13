@@ -47,6 +47,11 @@ export default {
         result: "void",
         nonblocking: true,
     },
+    TokenToString: {
+        parameters: ["pointer", "i32"],
+        result: "pointer" as const,
+        nonblocking: true,
+    },
     MakeSampler: {
         parameters: [],
         result: "pointer" as const, // void*
@@ -86,20 +91,14 @@ export default {
     PenaltiesSampler: {
         parameters: [
             "pointer",
-            "i32",
-            "i32",
-            "i32",
+            "pointer",
             "i32",
             "f32",
             "f32",
             "f32",
             "bool",
             "bool",
-        ], // void* sampler, int nVocab, llama_token eosToken, llama_token nlToken, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos
-        result: "pointer" as const, // void*
-    },
-    TailFreeSampler: {
-        parameters: ["pointer", "f32", "usize"], // void* sampler, float z, size_t minKeep
+        ], // void* sampler, void* model, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos
         result: "pointer" as const, // void*
     },
     TempSampler: {

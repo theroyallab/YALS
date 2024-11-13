@@ -208,14 +208,6 @@ export class SamplerBuilder {
         );
     }
 
-    tailFreeSampler(z: number, minKeep: number) {
-        this.sampler = lib.symbols.TailFreeSampler(
-            this.sampler,
-            z,
-            BigInt(minKeep),
-        );
-    }
-
     tempSampler(temp: number) {
         this.sampler = lib.symbols.TempSampler(this.sampler, temp);
     }

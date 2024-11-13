@@ -46,6 +46,10 @@ llama_token EosToken(const llama_model* model)
     return llama_token_eos(model);
 }
 
+const char* TokenToString(const llama_model* model, const llama_token token) {
+    return llama_token_get_text(model, token);
+}
+
 void FreeSampler(llama_sampler* sampler)
 {
     llama_sampler_free(sampler);
@@ -58,8 +62,6 @@ void FreeCtx(llama_context* ctx)
 
 void ClearContextKVCache(llama_context* ctx)
 {
-    std::cout << "Cleared KV Cache." << std::endl;
-    flush(std::cout);
     llama_kv_cache_clear(ctx);
 }
 
@@ -206,21 +208,14 @@ llama_sampler* MirostatV2Sampler(llama_sampler* sampler, const uint32_t seed, co
 
 // Typically applied early in the sampling chain
 llama_sampler* PenaltiesSampler(llama_sampler* sampler, const llama_model* model,
-                                const llama_token nlToken, const int penaltyLastN, const float penaltyRepeat,
+                                const int penaltyLastN, const float penaltyRepeat,
                                 const float penaltyFreq, const float penaltyPresent, const bool penalizeNl,
                                 const bool ignoreEos)
 {
     const int nVocab = llama_n_vocab(model);
     llama_sampler_chain_add(sampler, llama_sampler_init_penalties(
-        nVocab, LLAMA_TOKEN_NULL, nlToken, penaltyLastN,
+        nVocab, LLAMA_TOKEN_NULL, llama_token_nl(model), penaltyLastN,
         penaltyRepeat, penaltyFreq, penaltyPresent, penalizeNl, ignoreEos));
-    return sampler;
-}
-
-// Independent of order, but typically applied after topK or topP
-llama_sampler* TailFreeSampler(llama_sampler* sampler, const float z, const size_t minKeep)
-{
-    llama_sampler_chain_add(sampler, llama_sampler_init_tail_free(z, minKeep));
     return sampler;
 }
 
@@ -277,10 +272,11 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
         std::cerr << "error: failed to convert token to piece in TokenToPiece()" << std::endl;
         return std::nullopt;
     }
+
     return std::string{buf, static_cast<size_t>(n)};
 }
 
-std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaModel, llama_context* context, const std::string_view& prompt) {
+std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaModel, const llama_context* context, const std::string_view& prompt) {
 
     const int n_prompt = -llama_tokenize(llamaModel, prompt.data(), prompt.size(),
                                        nullptr, 0, true, true);

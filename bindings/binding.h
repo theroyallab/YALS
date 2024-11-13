@@ -17,6 +17,7 @@ extern "C" {
     void FreeModel(llama_model* model);
     void FreeCtx(llama_context* ctx);
     void ClearContextKVCache(llama_context* ctx);
+    const char* TokenToString(const llama_model* model, const llama_token token);
 
     ReadbackBuffer* CreateReadbackBuffer();
 
@@ -39,9 +40,8 @@ extern "C" {
         llama_sampler* sampler, const llama_model* model, uint32_t seed, float tau, float eta, int m);
     llama_sampler* MirostatV2Sampler(llama_sampler* sampler, uint32_t seed, float tau, float eta);
     llama_sampler* PenaltiesSampler(
-        llama_sampler* sampler, const llama_model* model, llama_token nlToken, int penaltyLastN, float penaltyRepeat,
+        llama_sampler* sampler, const llama_model* model, int penaltyLastN, float penaltyRepeat,
         float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos);
-    llama_sampler* TailFreeSampler(llama_sampler* sampler, float z, size_t minKeep);
     llama_sampler* TempSampler(llama_sampler* sampler, float temp);
     llama_sampler* TempExtSampler(llama_sampler* sampler, float temp, float dynatempRange, float dynatempExponent);
     llama_sampler* TopKSampler(llama_sampler* sampler, int topK);
