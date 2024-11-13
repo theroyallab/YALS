@@ -158,7 +158,7 @@ export default {
             "pointer", // llama_context* context
             "pointer", // ReadbackBuffer* readbackBufferPtr
             "pointer", // const char* nextMessage
-            "u32",    // const unsigned numberTokensToPredict
+            "u32", // const unsigned numberTokensToPredict
         ],
         result: "void" as const,
         nonblocking: true,
@@ -170,7 +170,7 @@ export default {
             "pointer", // llama_context* context
             "pointer", // ReadbackBuffer* readbackBufferPtr
             "pointer", // const char* prompt
-            "u32",    // const unsigned numberTokensToPredict
+            "u32", // const unsigned numberTokensToPredict
         ],
         result: "pointer" as const,
         nonblocking: true,

@@ -184,9 +184,6 @@ export class SamplerBuilder {
     }
 
     penaltiesSampler(
-        nVocab: number,
-        eosToken: number,
-        nlToken: number,
         penaltyLastN: number,
         penaltyRepeat: number,
         penaltyFreq: number,
@@ -196,9 +193,7 @@ export class SamplerBuilder {
     ) {
         this.sampler = lib.symbols.PenaltiesSampler(
             this.sampler,
-            nVocab,
-            eosToken,
-            nlToken,
+            this.model,
             penaltyLastN,
             penaltyRepeat,
             penaltyFreq,
