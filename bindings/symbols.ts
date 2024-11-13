@@ -160,4 +160,16 @@ export default {
         result: "void" as const,
         nonblocking: true,
     },
+    InferToReadbackBuffer: {
+        parameters: [
+            "pointer", // const llama_model* model
+            "pointer", // llama_sampler* sampler
+            "pointer", // llama_context* context
+            "pointer", // ReadbackBuffer* readbackBufferPtr
+            "pointer", // const char* prompt
+            "u32",    // const unsigned numberTokensToPredict
+        ],
+        result: "pointer" as const,
+        nonblocking: true,
+    },
 } as const;

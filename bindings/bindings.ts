@@ -421,7 +421,7 @@ export class Model {
         const promptPtr = new TextEncoder().encode(prompt + "\0");
         const readbackBuffer = new ReadbackBuffer();
 
-        lib.symbols.InferChat(
+        lib.symbols.InferToReadbackBuffer(
             this.model,
             sampler,
             this.context,

@@ -56,6 +56,11 @@ void FreeCtx(llama_context* ctx)
     llama_free(ctx);
 }
 
+void ClearContextKVCache(llama_context* ctx)
+{
+    llama_kv_cache_clear(ctx);
+}
+
 void FreeModel(llama_model* model)
 {
     llama_free_model(model);
@@ -291,7 +296,7 @@ std::optional<std::vector<llama_token>> TokenizePrompt(const llama_model* llamaM
     return tokenizedPrompt;
 }
 
-std::string InferToReadbackBuffer(
+const char* InferToReadbackBuffer(
     const llama_model* model,
     llama_sampler* sampler,
     llama_context* context,
@@ -341,9 +346,10 @@ std::string InferToReadbackBuffer(
     
     PrintPerformanceInfo(context);
     readbackBufferPtr->done = true;
-    return response;
+    return strdup(response.c_str());
 }
 
+//@Z Maybe unused.
 void InferChat(const llama_model* model,
     llama_sampler* sampler,
     llama_context* context,
@@ -381,7 +387,7 @@ void InferChat(const llama_model* model,
 
     const auto response = InferToReadbackBuffer(model, sampler, context, readbackBufferPtr, prompt.c_str(), numberTokensToPredict);
 
-    messages.push_back({"assistant", strdup(response.c_str())});
+    messages.push_back({"assistant", strdup(response)});
 
     readbackBufferPtr->done = true;
 }

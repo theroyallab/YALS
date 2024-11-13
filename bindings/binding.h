@@ -16,6 +16,7 @@ extern "C" {
     void FreeSampler(llama_sampler* sampler);
     void FreeModel(llama_model* model);
     void FreeCtx(llama_context* ctx);
+    void ClearContextKVCache(llama_context* ctx);
 
     ReadbackBuffer* CreateReadbackBuffer();
 
@@ -59,6 +60,14 @@ extern "C" {
         llama_context* context,
         ReadbackBuffer* readbackBufferPtr,
         const char* nextMessage,
+        const unsigned numberTokensToPredict);
+
+    const char* InferToReadbackBuffer(
+        const llama_model* model,
+        llama_sampler* sampler,
+        llama_context* context,
+        ReadbackBuffer* readbackBufferPtr,
+        const char* prompt,
         const unsigned numberTokensToPredict);
 
 #ifdef __cplusplus
