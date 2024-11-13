@@ -324,7 +324,7 @@ export class Model {
         return new Model(model, context, path);
     }
 
-    resetCacheKVContext() {
+    resetKVCache() {
         lib.symbols.ClearContextKVCache(this.context);
     }
 
@@ -347,9 +347,21 @@ export class Model {
         prompt: string,
         params: BaseSamplerRequest,
     ) {
+        // Clear generation cache
+        this.resetKVCache();
+
         const samplerBuilder = new SamplerBuilder(this.model);
         const seed = params.seed ??
             Math.floor(Math.random() * (0xFFFFFFFF + 1));
+
+        samplerBuilder.penaltiesSampler(
+            params.penalty_range,
+            params.repetition_penalty,
+            params.frequency_penalty,
+            params.presence_penalty,
+            true,
+            false,
+        );
 
         if (params.dry_multiplier > 0) {
             samplerBuilder.drySampler(

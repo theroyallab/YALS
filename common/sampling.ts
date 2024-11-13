@@ -88,6 +88,7 @@ const AlphabetSamplerSchema = z.object({
     });
 
 const repetitionPenaltyType = z.number().gt(0).optional();
+const penaltyRangeType = z.number().optional();
 const PenaltySamplerSchema = z.object({
     frequency_penalty: z.number().gte(0).default(0),
     presence_penalty: z.number().gte(0).default(0),
@@ -98,6 +99,16 @@ const PenaltySamplerSchema = z.object({
             description: "Aliases: rep_pen",
         }),
     rep_pen: repetitionPenaltyType,
+
+    // penalty_range aliases
+    penalty_range: penaltyRangeType
+        .openapi({
+            description:
+                "Aliases: repetition_range, repetition_penalty_range, rep_pen_range",
+        }),
+    repetition_range: penaltyRangeType,
+    repetition_penalty_range: penaltyRangeType,
+    rep_pen_range: penaltyRangeType,
 })
     .openapi({
         description: "Penalty samplers",
@@ -106,6 +117,11 @@ const PenaltySamplerSchema = z.object({
         return {
             ...obj,
             repetition_penalty: obj.repetition_penalty ?? obj.rep_pen ?? 1,
+            penalty_range: obj.penalty_range ??
+                obj.repetition_range ??
+                obj.repetition_penalty_range ??
+                obj.rep_pen_range ??
+                -1,
         };
     });
 
