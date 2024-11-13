@@ -41,7 +41,6 @@ export default {
     ClearContextKVCache: {
         parameters: ["pointer"],
         result: "void",
-        nonblocking: true,
     },
     FreeModel: {
         parameters: ["pointer"],

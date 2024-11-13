@@ -58,6 +58,8 @@ void FreeCtx(llama_context* ctx)
 
 void ClearContextKVCache(llama_context* ctx)
 {
+    std::cout << "Cleared KV Cache." << std::endl;
+    flush(std::cout);
     llama_kv_cache_clear(ctx);
 }
 
