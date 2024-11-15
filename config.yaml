@@ -1,4 +1,0 @@
-modelPath: "D:/koboldcpp/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf"
-numberGpuLayers: 40
-contextLength: 2048
-numBatches: 1

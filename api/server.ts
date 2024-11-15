@@ -9,6 +9,7 @@ import { openAPISpecs } from "hono-openapi";
 
 import core from "./core/router.ts";
 import oai from "./OAI/router.ts";
+import { config } from "@/common/config.ts";
 
 const logger = getLogger("YALS");
 
@@ -75,8 +76,8 @@ export function createApi() {
 
     // Serve
     Deno.serve({
-        hostname: "127.0.0.1",
-        port: 5000,
+        hostname: config.network.host,
+        port: config.network.port,
         handler: app.fetch,
         onListen: ({ hostname, port }) => {
             logger.info(`Server running on http://${hostname}:${port}`);

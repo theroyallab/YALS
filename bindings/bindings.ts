@@ -1,5 +1,6 @@
 import { delay } from "@std/async";
 import { parse, ParsedPath } from "@std/path";
+import { ModelConfig } from "@/common/configModels.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 
 import llamaSymbols from "./symbols.ts";
@@ -355,11 +356,11 @@ export class Model {
         this.tokenizer = tokenizer;
     }
 
-    static async init(modelPath: string, gpuLayers: number) {
-        const modelPathPtr = new TextEncoder().encode(modelPath + "\0");
+    static async init(params: ModelConfig) {
+        const modelPathPtr = new TextEncoder().encode(params.model_dir + "\0");
         const model = await lib.symbols.LoadModel(
             Deno.UnsafePointer.of(modelPathPtr),
-            gpuLayers,
+            params.num_gpu_layers as number,
         );
 
         const context = await lib.symbols.InitiateCtx(
@@ -368,7 +369,7 @@ export class Model {
             1,
         );
 
-        const path = parse(modelPath);
+        const path = parse(params.model_dir);
         const tokenizer = await Tokenizer.init(model);
         return new Model(model, context, path, tokenizer);
     }

@@ -27,5 +27,4 @@ models/*
 venv/*
 .venv/*
 
-*.yaml
-*.yml
+config.yml
