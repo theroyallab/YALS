@@ -1,4 +1,5 @@
 #include "binding.h"
+#include "trie.hpp"
 #include <iostream>
 #include <optional>
 #include <cstring>
@@ -281,7 +282,7 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
     return std::string{buf, static_cast<size_t>(n)};
 }
 
-std::optional<std::vector<llama_token>> TokenizePrompt(
+std::optional<std::vector<llama_token>> Tokenize(
     const llama_model* llamaModel, const llama_context* context, const std::string_view& prompt,
     const bool addSpecial, const bool parseSpecial) {
 
@@ -289,11 +290,11 @@ std::optional<std::vector<llama_token>> TokenizePrompt(
                                        nullptr, 0, addSpecial, parseSpecial);
     std::vector<llama_token> tokenizedPrompt(n_prompt);
     
-    bool add_bos = llama_get_kv_cache_used_cells(context) == 0;
+    bool add_bos = (llama_get_kv_cache_used_cells(context) == 0) & addSpecial;
 
     if (llama_tokenize(llamaModel, prompt.data(), prompt.size(),
         tokenizedPrompt.data(), tokenizedPrompt.size(),
-        add_bos, true) < 0) {
+        add_bos, parseSpecial) < 0) {
         std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
         return std::nullopt;
     }
@@ -309,96 +310,108 @@ const char* InferToReadbackBuffer(
     const char* prompt,
     const unsigned numberTokensToPredict,
     const bool addSpecial,
-    const bool parseSpecial)
+    const bool parseSpecial,
+    const char** rewindStrings,
+    const unsigned numRewindStrings,
+    const char** stoppingStrings,
+    const unsigned numStoppingStrings)
 {
-    auto promptTokens = TokenizePrompt(model, context, prompt, addSpecial, parseSpecial).value();
+    auto promptTokens = Tokenize(model, context, prompt, addSpecial, parseSpecial).value();
 
     const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
-    llama_batch batch = llama_batch_get_one(promptTokens.data(), promptTokens.size());
+    llama_batch firstBatch = llama_batch_get_one(promptTokens.data(), promptTokens.size());
 
-    llama_token newTokenId;
+    MatchTrie::MatchTrie matchingTrie;
+
+    matchingTrie.AddMatchableWords(rewindStrings, numRewindStrings, MatchTrie::MatchType::REWIND);
+    matchingTrie.AddMatchableWords(stoppingStrings, numStoppingStrings, MatchTrie::MatchType::STOP);
+
     std::string response;
-    //inference
-    for (int tokenPosition = 0; tokenPosition + batch.n_tokens < numTokensToGenerate; tokenPosition += batch.n_tokens) {
+    std::string buffer;
+
+    auto gen = [&](const llama_batch& batch) -> std::pair<llama_token, bool> {
         int n_ctx = llama_n_ctx(context);
         int n_ctx_used = llama_get_kv_cache_used_cells(context);
         if (n_ctx_used + batch.n_tokens > n_ctx) {
-          std::cerr << "Context size exceeded, must abort." << std::endl;
-          break;
+            std::cerr << "Context size exceeded, must abort." << std::endl;
+            return {0, true};
         }
 
-        // evaluate the current batch with the transformer model
         if (llama_decode(context, batch)) {
             std::cerr << "error: failed to eval, return code 1 in Infer()" << std::endl;
-            break;
+            return {0, true};
         }
 
-        // sample the next token
-        {
-            newTokenId = llama_sampler_sample(sampler, context, -1);
+        auto newTokenId = llama_sampler_sample(sampler, context, -1);
 
-            // is it an end of generation?
-            if (llama_token_is_eog(model, newTokenId)) {
-                std::cout << "Ended due to EOG" << std::endl;
-                break;
+        if (llama_token_is_eog(model, newTokenId)) {
+            std::cout << "Ended due to EOG" << std::endl;
+            return {newTokenId, true};
+        }
+
+        return {newTokenId, false};
+    };
+
+    auto [newTokenId, isEnd] = gen(firstBatch);
+    if (isEnd) return "";
+
+    int rewindPos = 0;
+    int rewindTokenId = 0;
+    int samplerChainPos = -1;
+    while (!isEnd) {
+        const auto piece = TokenToPiece(model, newTokenId).value();
+        buffer += piece;
+
+        if (!buffer.empty()) {
+            MatchTrie::MatchResult matchResult;
+            if (buffer.find_first_not_of(' ') != std::string::npos) {
+                matchResult = matchingTrie.CheckBuffer(buffer.substr(buffer.find_first_not_of(' ')));
+            } else {
+                matchResult = matchingTrie.CheckBuffer(buffer);
             }
+            if (matchResult == MatchTrie::MatchResult::NO) {
+                WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()));
+                response += buffer;
+                buffer = "";
+                //Rewind to last accepted id.
+                rewindPos = llama_get_kv_cache_used_cells(context);
+                rewindTokenId = newTokenId;
 
-            auto piece = TokenToPiece(model, newTokenId).value();
-            WriteToReadbackBuffer(readbackBufferPtr, strdup(piece.c_str()));
-            response += piece;
+                if (samplerChainPos != -1) {
+                    llama_sampler_chain_remove(sampler, samplerChainPos+2);
+                    llama_sampler_chain_remove(sampler, samplerChainPos+1);
+                    samplerChainPos = -1;
+                }
+            } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
+                //Matched a stop, break.
+                break;
+            } else if (matchResult == MatchTrie::MatchResult::MATCHED_REWIND) {
+                llama_kv_cache_seq_rm(context, 0, rewindPos, llama_get_kv_cache_used_cells(context));
 
-            // prepare the next batch with the sampled token
-            batch = llama_batch_get_one(&newTokenId, 1);
+                const auto tokens = Tokenize(model, context, buffer, false, false);
+                std::vector<llama_logit_bias> biases;
+                biases.reserve(tokens.value().size());
+                for (const llama_token token : tokens.value()) {
+                    biases.push_back({
+                        .token = token,
+                        .bias = -50000.0f
+                    });
+                }
+
+                samplerChainPos = llama_sampler_chain_n(sampler);
+                sampler = LogitBiasSampler(sampler, model, static_cast<int32_t>(biases.size()), biases.data());
+                sampler = DistSampler(sampler, 1337);
+
+                buffer = "";
+                newTokenId = rewindTokenId;
+            }
         }
+
+        const auto batch = llama_batch_get_one(&newTokenId, 1);
+        std::tie(newTokenId, isEnd) = gen(batch);
     }
-    
+
     PrintPerformanceInfo(context);
     readbackBufferPtr->done = true;
     return strdup(response.c_str());
-}
-
-//@Z Maybe unused.
-void InferChat(const llama_model* model,
-    llama_sampler* sampler,
-    llama_context* context,
-    ReadbackBuffer* readbackBufferPtr,
-    const char* nextMessage,
-    const unsigned numberTokensToPredict,
-    const bool addSpecial,
-    const bool parseSpecial)
-{
-    /*
-    typedef struct llama_chat_message {
-        const char * role;
-        const char * content;
-    };
-    */
-
-    auto messages = std::vector<llama_chat_message>();
-    std::string formatted;
-    formatted.reserve(llama_n_ctx(context));
-    int prev_len = formatted.size();
-    messages.push_back({"user", strdup(nextMessage)});
-
-    int new_len = llama_chat_apply_template(model, nullptr,
-        messages.data(), messages.size(), true, formatted.data(),formatted.size());
-    if (new_len > static_cast<int>(formatted.size())) {
-        formatted.resize(new_len);
-        new_len = llama_chat_apply_template(model, nullptr,
-            messages.data(), messages.size(), true, formatted.data(),formatted.size());
-    }
-
-    if (new_len < 0) {
-        std::cerr << "Context size exceeded, must abort." << std::endl;
-        return;
-    }
-
-    std::string prompt(formatted.begin() + prev_len, formatted.begin() + new_len);
-
-    const auto response = InferToReadbackBuffer(model, sampler, context, readbackBufferPtr,
-        prompt.c_str(), numberTokensToPredict, addSpecial, parseSpecial);
-
-    messages.push_back({"assistant", strdup(response)});
-
-    readbackBufferPtr->done = true;
 }

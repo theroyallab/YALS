@@ -167,6 +167,10 @@ export default {
             "u32", // const unsigned numberTokensToPredict
             "bool", // const bool addSpecial
             "bool", // const bool parseSpecial
+            "pointer", // const char** rewindStrings
+            "u32", // count of rewind strings
+            "pointer", // const char** stoppingStrings
+            "u32", // count of stop strings
         ],
         result: "pointer" as const,
         nonblocking: true,

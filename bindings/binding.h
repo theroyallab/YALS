@@ -4,6 +4,12 @@
 
 #ifdef __cplusplus
 
+//Array of strings passed via FFI, equiv to const char[]*
+typedef struct {
+    const char** strings;
+    size_t count;
+} FfiStringArray;
+
 extern "C" {
 #endif
     struct ReadbackBuffer;
@@ -69,9 +75,13 @@ extern "C" {
         llama_context* context,
         ReadbackBuffer* readbackBufferPtr,
         const char* prompt,
-        unsigned numberTokensToPredict,
-        bool addSpecial,
-        bool parseSpecial);
+        const unsigned numberTokensToPredict,
+        const bool addSpecial,
+        const bool parseSpecial,
+        const char** rewindStrings,
+        const unsigned numRewindStrings,
+        const char** stoppingStrings,
+        const unsigned numStoppingStrings);
 
 #ifdef __cplusplus
 }
