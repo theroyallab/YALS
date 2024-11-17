@@ -352,6 +352,8 @@ const char* InferToReadbackBuffer(
         return {newTokenId, false};
     };
 
+    //Re implement number of tokens to gen!!!
+
     auto [newTokenId, isEnd] = gen(firstBatch);
     if (isEnd) return "";
 
