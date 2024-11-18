@@ -441,6 +441,10 @@ const char* InferToReadbackBuffer(
         std::tie(newTokenId, isEnd) = gen(batch, sampler);
     }
 
+    if (banSampler != nullptr) {
+        llama_sampler_free(banSampler);
+    }
+
     PrintPerformanceInfo(context);
     readbackBufferPtr->done = true;
     return strdup(response.c_str());
