@@ -4,6 +4,7 @@
 /.vscode/
 
 /node_modules
+/bindings/home/
 
 .env
 *.orig

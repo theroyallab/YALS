@@ -91,8 +91,22 @@ struct ReadbackBuffer
 {
     unsigned lastReadbackIndex {0};
     bool done {false};
+    bool cancelled {false};
     std::vector<char*>* data = new std::vector<char*>();
 };
+
+void ResetReadbackBuffer(ReadbackBuffer* buffer) {
+    buffer->done = false;
+    buffer->cancelled = false;
+    buffer->lastReadbackIndex = 0;
+    //Keep capacity, no resize.
+    buffer->data->clear();
+}
+
+void CancelReadbackJob(ReadbackBuffer* buffer)
+{
+    buffer->cancelled = true;
+}
 
 bool IsReadbackBufferDone(const ReadbackBuffer* buffer)
 {
@@ -360,7 +374,7 @@ const char* InferToReadbackBuffer(
     int rewindPos = 0;
     int rewindTokenId = 0;
     int samplerChainPos = -1;
-    while (!isEnd) {
+    while (!isEnd && !readbackBufferPtr->cancelled) {
         const auto piece = TokenToPiece(model, newTokenId).value();
         buffer += piece;
 

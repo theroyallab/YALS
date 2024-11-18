@@ -26,9 +26,16 @@ for (let i = 0; i < 4; i++) {
   console.log();
   console.log("NEXT");
   console.log();
-  
-  for await (const chunk of model!.generateGen("Hi my name is", samplerRequest)) {
+
+  var q = 0;
+  for await (const chunk of model!.generateGen("What a cool kitten catten", samplerRequest)) {
+    q = q + 1;
     await Deno.stdout.write(encoder.encode(chunk));
+    if(q == 10) {
+      await Deno.stdout.write(encoder.encode("\nmoo\n"));
+      await model!.cancelJob();
+      break;
+    }
     buffer += chunk;
   }
 }

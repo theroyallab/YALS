@@ -27,6 +27,8 @@ extern "C" {
     const char* TokenToString(const llama_model* model, const llama_token token);
 
     ReadbackBuffer* CreateReadbackBuffer();
+    void CancelReadbackJob(ReadbackBuffer* buffer);
+    void ResetReadbackBuffer(ReadbackBuffer* buffer);
 
     char* ReadbackNext(ReadbackBuffer *buffer);
     void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData);

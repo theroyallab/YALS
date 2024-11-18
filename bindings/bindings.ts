@@ -281,6 +281,10 @@ export class ReadbackBuffer {
         return lib.symbols.IsReadbackBufferDone(this.bufferPtr);
     }
 
+    reset() {
+        lib.symbols.ResetReadbackBuffer(this.bufferPtr);
+    }
+
     async *read(): AsyncGenerator<string, void, unknown> {
         do {
             const nextString = await this.readNext();
@@ -343,6 +347,7 @@ export class Model {
     context: Deno.PointerValue;
     path: ParsedPath;
     tokenizer: Tokenizer;
+    readbackBuffer: ReadbackBuffer;
 
     private constructor(
         model: Deno.PointerValue,
@@ -354,6 +359,7 @@ export class Model {
         this.context = context;
         this.path = path;
         this.tokenizer = tokenizer;
+        this.readbackBuffer = new ReadbackBuffer();
     }
 
     static async init(params: ModelConfig) {
@@ -381,6 +387,14 @@ export class Model {
     async unload() {
         await lib.symbols.FreeModel(this.model);
         await lib.symbols.FreeCtx(this.context);
+    }
+
+    async cancelJob() : AsyncGenerator<void> {
+        lib.symbols.CancelReadbackJob(this.readbackBuffer.bufferPtr);
+        do {
+            await delay(10);
+        } while (!this.readbackBuffer.isDone());
+        this.readbackBuffer.reset();
     }
 
     async generate(prompt: string, params: BaseSamplerRequest) {
@@ -482,7 +496,6 @@ export class Model {
         const sampler = samplerBuilder.build();
 
         const promptPtr = new TextEncoder().encode(prompt + "\0");
-        const readbackBuffer = new ReadbackBuffer();
 
         const rewindStrings = ["I am", "i'm"]
         const stoppingStrings = [""]
@@ -526,7 +539,7 @@ export class Model {
             this.model,
             sampler,
             this.context,
-            readbackBuffer.bufferPtr,
+            this.readbackBuffer.bufferPtr,
             Deno.UnsafePointer.of(promptPtr),
             params.max_tokens ?? 150,
             params.add_bos_token,
@@ -538,8 +551,9 @@ export class Model {
         );
 
         // Read from the read buffer
-        for await (const chunk of readbackBuffer.read()) {
+        for await (const chunk of this.readbackBuffer.read()) {
             yield chunk;
         }
+        this.readbackBuffer.reset();
     }
 }

@@ -148,6 +148,14 @@ export default {
         parameters: [],
         result: "pointer" as const, // void*
     },
+    CancelReadbackJob: {
+        parameters: ["pointer"], // ReadbackBuffer*
+        result: "void",
+    },
+    ResetReadbackBuffer: {
+        parameters: ["pointer"], // ReadbackBuffer*
+        result: "void",
+    },
     ReadbackNext: {
         parameters: ["pointer"], // void* readbackBufferPtr
         result: "pointer" as const, // void*
