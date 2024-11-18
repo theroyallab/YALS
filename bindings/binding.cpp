@@ -343,7 +343,7 @@ const char* InferToReadbackBuffer(
     std::string response;
     std::string buffer;
 
-    auto gen = [&](const llama_batch& batch) -> std::pair<llama_token, bool> {
+    auto gen = [&](const llama_batch& batch, llama_sampler* smpl) -> std::pair<llama_token, bool> {
         int n_ctx = llama_n_ctx(context);
         int n_ctx_used = llama_get_kv_cache_used_cells(context);
         if (n_ctx_used + batch.n_tokens > n_ctx) {
@@ -356,7 +356,7 @@ const char* InferToReadbackBuffer(
             return {0, true};
         }
 
-        auto newTokenId = llama_sampler_sample(sampler, context, -1);
+        auto newTokenId = llama_sampler_sample(smpl, context, -1);
 
         if (llama_token_is_eog(model, newTokenId)) {
             std::cout << "Ended due to EOG" << std::endl;
@@ -368,15 +368,20 @@ const char* InferToReadbackBuffer(
 
     //Re implement number of tokens to gen!!!
 
-    auto [newTokenId, isEnd] = gen(firstBatch);
+    auto [newTokenId, isEnd] = gen(firstBatch, sampler);
     if (isEnd) return "";
 
     int rewindPos = 0;
     int rewindTokenId = 0;
-    int samplerChainPos = -1;
-    while (!isEnd && !readbackBufferPtr->cancelled) {
+    int tokenCount = 0;
+    int rewindTokenCount = 0;
+    std::vector<llama_logit_bias> biases;
+    llama_sampler* banSampler = nullptr;
+    llama_batch batch;
+    while (!isEnd && !readbackBufferPtr->cancelled && tokenCount + batch.n_tokens <= numTokensToGenerate) {
         const auto piece = TokenToPiece(model, newTokenId).value();
         buffer += piece;
+        tokenCount += 1;
 
         if (!buffer.empty()) {
             MatchTrie::MatchResult matchResult;
@@ -392,37 +397,44 @@ const char* InferToReadbackBuffer(
                 //Rewind to last accepted id.
                 rewindPos = llama_get_kv_cache_used_cells(context);
                 rewindTokenId = newTokenId;
-
-                if (samplerChainPos != -1) {
-                    llama_sampler_chain_remove(sampler, samplerChainPos+2);
-                    llama_sampler_chain_remove(sampler, samplerChainPos+1);
-                    samplerChainPos = -1;
-                }
+                llama_sampler_free(banSampler);
+                banSampler = nullptr;
+                rewindTokenCount = tokenCount;
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
                 //Matched a stop, break.
                 break;
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_REWIND) {
-                llama_kv_cache_seq_rm(context, 0, rewindPos, llama_get_kv_cache_used_cells(context));
+                llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
 
                 const auto tokens = Tokenize(model, context, buffer, false, false);
-                std::vector<llama_logit_bias> biases;
-                biases.reserve(tokens.value().size());
+                biases.reserve(biases.size() + tokens.value().size());
                 for (const llama_token token : tokens.value()) {
-                    llama_logit_bias bias = {token, -50000.0f};
-                    biases.push_back(bias);
+                    biases.push_back({token, -50000.0f});
                 }
 
-                samplerChainPos = llama_sampler_chain_n(sampler);
-                sampler = LogitBiasSampler(sampler, model, static_cast<int32_t>(biases.size()), biases.data());
-                sampler = DistSampler(sampler, 1337);
+                if (banSampler == nullptr) {
+                    banSampler = MakeSampler();
+                    LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
+                    DistSampler(banSampler, 1337);
+                } else {
+                    llama_sampler_chain_remove(banSampler, 1);
+                    llama_sampler_chain_remove(banSampler, 0);
+                    LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
+                    DistSampler(banSampler, 1337);
+                }
 
                 buffer = "";
                 newTokenId = rewindTokenId;
+
+                batch = llama_batch_get_one(&newTokenId, 1);
+                std::tie(newTokenId, isEnd) = gen(batch, banSampler);
+                tokenCount = rewindTokenCount;
+                continue;
             }
         }
 
-        const auto batch = llama_batch_get_one(&newTokenId, 1);
-        std::tie(newTokenId, isEnd) = gen(batch);
+        batch = llama_batch_get_one(&newTokenId, 1);
+        std::tie(newTokenId, isEnd) = gen(batch, sampler);
     }
 
     PrintPerformanceInfo(context);

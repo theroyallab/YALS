@@ -497,8 +497,8 @@ export class Model {
 
         const promptPtr = new TextEncoder().encode(prompt + "\0");
 
-        const rewindStrings = ["I am", "i'm"]
-        const stoppingStrings = [""]
+        const rewindStrings = ["I"]
+        const stoppingStrings = []
 
         const nullTerminatedRewinds = rewindStrings.map(str => str + "\0");
         const nullTerminatedStops = stoppingStrings.map(str => str + "\0");
