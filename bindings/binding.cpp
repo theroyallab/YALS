@@ -391,15 +391,20 @@ const char* InferToReadbackBuffer(
                 matchResult = matchingTrie.CheckBuffer(buffer);
             }
             if (matchResult == MatchTrie::MatchResult::NO) {
+
                 WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()));
                 response += buffer;
                 buffer = "";
                 //Rewind to last accepted id.
+
+                //Reset rewind state.
                 rewindPos = llama_get_kv_cache_used_cells(context);
                 rewindTokenId = newTokenId;
                 llama_sampler_free(banSampler);
                 banSampler = nullptr;
                 rewindTokenCount = tokenCount;
+                biases.clear();
+
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
                 //Matched a stop, break.
                 break;
