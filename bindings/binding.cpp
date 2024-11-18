@@ -395,15 +395,17 @@ const char* InferToReadbackBuffer(
                 WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()));
                 response += buffer;
                 buffer = "";
-                //Rewind to last accepted id.
 
-                //Reset rewind state.
+                //Save last known accept point in case we have to rewind back to the last accept.
                 rewindPos = llama_get_kv_cache_used_cells(context);
                 rewindTokenId = newTokenId;
-                llama_sampler_free(banSampler);
-                banSampler = nullptr;
                 rewindTokenCount = tokenCount;
-                biases.clear();
+                //If we had a rewind state built, tear it down as we've accepted a sequence.
+                if (banSampler != nullptr) {
+                    llama_sampler_free(banSampler);
+                    banSampler = nullptr;
+                    biases.clear();
+                }
 
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
                 //Matched a stop, break.
