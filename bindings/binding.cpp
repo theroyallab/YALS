@@ -412,7 +412,6 @@ const char* InferToReadbackBuffer(
                 llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
 
                 const auto tokens = Tokenize(model, context, buffer, false, false);
-                biases.reserve(biases.size() + tokens.value().size());
                 for (const llama_token token : tokens.value()) {
                     biases.push_back({token, -50000.0f});
                 }
