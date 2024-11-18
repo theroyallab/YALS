@@ -394,10 +394,8 @@ const char* InferToReadbackBuffer(
                 std::vector<llama_logit_bias> biases;
                 biases.reserve(tokens.value().size());
                 for (const llama_token token : tokens.value()) {
-                    biases.push_back({
-                        .token = token,
-                        .bias = -50000.0f
-                    });
+                    llama_logit_bias bias = {token, -50000.0f};
+                    biases.push_back(bias);
                 }
 
                 samplerChainPos = llama_sampler_chain_n(sampler);
