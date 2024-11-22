@@ -17,6 +17,7 @@ const GenerationOptionsSchema = z.object({
     skip_special_tokens: z.boolean().default(false),
     seed: z.number().optional(),
     logit_bias: z.record(z.string(), z.number()).default({}),
+    banned_strings: z.union([z.string(), z.array(z.string())]).default([]),
 
     // max token aliases
     max_tokens: maxTokensType

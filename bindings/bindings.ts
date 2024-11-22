@@ -277,7 +277,7 @@ export class ReadbackBuffer {
         return cString.getCString();
     }
 
-    private isDone(): boolean {
+    isDone(): boolean {
         return lib.symbols.IsReadbackBufferDone(this.bufferPtr);
     }
 
@@ -363,7 +363,8 @@ export class Model {
     }
 
     static async init(params: ModelConfig) {
-        const modelPathPtr = new TextEncoder().encode(params.model_dir + "\0");
+        const modelPath = params.model_dir + params.model_name;
+        const modelPathPtr = new TextEncoder().encode(modelPath + "\0");
         const model = await lib.symbols.LoadModel(
             Deno.UnsafePointer.of(modelPathPtr),
             params.num_gpu_layers as number,
@@ -375,9 +376,9 @@ export class Model {
             1,
         );
 
-        const path = parse(params.model_dir);
+        const parsedModelPath = parse(modelPath);
         const tokenizer = await Tokenizer.init(model);
-        return new Model(model, context, path, tokenizer);
+        return new Model(model, context, parsedModelPath, tokenizer);
     }
 
     resetKVCache() {
@@ -389,7 +390,7 @@ export class Model {
         await lib.symbols.FreeCtx(this.context);
     }
 
-    async cancelJob() : AsyncGenerator<void> {
+    async cancelJob() {
         lib.symbols.CancelReadbackJob(this.readbackBuffer.bufferPtr);
         do {
             await delay(10);
@@ -497,25 +498,26 @@ export class Model {
 
         const promptPtr = new TextEncoder().encode(prompt + "\0");
 
-        const rewindStrings = ["I"]
-        const stoppingStrings = []
+        // MARK: Redundant
+        const rewindStrings = params.banned_strings as string[];
+        const stoppingStrings = params.stop as string[];
 
-        const nullTerminatedRewinds = rewindStrings.map(str => str + "\0");
-        const nullTerminatedStops = stoppingStrings.map(str => str + "\0");
+        const nullTerminatedRewinds = rewindStrings.map((str) => str + "\0");
+        const nullTerminatedStops = stoppingStrings.map((str) => str + "\0");
 
         // Encode strings to Uint8Arrays
-        const encodedRewinds = nullTerminatedRewinds.map(str =>
+        const encodedRewinds = nullTerminatedRewinds.map((str) =>
             new TextEncoder().encode(str)
         );
-        const encodedStops = nullTerminatedStops.map(str =>
+        const encodedStops = nullTerminatedStops.map((str) =>
             new TextEncoder().encode(str)
         );
 
         // Create pointers for each string
-        const rewindPtrs = encodedRewinds.map(encoded =>
+        const rewindPtrs = encodedRewinds.map((encoded) =>
             Deno.UnsafePointer.of(encoded)
         );
-        const stopPtrs = encodedStops.map(encoded =>
+        const stopPtrs = encodedStops.map((encoded) =>
             Deno.UnsafePointer.of(encoded)
         );
 
@@ -547,7 +549,7 @@ export class Model {
             Deno.UnsafePointer.of(rewindPtrArrayBuffer),
             rewindStrings.length,
             Deno.UnsafePointer.of(stopPtrArrayBuffer),
-            stoppingStrings.length
+            stoppingStrings.length,
         );
 
         // Read from the read buffer

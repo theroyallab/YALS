@@ -1,9 +1,12 @@
 import * as YAML from "@std/yaml";
 
-import { ConfigSchema } from "./configModels.ts";
+import { ConfigSchema, ModelConfig, NetworkConfig } from "./configModels.ts";
 
 // Initialize with an empty config
-export let config: ConfigSchema = ConfigSchema.parse({});
+export let config: ConfigSchema = ConfigSchema.parse({
+    network: NetworkConfig.parse({}),
+    model: ModelConfig.parse({}),
+});
 
 export async function loadConfig() {
     const configPath = "config.yml";

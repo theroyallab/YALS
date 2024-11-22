@@ -7,7 +7,7 @@ if (import.meta.main) {
     await setupLogger();
     await loadConfig();
 
-    if (config?.model.model_name) {
+    if (config.model.model_name) {
         await loadModel(config.model);
     }
 
