@@ -366,8 +366,6 @@ const char* InferToReadbackBuffer(
         return {newTokenId, false};
     };
 
-    //Re implement number of tokens to gen!!!
-
     auto [newTokenId, isEnd] = gen(firstBatch, sampler);
     if (isEnd) return "";
 
@@ -377,19 +375,24 @@ const char* InferToReadbackBuffer(
     int rewindTokenCount = 0;
     std::vector<llama_logit_bias> biases;
     llama_sampler* banSampler = nullptr;
-    llama_batch batch;
-    while (!isEnd && !readbackBufferPtr->cancelled && tokenCount + batch.n_tokens <= numTokensToGenerate) {
+    llama_batch batch = firstBatch;
+    std::cout << "Num:" << numTokensToGenerate;
+    std::flush(std::cout);
+    while (!isEnd && !readbackBufferPtr->cancelled && (tokenCount + batch.n_tokens <= numTokensToGenerate)) {
         const auto piece = TokenToPiece(model, newTokenId).value();
         buffer += piece;
-        tokenCount += 1;
+        tokenCount += batch.n_tokens;
 
         if (!buffer.empty()) {
             MatchTrie::MatchResult matchResult;
+
+            //Strip leading spaces which is a common issue that will confuse the trie matching.
             if (buffer.find_first_not_of(' ') != std::string::npos) {
                 matchResult = matchingTrie.CheckBuffer(buffer.substr(buffer.find_first_not_of(' ')));
             } else {
                 matchResult = matchingTrie.CheckBuffer(buffer);
             }
+
             if (matchResult == MatchTrie::MatchResult::NO) {
 
                 WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()));
@@ -442,6 +445,9 @@ const char* InferToReadbackBuffer(
         batch = llama_batch_get_one(&newTokenId, 1);
         std::tie(newTokenId, isEnd) = gen(batch, sampler);
     }
+
+    std::cout << "Count: " << tokenCount << "End" << isEnd << "ReadB Cancel:" << readbackBufferPtr->cancelled << std::endl;
+    std::flush(std::cout);
 
     if (banSampler != nullptr) {
         llama_sampler_free(banSampler);

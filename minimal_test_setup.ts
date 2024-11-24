@@ -2,13 +2,10 @@ import { loadModel, model } from "./common/modelContainer.ts";
 import { ModelConfig } from "./common/configModels.ts";
 import { BaseSamplerRequest } from "./common/sampling.ts";
 
-const fullModelPath =
-    "/home/blackroot/Desktop/YALS/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf";
-
 // Create the model configuration matching the Model.init expectations
 const modelConfig = ModelConfig.parse({
-    model_dir: fullModelPath, // The full path to the .gguf file
-    model_name: undefined, // Not needed since we're using full path in model_dir
+    model_dir: "/home/blackroot/Desktop/YALS/Models/",
+    model_name: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
     num_gpu_layers: 999,
     max_seq_len: undefined,
 });
