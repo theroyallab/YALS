@@ -60,6 +60,12 @@ set_target_properties(deno_cpp_binding PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "../${CMAKE_CURRENT_SOURCE_DIR}/lib"
 )
 
+add_executable(minimal_cpp_test
+        minimal_cpp_test.cpp
+)
+
+target_link_libraries(minimal_cpp_test PRIVATE llama)
+
 # Windows options
 if(WIN32)
     set_target_properties(deno_cpp_binding PROPERTIES
