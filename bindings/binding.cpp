@@ -376,8 +376,6 @@ const char* InferToReadbackBuffer(
     std::vector<llama_logit_bias> biases;
     llama_sampler* banSampler = nullptr;
     llama_batch batch = firstBatch;
-    std::cout << "Num:" << numTokensToGenerate;
-    std::flush(std::cout);
     while (!isEnd && !readbackBufferPtr->cancelled && (tokenCount + batch.n_tokens <= numTokensToGenerate)) {
         const auto piece = TokenToPiece(model, newTokenId).value();
         buffer += piece;
@@ -445,9 +443,6 @@ const char* InferToReadbackBuffer(
         batch = llama_batch_get_one(&newTokenId, 1);
         std::tie(newTokenId, isEnd) = gen(batch, sampler);
     }
-
-    std::cout << "Count: " << tokenCount << "End" << isEnd << "ReadB Cancel:" << readbackBufferPtr->cancelled << std::endl;
-    std::flush(std::cout);
 
     if (banSampler != nullptr) {
         llama_sampler_free(banSampler);
