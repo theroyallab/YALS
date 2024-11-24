@@ -31,4 +31,8 @@ int main() {
             std::flush(std::cout);
         }
     }
+
+    FreeModel(model);
+    FreeSampler(sampler);
+    ResetReadbackBuffer(readbackBuffer);
 }
