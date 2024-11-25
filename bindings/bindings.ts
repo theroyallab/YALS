@@ -505,11 +505,10 @@ export class Model {
         const promptPtr = new TextEncoder().encode(prompt + "\0");
 
         // MARK: Redundant
-        const rewindStrings = params.banned_strings as string[];
-        const stoppingStrings = params.stop as string[];
-
-        const nullTerminatedRewinds = rewindStrings.map((str) => str + "\0");
-        const nullTerminatedStops = stoppingStrings.map((str) => str + "\0");
+        const nullTerminatedRewinds = params.banned_strings.map((str) =>
+            str + "\0"
+        );
+        const nullTerminatedStops = params.stop.map((str) => str + "\0");
 
         // Encode strings to Uint8Arrays
         const encodedRewinds = nullTerminatedRewinds.map((str) =>
@@ -553,9 +552,9 @@ export class Model {
             params.add_bos_token,
             !params.skip_special_tokens,
             Deno.UnsafePointer.of(rewindPtrArrayBuffer),
-            rewindStrings.length,
+            params.banned_strings.length,
             Deno.UnsafePointer.of(stopPtrArrayBuffer),
-            stoppingStrings.length,
+            params.stop.length,
         );
 
         // Read from the read buffer

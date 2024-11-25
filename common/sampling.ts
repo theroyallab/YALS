@@ -5,7 +5,7 @@ const maxTokensType = z.number().gte(0).optional();
 const banEosTokenType = z.boolean().optional();
 const stopStringsType = z.union([
     z.string(),
-    z.array(z.union([z.number(), z.string()])),
+    z.array(z.string()),
 ]).optional();
 const bannedTokensType = z.union([
     z.array(z.number()),
@@ -48,15 +48,42 @@ const GenerationOptionsSchema = z.object({
     custom_token_bans: bannedTokensType,
 })
     .openapi({
-        "description": "Generation options",
+        description: "Generation options",
     })
     .transform((obj) => {
-        return {
+        // Aliases
+        const aliasObj = {
             ...obj,
             max_tokens: obj.max_tokens ?? obj.max_length,
             ban_eos_token: obj.ban_eos_token ?? obj.ignore_eos ?? false,
             stop: obj.stop ?? obj.stop_sequence ?? [],
             banned_tokens: obj.banned_tokens ?? obj.custom_token_bans ?? [],
+        };
+
+        // TODO: Possibly fix redundancy?
+
+        // Transform associated values
+        if (typeof aliasObj.stop == "string") {
+            aliasObj.stop = [aliasObj.stop];
+        }
+
+        if (typeof aliasObj.banned_tokens == "string") {
+            aliasObj.banned_tokens = aliasObj.banned_tokens.replaceAll(" ", "")
+                .split(",")
+                .filter((x) => /^\d+$/.test(x))
+                .map((x) => parseInt(x));
+        }
+
+        if (typeof aliasObj.banned_strings == "string") {
+            aliasObj.banned_strings = [aliasObj.banned_strings];
+        }
+
+        // Cast the transformed types
+        return {
+            ...aliasObj,
+            stop: aliasObj.stop as string[],
+            banned_tokens: aliasObj.banned_tokens as number[],
+            banned_strings: aliasObj.banned_strings as string[],
         };
     });
 
@@ -82,10 +109,18 @@ const AlphabetSamplerSchema = z.object({
         description: "Alphabet samplers",
     })
     .transform((obj) => {
-        return {
+        // Aliases
+        const aliasObj = {
             ...obj,
             typical: obj.typical ?? obj.typical_p ?? 1,
         };
+
+        // Transform associated values
+        if (aliasObj.top_k == -1) {
+            aliasObj.top_k = 0;
+        }
+
+        return aliasObj;
     });
 
 const repetitionPenaltyType = z.number().gt(0).optional();
@@ -146,9 +181,33 @@ const DrySchema = z.object({
         description: "DRY options",
     })
     .transform((obj) => {
-        return {
+        // Aliases
+        const aliasObj = {
             ...obj,
             dry_range: obj.dry_range ?? obj.dry_penalty_last_n ?? 0,
+        };
+
+        // Transform associated values
+        if (typeof aliasObj.dry_sequence_breakers == "string") {
+            if (!aliasObj.dry_sequence_breakers.startsWith("[")) {
+                aliasObj.dry_sequence_breakers =
+                    `[${aliasObj.dry_sequence_breakers}]`;
+            }
+
+            // Parse can fail, so return a default value if it does
+            try {
+                aliasObj.dry_sequence_breakers = JSON.parse(
+                    aliasObj.dry_sequence_breakers,
+                );
+            } catch {
+                aliasObj.dry_sequence_breakers = [];
+            }
+        }
+
+        // Cast the transformed types
+        return {
+            ...aliasObj,
+            dry_sequence_breakers: aliasObj.dry_sequence_breakers as string[],
         };
     });
 
@@ -204,6 +263,13 @@ const MirostatSchema = z.object({
 })
     .openapi({
         description: "Mirostat options",
+    })
+    .transform((obj) => {
+        if (obj.mirostat_mode == 2) {
+            obj.mirostat = true;
+        }
+
+        return obj;
     });
 
 // Construct from aliased sampler requests
