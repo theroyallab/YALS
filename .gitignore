@@ -17,6 +17,7 @@
 # C++ ignores
 cmake-build-debug*
 */cmake-build-debug*
+bindings/build
 
 # Lib
 lib/*
