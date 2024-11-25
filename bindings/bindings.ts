@@ -4,6 +4,7 @@ import { ModelConfig } from "@/common/configModels.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 
 import llamaSymbols from "./symbols.ts";
+import { pointerArrayFromStrings } from "./utils.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -69,8 +70,8 @@ export class SamplerBuilder {
         this.sampler = lib.symbols.GrammarSampler(
             this.sampler,
             model,
-            Deno.UnsafePointer.of(grammarPtr),
-            Deno.UnsafePointer.of(rootPtr),
+            grammarPtr,
+            rootPtr,
         );
     }
 
@@ -146,7 +147,7 @@ export class SamplerBuilder {
             base,
             allowedLength,
             penaltyLastN,
-            Deno.UnsafePointer.of(ptrArrayBuffer),
+            ptrArrayBuffer,
             BigInt(sequenceBreakers.length),
         );
     }
@@ -366,7 +367,7 @@ export class Model {
         const modelPath = params.model_dir + params.model_name;
         const modelPathPtr = new TextEncoder().encode(modelPath + "\0");
         const model = await lib.symbols.LoadModel(
-            Deno.UnsafePointer.of(modelPathPtr),
+            modelPathPtr,
             params.num_gpu_layers as number,
         );
 
@@ -504,56 +505,22 @@ export class Model {
 
         const promptPtr = new TextEncoder().encode(prompt + "\0");
 
-        // MARK: Redundant
-        const nullTerminatedRewinds = params.banned_strings.map((str) =>
-            str + "\0"
-        );
-        const nullTerminatedStops = params.stop.map((str) => str + "\0");
-
-        // Encode strings to Uint8Arrays
-        const encodedRewinds = nullTerminatedRewinds.map((str) =>
-            new TextEncoder().encode(str)
-        );
-        const encodedStops = nullTerminatedStops.map((str) =>
-            new TextEncoder().encode(str)
-        );
-
-        // Create pointers for each string
-        const rewindPtrs = encodedRewinds.map((encoded) =>
-            Deno.UnsafePointer.of(encoded)
-        );
-        const stopPtrs = encodedStops.map((encoded) =>
-            Deno.UnsafePointer.of(encoded)
-        );
-
-        // Create pointer arrays for rewind and stop strings
-        const rewindPtrArrayBuffer = new ArrayBuffer(rewindPtrs.length * 8);
-        const rewindPtrArray = new BigUint64Array(rewindPtrArrayBuffer);
-
-        const stopPtrArrayBuffer = new ArrayBuffer(stopPtrs.length * 8);
-        const stopPtrArray = new BigUint64Array(stopPtrArrayBuffer);
-
-        // Fill pointer arrays
-        rewindPtrs.forEach((ptr, index) => {
-            rewindPtrArray[index] = BigInt(Deno.UnsafePointer.value(ptr));
-        });
-
-        stopPtrs.forEach((ptr, index) => {
-            stopPtrArray[index] = BigInt(Deno.UnsafePointer.value(ptr));
-        });
+        // Use the helper function for both arrays
+        const rewindPtrArray = pointerArrayFromStrings(params.banned_strings);
+        const stopPtrArray = pointerArrayFromStrings(params.stop);
 
         lib.symbols.InferToReadbackBuffer(
             this.model,
             sampler,
             this.context,
             this.readbackBuffer.bufferPtr,
-            Deno.UnsafePointer.of(promptPtr),
+            promptPtr,
             params.max_tokens ?? 150,
             params.add_bos_token,
             !params.skip_special_tokens,
-            Deno.UnsafePointer.of(rewindPtrArrayBuffer),
+            rewindPtrArray,
             params.banned_strings.length,
-            Deno.UnsafePointer.of(stopPtrArrayBuffer),
+            stopPtrArray,
             params.stop.length,
         );
 

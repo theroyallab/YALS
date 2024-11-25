@@ -1,7 +1,7 @@
 export default {
     LoadModel: {
         parameters: [
-            "pointer", // const char *modelPath
+            "buffer", // const char *modelPath
             "i32", // int numberGpuLayers
         ],
         result: "pointer" as const, // void*
@@ -67,7 +67,7 @@ export default {
         result: "pointer" as const, // void*
     },
     GrammarSampler: {
-        parameters: ["pointer", "pointer", "pointer", "pointer"], // void* sampler, const llama_model* model, const char* grammar, const char* root
+        parameters: ["pointer", "pointer", "buffer", "buffer"], // void* sampler, const llama_model* model, const char* grammar, const char* root
         result: "pointer" as const, // void*
     },
     GreedySampler: {
@@ -139,7 +139,7 @@ export default {
             "f32",
             "i32",
             "i32",
-            "pointer",
+            "buffer",
             "u64",
         ], // void* sampler, const llama_model* model, float multiplier, float base, int32_t allowed_length, int32_t penalty_last_n, const char* const* sequence_breakers, size_t n_breakers
         result: "pointer" as const, // void*
@@ -171,13 +171,13 @@ export default {
             "pointer", // llama_sampler* sampler
             "pointer", // llama_context* context
             "pointer", // ReadbackBuffer* readbackBufferPtr
-            "pointer", // const char* prompt
+            "buffer", // const char* prompt
             "u32", // const unsigned numberTokensToPredict
             "bool", // const bool addSpecial
             "bool", // const bool parseSpecial
-            "pointer", // const char** rewindStrings
+            "buffer", // const char** rewindStrings
             "u32", // count of rewind strings
-            "pointer", // const char** stoppingStrings
+            "buffer", // const char** stoppingStrings
             "u32", // count of stop strings
         ],
         result: "pointer" as const,
