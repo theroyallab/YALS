@@ -417,7 +417,7 @@ export class Model {
     async *generateGen(
         prompt: string,
         params: BaseSamplerRequest,
-        abortSignal?: AbortSignal,
+        abortSignal: AbortSignal,
     ) {
         // Clear generation cache
         this.resetKVCache();
@@ -526,7 +526,7 @@ export class Model {
 
         // Read from the read buffer
         for await (const chunk of this.readbackBuffer.read()) {
-            if (abortSignal?.aborted) {
+            if (abortSignal.aborted) {
                 await this.cancelJob();
                 break;
             }

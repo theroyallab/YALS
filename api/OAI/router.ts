@@ -24,6 +24,7 @@ router.post(
     zValidator("json", CompletionRequest),
     async (c) => {
         const params = c.req.valid("json");
+        const abortController = new AbortController();
 
         if (params.stream) {
             return streamSSE(c, async (stream) => {
@@ -31,8 +32,6 @@ router.post(
             });
         } else {
             let finished = false;
-            const abortController = new AbortController();
-
             c.req.raw.signal.addEventListener("abort", () => {
                 if (!finished) {
                     abortController.abort();
@@ -43,7 +42,7 @@ router.post(
             const completionResult = await generateCompletion(
                 c.var.model,
                 params,
-                abortController.signal,
+                c.req,
             );
 
             finished = true;
