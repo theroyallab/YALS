@@ -1,4 +1,4 @@
-import { StreamingApi } from "hono/stream";
+import { SSEStreamingApi } from "hono/streaming";
 import { Model } from "@/bindings/bindings.ts";
 
 import {
@@ -21,7 +21,7 @@ async function createResponse(text: string, modelName: string) {
 }
 
 export async function streamCompletion(
-    stream: StreamingApi,
+    stream: SSEStreamingApi,
     model: Model,
     params: CompletionRequest,
 ) {
