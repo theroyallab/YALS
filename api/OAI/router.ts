@@ -7,6 +7,7 @@ import { jsonContent } from "@/common/networking.ts";
 import { CompletionRequest, CompletionResponse } from "./types/completions.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 import { generateCompletion, streamCompletion } from "./utils/completion.ts";
+import { logger } from "@/common/logging.ts";
 
 const router = new Hono();
 
@@ -29,10 +30,23 @@ router.post(
                 await streamCompletion(stream, c.var.model, params);
             });
         } else {
+            let finished = false;
+            const abortController = new AbortController();
+
+            c.req.raw.signal.addEventListener("abort", () => {
+                if (!finished) {
+                    abortController.abort();
+                    logger.error("Aborted generation request");
+                }
+            });
+
             const completionResult = await generateCompletion(
                 c.var.model,
                 params,
+                abortController.signal,
             );
+
+            finished = true;
             return c.json(completionResult);
         }
     },

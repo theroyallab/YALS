@@ -38,7 +38,8 @@ export async function streamCompletion(
 export async function generateCompletion(
     model: Model,
     params: CompletionRequest,
+    abortSignal: AbortSignal,
 ) {
-    const result = await model.generate(params.prompt, params);
+    const result = await model.generate(params.prompt, params, abortSignal);
     return await createResponse(result, model.path.name);
 }

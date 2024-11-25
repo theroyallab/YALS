@@ -1,4 +1,9 @@
-import { configure, getAnsiColorFormatter, getConsoleSink } from "logtape";
+import {
+    configure,
+    getAnsiColorFormatter,
+    getConsoleSink,
+    getLogger,
+} from "logtape";
 
 export async function setupLogger() {
     const formatter = getAnsiColorFormatter({
@@ -16,3 +21,5 @@ export async function setupLogger() {
         ],
     });
 }
+
+export const logger = getLogger("YALS");

@@ -392,15 +392,20 @@ export class Model {
 
     async cancelJob() {
         lib.symbols.CancelReadbackJob(this.readbackBuffer.bufferPtr);
-        do {
+        while (!this.readbackBuffer.isDone()) {
             await delay(10);
-        } while (!this.readbackBuffer.isDone());
+        }
+
         this.readbackBuffer.reset();
     }
 
-    async generate(prompt: string, params: BaseSamplerRequest) {
+    async generate(
+        prompt: string,
+        params: BaseSamplerRequest,
+        abortSignal: AbortSignal,
+    ) {
         let result = "";
-        const generator = this.generateGen(prompt, params);
+        const generator = this.generateGen(prompt, params, abortSignal);
         for await (const chunk of generator) {
             result += chunk;
         }
@@ -411,6 +416,7 @@ export class Model {
     async *generateGen(
         prompt: string,
         params: BaseSamplerRequest,
+        abortSignal?: AbortSignal,
     ) {
         // Clear generation cache
         this.resetKVCache();
@@ -554,6 +560,11 @@ export class Model {
 
         // Read from the read buffer
         for await (const chunk of this.readbackBuffer.read()) {
+            if (abortSignal?.aborted) {
+                await this.cancelJob();
+                break;
+            }
+
             yield chunk;
         }
         this.readbackBuffer.reset();

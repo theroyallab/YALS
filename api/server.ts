@@ -1,7 +1,6 @@
 import { cors } from "hono/cors";
 import { logger as loggerMiddleware } from "hono/logger";
 import { StatusCode } from "hono/utils/http-status";
-import { getLogger } from "logtape";
 import { apiReference } from "@scalar/hono-api-reference";
 
 import { Hono } from "hono";
@@ -10,8 +9,7 @@ import { openAPISpecs } from "hono-openapi";
 import core from "./core/router.ts";
 import oai from "./OAI/router.ts";
 import { config } from "@/common/config.ts";
-
-const logger = getLogger("YALS");
+import { logger } from "@/common/logging.ts";
 
 export function createApi() {
     const app = new Hono();
