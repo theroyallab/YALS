@@ -6,16 +6,16 @@
   },
   "imports": {
     "@/": "./",
+    "hono": "npm:hono@^4.6.12",
     "hono-openapi": "npm:@bdashore3/hono-openapi@^0.1.5",
     "@huggingface/jinja": "npm:@huggingface/jinja@^0.3.2",
-    "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.5.158",
-    "@std/async": "jsr:@std/async@^1.0.8",
+    "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.5.161",
+    "@std/async": "jsr:@std/async@^1.0.9",
     "@std/path": "jsr:@std/path@^1.0.8",
-    "logtape": "jsr:@logtape/logtape@^0.7.1",
+    "logtape": "jsr:@logtape/logtape@^0.8.0",
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
-    "hono": "npm:hono@^4.6.8",
     "zod": "npm:zod@^3.23.8",
-    "zod-openapi": "npm:zod-openapi@^4.0.0"
+    "zod-openapi": "npm:zod-openapi@^4.1.0"
   },
   "fmt": {
     "indentWidth": 4,
