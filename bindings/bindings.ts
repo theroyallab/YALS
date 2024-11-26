@@ -398,10 +398,11 @@ export class Model {
                 return;
             }
 
+            // Use 2048 for chunk size for now, need more info on what to actually use
             const context = await lib.symbols.InitiateCtx(
                 model,
-                8192,
-                1,
+                params.max_seq_len ?? 4096,
+                2048,
             );
 
             const parsedModelPath = parse(modelPath);
@@ -453,8 +454,9 @@ export class Model {
         this.resetKVCache();
 
         const samplerBuilder = new SamplerBuilder(this.model);
-        const seed = params.seed ??
-            Math.floor(Math.random() * (0xFFFFFFFF + 1));
+        const seed = params.seed && params.seed > 0
+            ? params.seed
+            : Math.floor(Math.random() * (0xFFFFFFFF + 1));
 
         const logitBias: LogitBias[] = [];
         if (params.logit_bias) {
@@ -558,6 +560,7 @@ export class Model {
         for await (const chunk of this.readbackBuffer.read()) {
             if (abortSignal.aborted) {
                 await this.cancelJob();
+                console.log("Cancel sent");
                 break;
             }
 

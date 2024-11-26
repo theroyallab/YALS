@@ -256,20 +256,12 @@ const DynatempSchema = z.object({
     });
 
 const MirostatSchema = z.object({
-    mirostat: z.boolean().default(false),
     mirostat_mode: z.number().default(0),
     mirostat_tau: z.number().default(1),
     mirostat_eta: z.number().default(0),
 })
     .openapi({
         description: "Mirostat options",
-    })
-    .transform((obj) => {
-        if (obj.mirostat_mode == 2) {
-            obj.mirostat = true;
-        }
-
-        return obj;
     });
 
 // Construct from aliased sampler requests

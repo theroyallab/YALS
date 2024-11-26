@@ -13,7 +13,6 @@ import * as modelContainer from "@/common/modelContainer.ts";
 import { jsonContent } from "@/common/networking.ts";
 
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
-import { z } from "zod";
 
 const router = new Hono();
 
