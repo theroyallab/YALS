@@ -16,8 +16,8 @@ const ModelLoadCallback = {
     parameters: [
         "f32",
         "pointer",
-    ],  // float and void*
-    result: "bool"
+    ], // float and void*
+    result: "bool",
 } as const;
 
 // Automatically setup the lib
@@ -371,21 +371,32 @@ export class Model {
         this.readbackBuffer = new ReadbackBuffer();
     }
 
-    static async init(params: ModelConfig, progressCallback?: (progress: number) => boolean) {
+    static async init(
+        params: ModelConfig,
+        progressCallback?: (progress: number) => boolean,
+    ) {
         const modelPath = params.model_dir + params.model_name;
         const modelPathPtr = new TextEncoder().encode(modelPath + "\0");
 
         let callback = undefined;
         if (progressCallback) {
-            callback = new Deno.UnsafeCallback(ModelLoadCallback, progressCallback);
+            callback = new Deno.UnsafeCallback(
+                ModelLoadCallback,
+                progressCallback,
+            );
         }
 
         try {
             const model = await lib.symbols.LoadModel(
                 modelPathPtr,
                 params.num_gpu_layers as number,
-                callback?.pointer ?? null
+                callback?.pointer ?? null,
             );
+
+            // Was the load aborted?
+            if (!model) {
+                return;
+            }
 
             const context = await lib.symbols.InitiateCtx(
                 model,

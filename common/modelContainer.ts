@@ -3,8 +3,11 @@ import { ModelConfig } from "@/common/configModels.ts";
 
 export let model: Model | undefined = undefined;
 
-export async function loadModel(params: ModelConfig) {
-    model = await Model.init(params);
+export async function loadModel(
+    params: ModelConfig,
+    progressCallback?: (progress: number) => boolean,
+) {
+    model = await Model.init(params, progressCallback);
 }
 
 export async function unloadModel() {
