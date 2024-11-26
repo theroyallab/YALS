@@ -10,7 +10,7 @@ int main() {
     const auto prompt = "This is the test prompt";
     const auto numTokens = 35;
 
-    const auto model = LoadModel(modelPath.c_str(), modelLayers);
+    const auto model = LoadModel(modelPath.c_str(), modelLayers, nullptr);
     const auto ctx = InitiateCtx(model, ctxLen, 1);
     const auto sampler = MakeSampler();
     GreedySampler(sampler);

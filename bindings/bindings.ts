@@ -12,6 +12,14 @@ interface LogitBias {
     bias: number; // This corresponds to float
 }
 
+const ModelLoadCallback = {
+    parameters: [
+        "f32",
+        "pointer",
+    ],  // float and void*
+    result: "bool"
+} as const;
+
 // Automatically setup the lib
 const lib = (() => {
     const libName = "deno_cpp_binding";
@@ -363,23 +371,34 @@ export class Model {
         this.readbackBuffer = new ReadbackBuffer();
     }
 
-    static async init(params: ModelConfig) {
+    static async init(params: ModelConfig, progressCallback?: (progress: number) => boolean) {
         const modelPath = params.model_dir + params.model_name;
         const modelPathPtr = new TextEncoder().encode(modelPath + "\0");
-        const model = await lib.symbols.LoadModel(
-            modelPathPtr,
-            params.num_gpu_layers as number,
-        );
 
-        const context = await lib.symbols.InitiateCtx(
-            model,
-            8192,
-            1,
-        );
+        let callback = undefined;
+        if (progressCallback) {
+            callback = new Deno.UnsafeCallback(ModelLoadCallback, progressCallback);
+        }
 
-        const parsedModelPath = parse(modelPath);
-        const tokenizer = await Tokenizer.init(model);
-        return new Model(model, context, parsedModelPath, tokenizer);
+        try {
+            const model = await lib.symbols.LoadModel(
+                modelPathPtr,
+                params.num_gpu_layers as number,
+                callback?.pointer ?? null
+            );
+
+            const context = await lib.symbols.InitiateCtx(
+                model,
+                8192,
+                1,
+            );
+
+            const parsedModelPath = parse(modelPath);
+            const tokenizer = await Tokenizer.init(model);
+            return new Model(model, context, parsedModelPath, tokenizer);
+        } finally {
+            callback?.close();
+        }
     }
 
     resetKVCache() {

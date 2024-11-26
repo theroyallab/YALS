@@ -11,10 +11,12 @@ void TestPrint(const char* text)
     std::cout << text << std::endl;
 }
 
-llama_model* LoadModel(const char* modelPath, int numberGpuLayers)
+//typedef bool (*llama_progress_callback)(float progress, void * user_data);
+llama_model* LoadModel(const char* modelPath, int numberGpuLayers, llama_progress_callback callback)
 {
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = numberGpuLayers;
+    model_params.progress_callback = callback;
 
     llama_model* model = llama_load_model_from_file(modelPath, model_params);
 

@@ -3,6 +3,7 @@ export default {
         parameters: [
             "buffer", // const char *modelPath
             "i32", // int numberGpuLayers
+            "pointer"
         ],
         result: "pointer" as const, // void*
         nonblocking: true,
