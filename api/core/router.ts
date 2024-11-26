@@ -1,15 +1,74 @@
 import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { validator as zValidator } from "hono-openapi/zod";
-import { ModelLoadRequest } from "@/api/core/types/model.ts";
+import {
+    ModelCard,
+    ModelList,
+    ModelLoadRequest,
+} from "@/api/core/types/model.ts";
 import { ModelConfig } from "@/common/configModels.ts";
 import { config } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
 import * as modelContainer from "@/common/modelContainer.ts";
+import { jsonContent } from "@/common/networking.ts";
 
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
+import { z } from "zod";
 
 const router = new Hono();
+
+const modelsRoute = describeRoute({
+    responses: {
+        200: jsonContent(ModelList, "List of models in directory"),
+    },
+});
+
+router.get(
+    "/v1/models",
+    modelsRoute,
+    async (c) => {
+        const modelCards: ModelCard[] = [];
+        for await (const file of Deno.readDir(config.model.model_dir)) {
+            if (!file.name.endsWith(".gguf")) {
+                continue;
+            }
+
+            const modelCard = await ModelCard.parseAsync({
+                id: file.name,
+            });
+
+            modelCards.push(modelCard);
+        }
+
+        const modelList = await ModelList.parseAsync({
+            data: modelCards,
+        });
+
+        return c.json(modelList);
+    },
+);
+
+const currentModelRoute = describeRoute({
+    responses: {
+        200: jsonContent(
+            ModelCard,
+            "The currently loaded model (if it exists)",
+        ),
+    },
+});
+
+router.get(
+    "/v1/model",
+    currentModelRoute,
+    checkModelMiddleware,
+    async (c) => {
+        const modelCard = await ModelCard.parseAsync({
+            id: c.var.model.path.base,
+        });
+
+        return c.json(modelCard);
+    },
+);
 
 const loadModelRoute = describeRoute({
     responses: {

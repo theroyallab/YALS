@@ -60,6 +60,10 @@ export function createApi() {
             ? (currentStatus as StatusCode)
             : 500;
 
+        if (err.stack) {
+            logger.error(err.stack);
+        }
+
         return c.json({
             message: err.message,
             stack: err.stack,
