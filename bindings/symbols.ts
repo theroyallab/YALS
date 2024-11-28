@@ -3,7 +3,7 @@ export default {
         parameters: [
             "buffer", // const char *modelPath
             "i32", // int numberGpuLayers
-            "pointer",
+            "pointer", // llama_progress_callback callback
         ],
         result: "pointer" as const, // void*
         nonblocking: true,
@@ -149,10 +149,6 @@ export default {
         parameters: [],
         result: "pointer" as const, // void*
     },
-    CancelReadbackJob: {
-        parameters: ["pointer"], // ReadbackBuffer*
-        result: "void",
-    },
     ResetReadbackBuffer: {
         parameters: ["pointer"], // ReadbackBuffer*
         result: "void",
@@ -176,6 +172,7 @@ export default {
             "u32", // const unsigned numberTokensToPredict
             "bool", // const bool addSpecial
             "bool", // const bool parseSpecial
+            "pointer", // ggml_abort_callback abortCallback
             "buffer", // const char** rewindStrings
             "u32", // count of rewind strings
             "buffer", // const char** stoppingStrings

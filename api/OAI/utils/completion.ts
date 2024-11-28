@@ -23,6 +23,7 @@ async function createResponse(text: string, modelName: string) {
 }
 
 export async function streamCompletion(
+    req: HonoRequest,
     stream: SSEStreamingApi,
     model: Model,
     params: CompletionRequest,
@@ -30,11 +31,20 @@ export async function streamCompletion(
     const abortController = new AbortController();
     let finished = false;
 
+    // If an abort happens before streaming starts
+    req.raw.signal.addEventListener("abort", () => {
+        if (!finished) {
+            abortController.abort();
+            logger.error("Streaming completion aborted");
+        }
+    });
+
     const generator = model.generateGen(
         params.prompt,
         params,
         abortController.signal,
     );
+
     for await (const chunk of generator) {
         stream.onAbort(() => {
             if (!finished) {

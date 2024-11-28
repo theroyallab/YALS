@@ -27,7 +27,6 @@ extern "C" {
     const char* TokenToString(const llama_model* model, const llama_token token);
 
     ReadbackBuffer* CreateReadbackBuffer();
-    void CancelReadbackJob(ReadbackBuffer* buffer);
     void ResetReadbackBuffer(ReadbackBuffer* buffer);
 
     char* ReadbackNext(ReadbackBuffer *buffer);
@@ -64,13 +63,6 @@ extern "C" {
     /* SAMPLERS
         * */
 
-    void InferChat(const llama_model* model,
-        llama_sampler* sampler,
-        llama_context* context,
-        ReadbackBuffer* readbackBufferPtr,
-        const char* nextMessage,
-        unsigned numberTokensToPredict);
-
     const char* InferToReadbackBuffer(
         const llama_model* model,
         llama_sampler* sampler,
@@ -80,6 +72,7 @@ extern "C" {
         const unsigned numberTokensToPredict,
         const bool addSpecial,
         const bool parseSpecial,
+        ggml_abort_callback abortCallback,
         const char** rewindStrings,
         const unsigned numRewindStrings,
         const char** stoppingStrings,

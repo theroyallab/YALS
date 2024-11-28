@@ -93,21 +93,14 @@ struct ReadbackBuffer
 {
     unsigned lastReadbackIndex {0};
     bool done {false};
-    bool cancelled {false};
     std::vector<char*>* data = new std::vector<char*>();
 };
 
 void ResetReadbackBuffer(ReadbackBuffer* buffer) {
     buffer->done = false;
-    buffer->cancelled = false;
     buffer->lastReadbackIndex = 0;
     //Keep capacity, no resize.
     buffer->data->clear();
-}
-
-void CancelReadbackJob(ReadbackBuffer* buffer)
-{
-    buffer->cancelled = true;
 }
 
 bool IsReadbackBufferDone(const ReadbackBuffer* buffer)
@@ -327,11 +320,16 @@ const char* InferToReadbackBuffer(
     const unsigned numberTokensToPredict,
     const bool addSpecial,
     const bool parseSpecial,
+    ggml_abort_callback abortCallback,
     const char** rewindStrings,
     const unsigned numRewindStrings,
     const char** stoppingStrings,
     const unsigned numStoppingStrings)
 {
+    if (abortCallback != nullptr) {
+        llama_set_abort_callback(context, abortCallback, NULL);
+    }
+
     auto promptTokens = Tokenize(model, context, prompt, addSpecial, parseSpecial).value();
 
     const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
@@ -378,7 +376,12 @@ const char* InferToReadbackBuffer(
     std::vector<llama_logit_bias> biases;
     llama_sampler* banSampler = nullptr;
     llama_batch batch = firstBatch;
-    while (!isEnd && !readbackBufferPtr->cancelled && (tokenCount + batch.n_tokens <= numTokensToGenerate)) {
+    while (!isEnd && (tokenCount + batch.n_tokens <= numTokensToGenerate)) {
+        // Abort if callback is fired
+        if (abortCallback != nullptr && abortCallback(nullptr)) {
+            break;
+        }
+
         const auto piece = TokenToPiece(model, newTokenId).value();
         buffer += piece;
         tokenCount += batch.n_tokens;

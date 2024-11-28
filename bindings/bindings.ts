@@ -20,6 +20,13 @@ const ModelLoadCallback = {
     result: "bool",
 } as const;
 
+const AbortCallback = {
+    parameters: [
+        "pointer",
+    ], // float and void*
+    result: "bool",
+} as const;
+
 // Automatically setup the lib
 const lib = (() => {
     const libName = "deno_cpp_binding";
@@ -422,15 +429,6 @@ export class Model {
         await lib.symbols.FreeCtx(this.context);
     }
 
-    async cancelJob() {
-        lib.symbols.CancelReadbackJob(this.readbackBuffer.bufferPtr);
-        while (!this.readbackBuffer.isDone()) {
-            await delay(10);
-        }
-
-        this.readbackBuffer.reset();
-    }
-
     async generate(
         prompt: string,
         params: BaseSamplerRequest,
@@ -541,6 +539,16 @@ export class Model {
         const rewindPtrArray = pointerArrayFromStrings(params.banned_strings);
         const stopPtrArray = pointerArrayFromStrings(params.stop);
 
+        // Callback to abort the current generation
+        const abortCallback: () => boolean = () => {
+            return abortSignal.aborted;
+        };
+
+        const abortCallbackPointer = new Deno.UnsafeCallback(
+            AbortCallback,
+            abortCallback,
+        ).pointer;
+
         lib.symbols.InferToReadbackBuffer(
             this.model,
             sampler,
@@ -550,6 +558,7 @@ export class Model {
             params.max_tokens ?? 150,
             params.add_bos_token,
             !params.skip_special_tokens,
+            abortCallbackPointer,
             rewindPtrArray,
             params.banned_strings.length,
             stopPtrArray,
@@ -558,12 +567,6 @@ export class Model {
 
         // Read from the read buffer
         for await (const chunk of this.readbackBuffer.read()) {
-            if (abortSignal.aborted) {
-                await this.cancelJob();
-                console.log("Cancel sent");
-                break;
-            }
-
             yield chunk;
         }
         this.readbackBuffer.reset();
