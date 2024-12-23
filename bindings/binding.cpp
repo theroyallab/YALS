@@ -222,15 +222,13 @@ llama_sampler* MirostatV2Sampler(llama_sampler* sampler, const uint32_t seed, co
 }
 
 // Typically applied early in the sampling chain
-llama_sampler* PenaltiesSampler(llama_sampler* sampler, const llama_model* model,
+llama_sampler* PenaltiesSampler(llama_sampler* sampler,
                                 const int penaltyLastN, const float penaltyRepeat,
-                                const float penaltyFreq, const float penaltyPresent, const bool penalizeNl,
-                                const bool ignoreEos)
+                                const float penaltyFreq, const float penaltyPresent)
 {
-    const int nVocab = llama_n_vocab(model);
     llama_sampler_chain_add(sampler, llama_sampler_init_penalties(
-        nVocab, LLAMA_TOKEN_NULL, llama_token_nl(model), penaltyLastN,
-        penaltyRepeat, penaltyFreq, penaltyPresent, penalizeNl, ignoreEos));
+        penaltyLastN, penaltyRepeat, penaltyFreq, penaltyPresent
+    ));
     return sampler;
 }
 

@@ -205,18 +205,13 @@ export class SamplerBuilder {
         penaltyRepeat: number,
         penaltyFreq: number,
         penaltyPresent: number,
-        penalizeNl: boolean,
-        ignoreEos: boolean,
     ) {
         this.sampler = lib.symbols.PenaltiesSampler(
             this.sampler,
-            this.model,
             penaltyLastN,
             penaltyRepeat,
             penaltyFreq,
             penaltyPresent,
-            penalizeNl,
-            ignoreEos,
         );
     }
 
@@ -493,8 +488,6 @@ export class Model {
             params.repetition_penalty,
             params.frequency_penalty,
             params.presence_penalty,
-            true,
-            false,
         );
 
         if (params.dry_multiplier > 0) {

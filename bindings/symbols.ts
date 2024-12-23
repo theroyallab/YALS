@@ -98,14 +98,11 @@ export default {
     PenaltiesSampler: {
         parameters: [
             "pointer",
-            "pointer",
             "i32",
             "f32",
             "f32",
             "f32",
-            "bool",
-            "bool",
-        ], // void* sampler, void* model, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent, bool penalizeNl, bool ignoreEos
+        ], // void* sampler, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent
         result: "pointer" as const, // void*
     },
     TempSampler: {

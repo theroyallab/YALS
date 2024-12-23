@@ -10,7 +10,7 @@ include(FetchContent)
 FetchContent_Declare(
         llama
         GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-        GIT_TAG 54ef9cfc726a799e6f454ac22c4815d037716eda
+        GIT_TAG 14b699ecde8f1e9e251ebff9eca39ebc5603b83b
 )
 
 # Required for proper builds
@@ -60,11 +60,11 @@ set_target_properties(deno_cpp_binding PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "../${CMAKE_CURRENT_SOURCE_DIR}/lib"
 )
 
-add_executable(minimal_cpp_test
-        minimal_cpp_test.cpp
-)
+#add_executable(minimal_cpp_test
+#        minimal_cpp_test.cpp
+#)
 
-target_link_libraries(minimal_cpp_test PRIVATE llama)
+#target_link_libraries(minimal_cpp_test PRIVATE llama)
 
 # Windows options
 if(WIN32)
