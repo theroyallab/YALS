@@ -1,23 +1,24 @@
 import "zod-openapi/extend";
 import { z } from "zod";
 
-const maxTokensType = z.number().gte(0).optional();
-const banEosTokenType = z.boolean().optional();
+const maxTokensType = z.number().gte(0).nullish();
+const banEosTokenType = z.boolean().nullish();
 const stopStringsType = z.union([
     z.string(),
     z.array(z.string()),
-]).optional();
+]).nullish();
 const bannedTokensType = z.union([
     z.array(z.number()),
     z.string(),
-]).optional();
+]).nullish();
 const GenerationOptionsSchema = z.object({
-    grammar_string: z.string().optional(),
-    add_bos_token: z.boolean().default(true),
-    skip_special_tokens: z.boolean().default(false),
-    seed: z.number().optional(),
-    logit_bias: z.record(z.string(), z.number()).default({}),
-    banned_strings: z.union([z.string(), z.array(z.string())]).default([]),
+    grammar_string: z.string().nullish(),
+    add_bos_token: z.boolean().nullish().coalesce(true),
+    skip_special_tokens: z.boolean().nullish().coalesce(false),
+    seed: z.number().nullish(),
+    logit_bias: z.record(z.string(), z.number()).nullish().coalesce({}),
+    banned_strings: z.union([z.string(), z.array(z.string())]).nullish()
+        .coalesce([]),
 
     // max token aliases
     max_tokens: maxTokensType
@@ -88,18 +89,18 @@ const GenerationOptionsSchema = z.object({
     });
 
 const TemperatureSamplerSchema = z.object({
-    temperature: z.number().gte(0).default(1),
-    temperature_last: z.boolean().default(false),
+    temperature: z.number().gte(0).nullish().coalesce(1),
+    temperature_last: z.boolean().nullish().coalesce(false),
 })
     .openapi({
         description: "Temperature options",
     });
 
-const typicalType = z.number().gt(0).lte(1).optional();
+const typicalType = z.number().gt(0).lte(1).nullish();
 const AlphabetSamplerSchema = z.object({
     top_k: z.number().gte(-1).default(0),
-    top_p: z.number().gte(0).lte(1).default(1),
-    min_p: z.number().gte(0).lte(1).default(0),
+    top_p: z.number().gte(0).lte(1).nullish().coalesce(1),
+    min_p: z.number().gte(0).lte(1).nullish().coalesce(0),
 
     // typical aliases
     typical: typicalType,
@@ -123,11 +124,11 @@ const AlphabetSamplerSchema = z.object({
         return aliasObj;
     });
 
-const repetitionPenaltyType = z.number().gt(0).optional();
-const penaltyRangeType = z.number().optional();
+const repetitionPenaltyType = z.number().gt(0).nullish();
+const penaltyRangeType = z.number().nullish();
 const PenaltySamplerSchema = z.object({
-    frequency_penalty: z.number().gte(0).default(0),
-    presence_penalty: z.number().gte(0).default(0),
+    frequency_penalty: z.number().gte(0).nullish().coalesce(0),
+    presence_penalty: z.number().gte(0).nullish().coalesce(0),
 
     // repetition_penalty aliases
     repetition_penalty: repetitionPenaltyType
@@ -161,14 +162,15 @@ const PenaltySamplerSchema = z.object({
         };
     });
 
-const dryRangeType = z.number().optional();
+const dryRangeType = z.number().nullish();
 const DrySchema = z.object({
-    dry_multiplier: z.number().default(0),
-    dry_base: z.number().default(0),
-    dry_allowed_length: z.number().default(0),
-    dry_sequence_breakers: z.union([z.string(), z.array(z.string())]).default(
-        [],
-    ),
+    dry_multiplier: z.number().nullish().coalesce(0),
+    dry_base: z.number().nullish().coalesce(0),
+    dry_allowed_length: z.number().nullish().coalesce(0),
+    dry_sequence_breakers: z.union([z.string(), z.array(z.string())]).nullish()
+        .coalesce(
+            [],
+        ),
 
     // dry_range aliases
     dry_range: dryRangeType
@@ -212,16 +214,16 @@ const DrySchema = z.object({
     });
 
 const XtcSchema = z.object({
-    xtc_probability: z.number().default(0),
-    xtc_threshold: z.number().default(0.1),
+    xtc_probability: z.number().nullish().coalesce(0),
+    xtc_threshold: z.number().nullish().coalesce(0.1),
 })
     .openapi({
         description: "XTC options",
     });
 
-const maxTempType = z.number().gte(0).optional();
-const minTempType = z.number().gte(0).optional();
-const tempExponentType = z.number().gte(0).optional();
+const maxTempType = z.number().gte(0).nullish();
+const minTempType = z.number().gte(0).nullish();
+const tempExponentType = z.number().gte(0).nullish();
 const DynatempSchema = z.object({
     // Aliases for max_temp
     max_temp: maxTempType
@@ -256,9 +258,9 @@ const DynatempSchema = z.object({
     });
 
 const MirostatSchema = z.object({
-    mirostat_mode: z.number().default(0),
-    mirostat_tau: z.number().default(1),
-    mirostat_eta: z.number().default(0),
+    mirostat_mode: z.number().nullish().coalesce(0),
+    mirostat_tau: z.number().nullish().coalesce(1),
+    mirostat_eta: z.number().nullish().coalesce(0),
 })
     .openapi({
         description: "Mirostat options",

@@ -7,12 +7,12 @@ export const CompletionResponseFormat = z.object({
 });
 
 export const CompletionRequest = z.object({
-    model: z.string().optional(),
+    model: z.string().nullish(),
     prompt: z.string(),
-    stream: z.boolean().default(false),
-    logprobs: z.number().gte(0).optional().default(0),
-    response_format: CompletionResponseFormat.optional(),
-    n: z.number().gte(1).optional().default(1),
+    stream: z.boolean().nullish().coalesce(false),
+    logprobs: z.number().gte(0).nullish().coalesce(0),
+    response_format: CompletionResponseFormat.nullish(),
+    n: z.number().gte(1).nullish().coalesce(1),
 })
     .and(BaseSamplerRequest)
     .openapi({
