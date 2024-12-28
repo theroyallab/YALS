@@ -1,5 +1,4 @@
-import { z } from "zod";
-import "@/common/extendZod.ts";
+import * as z from "@/common/myZod.ts";
 
 export const NetworkConfig = z.object({
     host: z.string().nullish().coalesce("127.0.0.1"),

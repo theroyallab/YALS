@@ -1,5 +1,4 @@
-import "zod-openapi/extend";
-import { z } from "zod";
+import * as z from "@/common/myZod.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 
 export const CompletionResponseFormat = z.object({

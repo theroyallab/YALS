@@ -1,6 +1,5 @@
-import "zod-openapi/extend";
+import * as z from "@/common/myZod.ts";
 import { ModelConfig } from "@/common/configModels.ts";
-import { z } from "zod";
 
 export const ModelLoadRequest = ModelConfig.omit({
     model_dir: true,
