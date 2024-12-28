@@ -1,23 +1,20 @@
-import "zod-openapi/extend";
+import * as v from "valibot";
 import { ModelConfig } from "@/common/configModels.ts";
-import { z } from "zod";
 
-export const ModelLoadRequest = ModelConfig.omit({
-    model_dir: true,
+export const ModelLoadRequest = v.omit(ModelConfig, ["model_dir"]);
+
+export const ModelCard = v.object({
+    id: v.nullish(v.string(), "test"),
+    object: v.nullish(v.string(), "model"),
+    created: v.nullish(v.number(), Date.now()),
+    owned_by: v.nullish(v.string(), "YALS"),
 });
 
-export const ModelCard = z.object({
-    id: z.string().default("test"),
-    object: z.string().default("model"),
-    created: z.number().default(Date.now()),
-    owned_by: z.string().default("YALS"),
+export type ModelCard = v.InferOutput<typeof ModelCard>;
+
+export const ModelList = v.object({
+    object: v.fallback(v.string(), "list"),
+    data: v.array(ModelCard),
 });
 
-export type ModelCard = z.infer<typeof ModelCard>;
-
-export const ModelList = z.object({
-    object: z.string().default("list"),
-    data: z.array(ModelCard).default([]),
-});
-
-export type ModelList = z.infer<typeof ModelList>;
+export type ModelList = v.InferOutput<typeof ModelList>;

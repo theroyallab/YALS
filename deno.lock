@@ -5,11 +5,13 @@
     "jsr:@std/async@^1.0.9": "1.0.9",
     "jsr:@std/path@^1.0.8": "1.0.8",
     "jsr:@std/yaml@^1.0.5": "1.0.5",
+    "npm:@bdashore3/hono-openapi@~0.3.1-2": "0.3.1-2_arktype@2.0.0-rc.25_hono@4.6.14_effect@3.12.0_@sinclair+typebox@0.34.13_valibot@1.0.0-beta.9_zod@3.24.1",
     "npm:@huggingface/jinja@~0.3.2": "0.3.2",
     "npm:@scalar/hono-api-reference@~0.5.165": "0.5.165_hono@4.6.14",
     "npm:@types/node@*": "22.5.4",
-    "npm:hono-openapi@0.3": "0.3.0_arktype@2.0.0-rc.25_hono@4.6.14_effect@3.12.0_@sinclair+typebox@0.34.13_valibot@1.0.0-beta.9_zod@3.24.1",
+    "npm:@valibot/to-json-schema@^1.0.0-beta.3": "1.0.0-beta.3_valibot@1.0.0-beta.9",
     "npm:hono@^4.6.14": "4.6.14",
+    "npm:valibot@^1.0.0-beta.9": "1.0.0-beta.9",
     "npm:zod-openapi@^4.2.1": "4.2.1_zod@3.24.1",
     "npm:zod@^3.24.1": "3.24.1"
   },
@@ -44,6 +46,26 @@
     },
     "@ark/util@0.25.0": {
       "integrity": "sha512-yo2Me+tYnmr6E0E3maZzu643/rL07oR25yBHkH24gllssqYcd6EPCvZE23GEKgbk0iac9J73GlJ9pkgZj43Q2g=="
+    },
+    "@bdashore3/hono-openapi@0.3.1-2_arktype@2.0.0-rc.25_hono@4.6.14_effect@3.12.0_@sinclair+typebox@0.34.13_valibot@1.0.0-beta.9_zod@3.24.1": {
+      "integrity": "sha512-pbYqJ/vNk+yK+AaOxciBG3Se3DjQPbUwV3EkuCXSjA/G04tXJhbdgFpivCrDVTstXZflJSezmQCtCb7pE+TvRA==",
+      "dependencies": [
+        "@hono/arktype-validator",
+        "@hono/effect-validator",
+        "@hono/typebox-validator",
+        "@hono/valibot-validator",
+        "@hono/zod-validator",
+        "@sinclair/typebox",
+        "@valibot/to-json-schema",
+        "arktype",
+        "effect",
+        "hono",
+        "json-schema-walker",
+        "openapi-types",
+        "valibot",
+        "zod",
+        "zod-openapi"
+      ]
     },
     "@hono/arktype-validator@2.0.0_arktype@2.0.0-rc.25_hono@4.6.14": {
       "integrity": "sha512-ICNZrK6Qcw6gyPfW53ONXI4JomRcks0fQhqzn9EWsfr6nlL6BNXQ96vIgVDU8qimcbJ2m3GJFAqgzOvWbZk3jw==",
@@ -153,26 +175,6 @@
         "pure-rand"
       ]
     },
-    "hono-openapi@0.3.0_arktype@2.0.0-rc.25_hono@4.6.14_effect@3.12.0_@sinclair+typebox@0.34.13_valibot@1.0.0-beta.9_zod@3.24.1": {
-      "integrity": "sha512-TN3zsXbFGBrwQgWRipgNt/HlRmfGbclqSUmBcQiTbpaetg+GEA9jhqbPBnGEyAIfJLooeIXvat9Xe9wPxn09yQ==",
-      "dependencies": [
-        "@hono/arktype-validator",
-        "@hono/effect-validator",
-        "@hono/typebox-validator",
-        "@hono/valibot-validator",
-        "@hono/zod-validator",
-        "@sinclair/typebox",
-        "@valibot/to-json-schema",
-        "arktype",
-        "effect",
-        "hono",
-        "json-schema-walker",
-        "openapi-types",
-        "valibot",
-        "zod",
-        "zod-openapi"
-      ]
-    },
     "hono@4.6.14": {
       "integrity": "sha512-j4VkyUp2xazGJ8eCCLN1Vm/bxdvm/j5ZuU9AIjLu9vapn2M44p9L3Ktr9Vnb2RN2QtcR/wVjZVMlT5k7GJQgPw=="
     },
@@ -223,10 +225,12 @@
       "jsr:@std/async@^1.0.9",
       "jsr:@std/path@^1.0.8",
       "jsr:@std/yaml@^1.0.5",
+      "npm:@bdashore3/hono-openapi@~0.3.1-2",
       "npm:@huggingface/jinja@~0.3.2",
       "npm:@scalar/hono-api-reference@~0.5.165",
-      "npm:hono-openapi@0.3",
+      "npm:@valibot/to-json-schema@^1.0.0-beta.3",
       "npm:hono@^4.6.14",
+      "npm:valibot@^1.0.0-beta.9",
       "npm:zod-openapi@^4.2.1",
       "npm:zod@^3.24.1"
     ]

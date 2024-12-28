@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { describeRoute } from "hono-openapi";
-import { validator as zValidator } from "hono-openapi/zod";
+import { validator as vValidator } from "hono-openapi/valibot";
 import { jsonContent } from "@/common/networking.ts";
 
 import { CompletionRequest, CompletionResponse } from "./types/completions.ts";
@@ -20,7 +20,7 @@ router.post(
     "/v1/completions",
     completionsRoute,
     checkModelMiddleware,
-    zValidator("json", CompletionRequest),
+    vValidator("json", CompletionRequest),
     async (c) => {
         const params = c.req.valid("json");
 

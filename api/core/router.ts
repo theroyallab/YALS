@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
-import { validator as zValidator } from "hono-openapi/zod";
+import { validator as vValidator } from "hono-openapi/valibot";
+import { parseAsync } from "valibot";
 import {
     ModelCard,
     ModelList,
@@ -32,14 +33,14 @@ router.get(
                 continue;
             }
 
-            const modelCard = await ModelCard.parseAsync({
+            const modelCard = await parseAsync(ModelCard, {
                 id: file.name,
             });
 
             modelCards.push(modelCard);
         }
 
-        const modelList = await ModelList.parseAsync({
+        const modelList = await parseAsync(ModelList, {
             data: modelCards,
         });
 
@@ -61,7 +62,7 @@ router.get(
     currentModelRoute,
     checkModelMiddleware,
     async (c) => {
-        const modelCard = await ModelCard.parseAsync({
+        const modelCard = await parseAsync(ModelCard, {
             id: c.var.model.path.base,
         });
 
@@ -81,10 +82,10 @@ const loadModelRoute = describeRoute({
 router.post(
     "/v1/model/load",
     loadModelRoute,
-    zValidator("json", ModelLoadRequest),
+    vValidator("json", ModelLoadRequest),
     async (c) => {
         const params = c.req.valid("json");
-        const loadParams = await ModelConfig.parseAsync({
+        const loadParams = await parseAsync(ModelConfig, {
             ...params,
             model_dir: config.model.model_dir,
         });

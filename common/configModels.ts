@@ -1,29 +1,24 @@
-import { z } from "zod";
-import "@/common/extendZod.ts";
+import * as v from "valibot";
 
-export const NetworkConfig = z.object({
-    host: z.string().nullish().coalesce("127.0.0.1"),
-    port: z.number().nullish().coalesce(5000),
+export const NetworkConfig = v.object({
+    host: v.nullish(v.string(), "127.0.0.1"),
+    port: v.nullish(v.number(), 5000),
 });
 
-export type NetworkConfig = z.infer<typeof NetworkConfig>;
+export type NetworkConfig = v.InferOutput<typeof NetworkConfig>;
 
-export const ModelConfig = z.object({
-    model_dir: z.string().nullish().coalesce("models"),
-    model_name: z.string().nullish(),
-    num_gpu_layers: z.number().nullish().coalesce(0),
-    max_seq_len: z.number().nullish(),
+export const ModelConfig = v.object({
+    model_dir: v.nullish(v.string(), "models"),
+    model_name: v.nullish(v.string()),
+    num_gpu_layers: v.nullish(v.number(), 0),
+    max_seq_len: v.nullish(v.number()),
 });
 
-export type ModelConfig = z.infer<typeof ModelConfig>;
+export type ModelConfig = v.InferOutput<typeof ModelConfig>;
 
-export const ConfigSchema = z.object({
+export const ConfigSchema = v.object({
     network: NetworkConfig,
     model: ModelConfig,
 });
 
-export type ConfigSchema = z.infer<typeof ConfigSchema>;
-
-export const testSchema = z.object({
-    firstValue: z.string().nullish().coalesce("Models"),
-});
+export type ConfigSchema = v.InferOutput<typeof ConfigSchema>;

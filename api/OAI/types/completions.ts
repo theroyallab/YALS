@@ -1,36 +1,37 @@
-import "zod-openapi/extend";
-import { z } from "zod";
+import * as v from "valibot";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 
-export const CompletionResponseFormat = z.object({
-    type: z.string().default("text"),
+export const CompletionResponseFormat = v.object({
+    type: v.nullish(v.string(), "text"),
 });
 
-export const CompletionRequest = z.object({
-    model: z.string().optional(),
-    prompt: z.string(),
-    stream: z.boolean().default(false),
-    logprobs: z.number().gte(0).optional().default(0),
-    response_format: CompletionResponseFormat.optional(),
-    n: z.number().gte(1).optional().default(1),
-})
-    .and(BaseSamplerRequest)
-    .openapi({
-        description: "Completion Request parameters",
-    });
+export const CompletionRequest = v.intersect([
+    v.object({
+        model: v.nullish(v.string()),
+        prompt: v.string(),
+        stream: v.nullish(v.boolean(), false),
+        logprobs: v.nullish(v.pipe(v.number(), v.minValue(0)), 0),
+        response_format: v.nullish(CompletionResponseFormat),
+        n: v.nullish(v.pipe(v.number(), v.minValue(1)), 1),
+    }),
+    BaseSamplerRequest,
+]);
+// .openapi({
+//     description: "Completion Request parameters",
+// });
 
-export type CompletionRequest = z.infer<typeof CompletionRequest>;
+export type CompletionRequest = v.InferOutput<typeof CompletionRequest>;
 
-export const CompletionRespChoice = z.object({
-    index: z.number().default(0),
-    finish_reason: z.string().optional(),
-    text: z.string(),
+export const CompletionRespChoice = v.object({
+    index: v.nullish(v.number(), 0),
+    finish_reason: v.nullish(v.string()),
+    text: v.string(),
 });
 
-export const CompletionResponse = z.object({
-    id: z.string().default(crypto.randomUUID().replaceAll("-", "")),
-    choices: z.array(CompletionRespChoice),
-    created: z.number().default((new Date()).getSeconds()),
-    model: z.string(),
-    object: z.string().default("text_completion"),
+export const CompletionResponse = v.object({
+    id: v.nullish(v.string(), crypto.randomUUID().replaceAll("-", "")),
+    choices: v.array(CompletionRespChoice),
+    created: v.nullish(v.number(), (new Date()).getSeconds()),
+    model: v.string(),
+    object: v.nullish(v.string(), "text_completion"),
 });

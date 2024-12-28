@@ -1,4 +1,5 @@
 import { SSEStreamingApi } from "hono/streaming";
+import { parseAsync } from "valibot";
 import { Model } from "@/bindings/bindings.ts";
 
 import {
@@ -10,11 +11,11 @@ import { HonoRequest } from "hono";
 import { logger } from "@/common/logging.ts";
 
 async function createResponse(text: string, modelName: string) {
-    const choice = await CompletionRespChoice.parseAsync({
+    const choice = await parseAsync(CompletionRespChoice, {
         text: text,
     });
 
-    const response = await CompletionResponse.parseAsync({
+    const response = await parseAsync(CompletionResponse, {
         choices: [choice],
         model: modelName,
     });
