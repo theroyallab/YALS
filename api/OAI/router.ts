@@ -2,10 +2,12 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { describeRoute } from "hono-openapi";
 import { validator as zValidator } from "hono-openapi/zod";
+import { AuthKeyPermission } from "@/common/auth.ts";
 import { jsonContent } from "@/common/networking.ts";
 
-import { CompletionRequest, CompletionResponse } from "./types/completions.ts";
+import authMiddleware from "@/api/middleware/authMiddleware.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
+import { CompletionRequest, CompletionResponse } from "./types/completions.ts";
 import { generateCompletion, streamCompletion } from "./utils/completion.ts";
 
 const router = new Hono();
@@ -19,6 +21,7 @@ const completionsRoute = describeRoute({
 router.post(
     "/v1/completions",
     completionsRoute,
+    authMiddleware(AuthKeyPermission.API),
     checkModelMiddleware,
     zValidator("json", CompletionRequest),
     async (c) => {

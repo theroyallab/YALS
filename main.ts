@@ -2,6 +2,7 @@ import { createApi } from "@/api/server.ts";
 import { setupLogger } from "@/common/logging.ts";
 import { loadModel } from "@/common/modelContainer.ts";
 import { config, loadConfig } from "@/common/config.ts";
+import { loadAuthKeys } from "@/common/auth.ts";
 
 if (import.meta.main) {
     await setupLogger();
@@ -11,5 +12,6 @@ if (import.meta.main) {
         await loadModel(config.model);
     }
 
+    await loadAuthKeys();
     createApi();
 }

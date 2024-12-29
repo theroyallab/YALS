@@ -6,12 +6,14 @@ import {
     ModelList,
     ModelLoadRequest,
 } from "@/api/core/types/model.ts";
+import { AuthKeyPermission } from "@/common/auth.ts";
 import { ModelConfig } from "@/common/configModels.ts";
 import { config } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
 import * as modelContainer from "@/common/modelContainer.ts";
 import { jsonContent } from "@/common/networking.ts";
 
+import authMiddleware from "../middleware/authMiddleware.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 
 const router = new Hono();
@@ -25,6 +27,7 @@ const modelsRoute = describeRoute({
 router.get(
     "/v1/models",
     modelsRoute,
+    authMiddleware(AuthKeyPermission.API),
     async (c) => {
         const modelCards: ModelCard[] = [];
         for await (const file of Deno.readDir(config.model.model_dir)) {
@@ -59,6 +62,7 @@ const currentModelRoute = describeRoute({
 router.get(
     "/v1/model",
     currentModelRoute,
+    authMiddleware(AuthKeyPermission.API),
     checkModelMiddleware,
     async (c) => {
         const modelCard = await ModelCard.parseAsync({
@@ -81,6 +85,7 @@ const loadModelRoute = describeRoute({
 router.post(
     "/v1/model/load",
     loadModelRoute,
+    authMiddleware(AuthKeyPermission.Admin),
     zValidator("json", ModelLoadRequest),
     async (c) => {
         const params = c.req.valid("json");
@@ -129,6 +134,7 @@ const unloadRoute = describeRoute({
 router.post(
     "/v1/model/unload",
     unloadRoute,
+    authMiddleware(AuthKeyPermission.Admin),
     checkModelMiddleware,
     async (c) => {
         await modelContainer.unloadModel();

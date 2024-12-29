@@ -30,3 +30,4 @@ venv/*
 .venv/*
 
 config.yml
+api_tokens.yml
