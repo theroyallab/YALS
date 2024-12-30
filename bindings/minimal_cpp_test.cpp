@@ -4,7 +4,7 @@
 #include <chrono>
 
 int main() {
-    const std::string modelPath = "/home/blackroot/Desktop/YALS/Models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf";
+    const std::string modelPath = "/home/blackroot/Desktop/YALS/bindings/gguf/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf";
     const auto modelLayers = 999;
     const auto ctxLen = 8192;
     const auto prompt = "This is the test prompt";
@@ -16,9 +16,25 @@ int main() {
     GreedySampler(sampler);
 
     auto readbackBuffer = CreateReadbackBuffer();
-    std::thread inferenceThread(InferToReadbackBuffer,
-      model, sampler, ctx, readbackBuffer, prompt, numTokens,
-      true, true, nullptr, 0, nullptr, 0);
+    std::thread inferenceThread(
+        [&]() {
+            InferToReadbackBuffer(
+                model,
+                sampler,
+                ctx,
+                readbackBuffer,
+                prompt,
+                numTokens,
+                true,
+                true,
+                nullptr,
+                nullptr,
+                0,
+                nullptr,
+                0
+            );
+        }
+    );
 
     // Detach the thread if you don't need to wait for it
     inferenceThread.detach();

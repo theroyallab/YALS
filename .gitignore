@@ -5,6 +5,7 @@
 
 /node_modules
 /bindings/home/
+/bindings/gguf
 
 .env
 *.orig
