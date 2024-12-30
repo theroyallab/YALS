@@ -27,7 +27,7 @@ export const CompletionRespChoice = z.object({
 });
 
 export const CompletionResponse = z.object({
-    id: z.string().default(crypto.randomUUID().replaceAll("-", "")),
+    id: z.string().default(`cmpl-${crypto.randomUUID().replaceAll("-", "")}`),
     choices: z.array(CompletionRespChoice),
     created: z.number().default((new Date()).getSeconds()),
     model: z.string(),
