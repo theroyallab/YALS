@@ -5,6 +5,8 @@ import { BaseSamplerRequest } from "@/common/sampling.ts";
 
 import llamaSymbols from "./symbols.ts";
 import { pointerArrayFromStrings } from "./utils.ts";
+import { PromptTemplate } from "@/common/templating.ts";
+import { logger } from "@/common/logging.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -359,17 +361,20 @@ export class Model {
     path: ParsedPath;
     tokenizer: Tokenizer;
     readbackBuffer: ReadbackBuffer;
+    promptTemplate?: PromptTemplate;
 
     private constructor(
         model: Deno.PointerValue,
         context: Deno.PointerValue,
         path: ParsedPath,
         tokenizer: Tokenizer,
+        promptTemplate?: PromptTemplate,
     ) {
         this.model = model;
         this.context = context;
         this.path = path;
         this.tokenizer = tokenizer;
+        this.promptTemplate = promptTemplate;
         this.readbackBuffer = new ReadbackBuffer();
     }
 
@@ -409,7 +414,25 @@ export class Model {
 
             const parsedModelPath = parse(modelPath);
             const tokenizer = await Tokenizer.init(model);
-            return new Model(model, context, parsedModelPath, tokenizer);
+
+            let promptTemplate: PromptTemplate | undefined = undefined;
+            if (params.prompt_template) {
+                promptTemplate = await PromptTemplate.fromFile(
+                    `templates/${params.prompt_template}`,
+                );
+                
+                logger.info(
+                    `Using template "${promptTemplate.name}" for chat completions`,
+                );
+            }
+
+            return new Model(
+                model,
+                context,
+                parsedModelPath,
+                tokenizer,
+                promptTemplate,
+            );
         } finally {
             callback?.close();
         }

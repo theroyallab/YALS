@@ -13,6 +13,7 @@ export const ModelConfig = z.object({
     model_name: z.string().nullish(),
     num_gpu_layers: z.number().nullish().coalesce(0),
     max_seq_len: z.number().nullish(),
+    prompt_template: z.string().nullish(),
 });
 
 export type ModelConfig = z.infer<typeof ModelConfig>;

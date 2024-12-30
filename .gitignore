@@ -29,5 +29,12 @@ models/*
 venv/*
 .venv/*
 
+# User configuration
 config.yml
 api_tokens.yml
+
+# Templates folder
+templates/*
+!templates/place_your_templates_here.txt
+!templates/alpaca.jinja
+!templates/chatml.jinja
