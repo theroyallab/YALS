@@ -7,7 +7,6 @@
   },
   "imports": {
     "@/": "./",
-    "@types/nunjucks": "npm:@types/nunjucks@^3.2.6",
     "hono": "npm:hono@^4.6.14",
     "@huggingface/jinja": "npm:@huggingface/jinja@^0.3.2",
     "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.5.165",
@@ -16,7 +15,6 @@
     "hono-openapi": "npm:hono-openapi@^0.3.0",
     "logtape": "jsr:@logtape/logtape@^0.8.0",
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
-    "nunjucks": "npm:nunjucks@^3.2.4",
     "zod": "npm:zod@^3.24.1",
     "zod-openapi": "npm:zod-openapi@^4.2.1"
   },

@@ -1,5 +1,11 @@
-// @ts-types="@/types/nunjucks.d.ts"
-import nunjucks from "nunjucks";
+// @ts-types="@/types/jinja.d.ts"
+import {
+    ArrayLiteral,
+    Identifier,
+    Literal,
+    SetStatement,
+    Template,
+} from "@huggingface/jinja";
 import * as z from "@/common/myZod.ts";
 import * as Path from "@std/path";
 
@@ -11,15 +17,10 @@ const TemplateMetadataSchema = z.object({
 
 type TemplateMetadata = z.infer<typeof TemplateMetadataSchema>;
 
-function raiseException(message: string) {
-    throw new Error(message);
-}
-
 export class PromptTemplate {
     name: string;
     rawTemplate: string;
-    environment: nunjucks.Environment;
-    template: nunjucks.Template;
+    template: Template;
     metadata: TemplateMetadata;
 
     public constructor(
@@ -28,53 +29,49 @@ export class PromptTemplate {
     ) {
         this.name = name;
         this.rawTemplate = rawTemplate;
-        this.environment = nunjucks.configure({ autoescape: false })
-            .addGlobal("raise_exception", raiseException);
-        this.template = new nunjucks.Template(rawTemplate, this.environment);
-        this.metadata = this.extractMetadata(rawTemplate);
+        this.template = new Template(rawTemplate);
+        this.metadata = this.extractMetadata(this.template);
     }
 
-    public render(context: object = {}): string {
+    public render(context: Record<string, unknown> = {}): string {
         return this.template.render(context);
     }
 
-    private extractMetadata(rawTemplate: string): TemplateMetadata {
-        const ast = nunjucks.parser.parse(rawTemplate);
+    private extractMetadata(template: Template) {
         const metadata: TemplateMetadata = TemplateMetadataSchema.parse({});
-        if (!ast.children) {
-            return metadata;
-        }
 
-        ast.children.forEach((node) => {
-            // Targets is unique to a setNode
-            if ("targets" in node) {
-                const setNode = node as nunjucks.SetNode;
-                if (setNode.targets.length === 0) {
-                    return;
-                }
+        template.parsed.body.forEach((statement) => {
+            if (statement.type === "Set") {
+                const setStatement = statement as SetStatement;
+
+                const assignee = setStatement.assignee as Identifier;
                 const foundMetaKey = Object.keys(TemplateMetadataSchema.shape)
                     .find(
-                        (key) => key === setNode.targets[0].value,
+                        (key) => key === assignee.value,
                     ) as keyof TemplateMetadata;
 
                 if (foundMetaKey) {
-                    // Get field schema from overall schema
                     const fieldSchema =
                         TemplateMetadataSchema.shape[foundMetaKey];
 
-                    // Only use for validation. For some reason, the parsed data can't be assigned
-                    let result;
-                    if (setNode.value.children) {
-                        result = setNode.value.children.map((child) =>
-                            child.value
-                        );
-                    } else {
-                        result = setNode.value.value;
+                    let result: unknown;
+                    if (setStatement.value.type === "ArrayLiteral") {
+                        const arrayValue = setStatement.value as ArrayLiteral;
+                        result = arrayValue.value.map((e) => {
+                            const literalValue = e as Literal<unknown>;
+                            return literalValue.value;
+                        });
+                    } else if (setStatement.value.type.endsWith("Literal")) {
+                        const literalValue = setStatement.value as Literal<
+                            unknown
+                        >;
+                        result = literalValue.value;
                     }
 
                     const parsedValue = fieldSchema.safeParse(result);
                     if (parsedValue.success) {
-                        metadata[foundMetaKey] = result;
+                        // deno-lint-ignore no-explicit-any
+                        metadata[foundMetaKey] = parsedValue.data as any;
                     }
                 }
             }

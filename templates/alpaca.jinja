@@ -1,6 +1,5 @@
 {# Metadata #}
 {%- set stop_strings = ["### Instruction:", "### Input:", "### Response:"] -%}
-{{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}
 {# Template #}
 {{ (messages|selectattr('role', 'equalto', 'system')|list|last).content|trim if (messages|selectattr('role', 'equalto', 'system')|list) else '' }}
 

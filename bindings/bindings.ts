@@ -421,13 +421,24 @@ export class Model {
 
             let promptTemplate: PromptTemplate | undefined = undefined;
             if (params.prompt_template) {
-                promptTemplate = await PromptTemplate.fromFile(
-                    `templates/${params.prompt_template}`,
-                );
+                try {
+                    promptTemplate = await PromptTemplate.fromFile(
+                        `templates/${params.prompt_template}`,
+                    );
 
-                logger.info(
-                    `Using template "${promptTemplate.name}" for chat completions`,
-                );
+                    logger.info(
+                        `Using template "${promptTemplate.name}" for chat completions`,
+                    );
+                } catch (error) {
+                    if (error instanceof Error) {
+                        logger.warn(
+                            "Could not create a prompt template because of the following error:\n " +
+                                `${error.stack}\n\n` +
+                                "YALS will continue loading without the prompt template.\n" +
+                                "Please proofread the template and make sure it's compatible with huggingface's jinja subset.",
+                        );
+                    }
+                }
             }
 
             return new Model(
