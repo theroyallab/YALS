@@ -4,7 +4,7 @@
 // deno-lint-ignore-file no-explicit-any no-unused-vars
 // @ts-types="@types/nunjucks"
 import nunjucks from "nunjucks";
-export * from "nunjucks"
+export * from "nunjucks";
 
 declare module "nunjucks" {
     export interface Node {

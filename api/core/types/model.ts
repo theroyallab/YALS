@@ -1,7 +1,9 @@
 import * as z from "@/common/myZod.ts";
 import { ModelConfig } from "@/common/configModels.ts";
 
-export const ModelLoadRequest = ModelConfig.omit({
+export const ModelLoadRequest = ModelConfig.extend({
+    model_name: z.string(),
+}).omit({
     model_dir: true,
 });
 

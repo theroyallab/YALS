@@ -1,5 +1,5 @@
 import { delay } from "@std/async";
-import { parse, ParsedPath } from "@std/path";
+import * as Path from "@std/path";
 import { ModelConfig } from "@/common/configModels.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 
@@ -358,7 +358,7 @@ class Tokenizer {
 export class Model {
     model: Deno.PointerValue;
     context: Deno.PointerValue;
-    path: ParsedPath;
+    path: Path.ParsedPath;
     tokenizer: Tokenizer;
     readbackBuffer: ReadbackBuffer;
     promptTemplate?: PromptTemplate;
@@ -366,7 +366,7 @@ export class Model {
     private constructor(
         model: Deno.PointerValue,
         context: Deno.PointerValue,
-        path: ParsedPath,
+        path: Path.ParsedPath,
         tokenizer: Tokenizer,
         promptTemplate?: PromptTemplate,
     ) {
@@ -382,7 +382,11 @@ export class Model {
         params: ModelConfig,
         progressCallback?: (progress: number) => boolean,
     ) {
-        const modelPath = params.model_dir + params.model_name;
+        if (!params.model_name) {
+            throw new Error("Model name not provided! Skipping load.");
+        }
+
+        const modelPath = Path.join(params.model_dir, params.model_name);
         const modelPathPtr = new TextEncoder().encode(modelPath + "\0");
 
         let callback = undefined;
@@ -412,7 +416,7 @@ export class Model {
                 2048,
             );
 
-            const parsedModelPath = parse(modelPath);
+            const parsedModelPath = Path.parse(modelPath);
             const tokenizer = await Tokenizer.init(model);
 
             let promptTemplate: PromptTemplate | undefined = undefined;
@@ -420,7 +424,7 @@ export class Model {
                 promptTemplate = await PromptTemplate.fromFile(
                     `templates/${params.prompt_template}`,
                 );
-                
+
                 logger.info(
                     `Using template "${promptTemplate.name}" for chat completions`,
                 );
