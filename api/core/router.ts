@@ -15,6 +15,7 @@ import { jsonContent } from "@/common/networking.ts";
 
 import authMiddleware from "../middleware/authMiddleware.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
+import { HTTPException } from "hono/http-exception";
 
 const router = new Hono();
 
@@ -36,7 +37,7 @@ router.get(
             }
 
             const modelCard = await ModelCard.parseAsync({
-                id: file.name,
+                id: file.name.replace(".gguf", ""),
             });
 
             modelCards.push(modelCard);
@@ -114,8 +115,15 @@ router.post(
             return true;
         };
 
-        // Load the model
-        await modelContainer.loadModel(loadParams, progressCallback);
+        // Load the model and re-raise errors
+        try {
+            await modelContainer.loadModel(loadParams, progressCallback);
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new HTTPException(422, error);
+            }
+        }
+
         finished = true;
 
         c.status(200);
@@ -137,7 +145,7 @@ router.post(
     authMiddleware(AuthKeyPermission.Admin),
     checkModelMiddleware,
     async (c) => {
-        await modelContainer.unloadModel();
+        await modelContainer.unloadModel(true);
 
         c.status(200);
         return c.body(null);

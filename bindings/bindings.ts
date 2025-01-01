@@ -1,3 +1,4 @@
+import { Mutex } from "@core/asyncutil";
 import { delay } from "@std/async";
 import * as Path from "@std/path";
 import { ModelConfig } from "@/common/configModels.ts";
@@ -363,6 +364,10 @@ export class Model {
     readbackBuffer: ReadbackBuffer;
     promptTemplate?: PromptTemplate;
 
+    // Concurrency
+    shutdown: boolean = false;
+    generationLock: Mutex = new Mutex();
+
     private constructor(
         model: Deno.PointerValue,
         context: Deno.PointerValue,
@@ -457,7 +462,15 @@ export class Model {
         lib.symbols.ClearContextKVCache(this.context);
     }
 
-    async unload() {
+    async unload(skipQueue: boolean = false) {
+        // Tell all jobs that the model is being unloaded
+        if (skipQueue) {
+            this.shutdown = true;
+        }
+
+        // Wait for jobs to complete
+        using _lock = await this.generationLock.acquire();
+
         await lib.symbols.FreeModel(this.model);
         await lib.symbols.FreeCtx(this.context);
     }
@@ -481,6 +494,14 @@ export class Model {
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
     ) {
+        // Get out if the model is shutting down
+        if (this.shutdown) {
+            return;
+        }
+
+        // Acquire the mutex
+        using _lock = await this.generationLock.acquire();
+
         // Clear generation cache
         this.resetKVCache();
 
@@ -572,7 +593,7 @@ export class Model {
 
         // Callback to abort the current generation
         const abortCallback: () => boolean = () => {
-            return abortSignal.aborted;
+            return abortSignal.aborted || this.shutdown;
         };
 
         const abortCallbackPointer = new Deno.UnsafeCallback(
@@ -601,5 +622,7 @@ export class Model {
             yield chunk;
         }
         this.readbackBuffer.reset();
+
+        console.log("Finished");
     }
 }
