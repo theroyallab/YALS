@@ -20,9 +20,10 @@ export const CommonCompletionRequest = z.object({
 });
 
 export const CompletionRequest = z.object({
-    prompt: z.union([z.string(), z.array(z.string())]).transform((prompt) =>
-        Array.isArray(prompt) ? prompt.join("\n") : prompt
-    ),
+    prompt: z.union([
+        z.string(),
+        z.array(z.string()).transform((arr) => arr.join("\n")),
+    ]),
 })
     .merge(CommonCompletionRequest)
     .and(BaseSamplerRequest)

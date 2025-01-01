@@ -6,7 +6,11 @@ const GenerationOptionsSchema = z.aliasedObject(
             .openapi({
                 description: "Aliases: max_length",
             }),
-        stop: z.union([z.string(), z.array(z.string())]).nullish().coalesce([])
+        stop: z.union([
+            z.string().transform((str) => [str]),
+            z.array(z.string()),
+        ])
+            .nullish().coalesce([])
             .openapi({
                 description: "Aliases: stop_sequence",
             }),
@@ -19,13 +23,25 @@ const GenerationOptionsSchema = z.aliasedObject(
         seed: z.number().nullish(),
         logit_bias: z.record(z.string(), z.number()).nullish().coalesce({}),
         grammar_string: z.string().nullish(),
-        banned_tokens: z.union([z.array(z.number()), z.string()]).nullish()
-            .coalesce([])
+        banned_tokens: z.union([
+            z.array(z.number()),
+            z.string()
+                .transform((str) =>
+                    str.replaceAll(" ", "")
+                        .split(",")
+                        .filter((x) => /^\d+$/.test(x))
+                        .map((x) => parseInt(x))
+                ),
+        ])
+            .nullish().coalesce([])
             .openapi({
                 description: "Aliases: custom_token_bans",
             }),
-        banned_strings: z.union([z.string(), z.array(z.string())]).nullish()
-            .coalesce([]),
+        banned_strings: z.union([
+            z.string().transform((str) => [str]),
+            z.array(z.string()),
+        ])
+            .nullish().coalesce([]),
     }),
     [
         { field: "max_tokens", aliases: ["max_length"] },
@@ -36,31 +52,6 @@ const GenerationOptionsSchema = z.aliasedObject(
 )
     .openapi({
         description: "Generation options",
-    })
-    .transform((obj) => {
-        // Transform associated values
-        if (typeof obj.stop == "string") {
-            obj.stop = [obj.stop];
-        }
-
-        if (typeof obj.banned_tokens == "string") {
-            obj.banned_tokens = obj.banned_tokens.replaceAll(" ", "")
-                .split(",")
-                .filter((x) => /^\d+$/.test(x))
-                .map((x) => parseInt(x));
-        }
-
-        if (typeof obj.banned_strings == "string") {
-            obj.banned_strings = [obj.banned_strings];
-        }
-
-        // Cast the transformed types
-        return {
-            ...obj,
-            stop: obj.stop as string[],
-            banned_tokens: obj.banned_tokens as number[],
-            banned_strings: obj.banned_strings as string[],
-        };
     });
 
 const TemperatureSamplerSchema = z.object({
@@ -73,7 +64,8 @@ const TemperatureSamplerSchema = z.object({
 
 const AlphabetSamplerSchema = z.aliasedObject(
     z.object({
-        top_k: z.number().gte(-1).nullish().coalesce(0),
+        top_k: z.number().gte(-1).transform((top_k) => top_k == -1 ? 0 : top_k)
+            .nullish().coalesce(0),
         top_p: z.number().gte(0).lte(1).nullish().coalesce(1),
         min_p: z.number().gte(0).lte(1).nullish().coalesce(0),
         typical: z.number().gt(0).lte(1).nullish().coalesce(1),
@@ -82,14 +74,6 @@ const AlphabetSamplerSchema = z.aliasedObject(
 )
     .openapi({
         description: "Alphabet samplers",
-    })
-    .transform((obj) => {
-        // Transform associated values
-        if (obj.top_k == -1) {
-            obj.top_k = 0;
-        }
-
-        return obj;
     });
 
 const PenaltySamplerSchema = z.aliasedObject(
@@ -127,7 +111,22 @@ const DrySchema = z.aliasedObject(
         dry_multiplier: z.number().nullish().coalesce(0),
         dry_base: z.number().nullish().coalesce(0),
         dry_allowed_length: z.number().nullish().coalesce(0),
-        dry_sequence_breakers: z.union([z.string(), z.array(z.string())])
+        dry_sequence_breakers: z.union([
+            z.string()
+                .transform((str) => {
+                    if (!str.startsWith("[")) {
+                        str = `[${str}]`;
+                    }
+
+                    // Parse can fail, so return a default value if it does
+                    try {
+                        return JSON.parse(str);
+                    } catch {
+                        return [];
+                    }
+                }),
+            z.array(z.string()),
+        ])
             .nullish().coalesce([]),
         dry_range: z.number().nullish().coalesce(0)
             .openapi({
@@ -138,29 +137,6 @@ const DrySchema = z.aliasedObject(
 )
     .openapi({
         description: "DRY options",
-    })
-    .transform((obj) => {
-        // Transform associated values
-        if (typeof obj.dry_sequence_breakers == "string") {
-            if (!obj.dry_sequence_breakers.startsWith("[")) {
-                obj.dry_sequence_breakers = `[${obj.dry_sequence_breakers}]`;
-            }
-
-            // Parse can fail, so return a default value if it does
-            try {
-                obj.dry_sequence_breakers = JSON.parse(
-                    obj.dry_sequence_breakers,
-                );
-            } catch {
-                obj.dry_sequence_breakers = [];
-            }
-        }
-
-        // Cast the transformed types
-        return {
-            ...obj,
-            dry_sequence_breakers: obj.dry_sequence_breakers as string[],
-        };
     });
 
 const XtcSchema = z.object({
