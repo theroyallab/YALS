@@ -55,9 +55,9 @@ target_include_directories(deno_cpp_binding
 target_link_libraries(deno_cpp_binding PRIVATE llama)
 
 set_target_properties(deno_cpp_binding PROPERTIES
-        OUTPUT_NAME "deno_cpp_binding"
-        PREFIX ""
-        LIBRARY_OUTPUT_DIRECTORY "../${CMAKE_CURRENT_SOURCE_DIR}/lib"
+    OUTPUT_NAME "deno_cpp_binding"
+    PREFIX ""
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../lib"
 )
 
 add_executable(minimal_cpp_test
