@@ -1,11 +1,14 @@
 import * as z from "@/common/myZod.ts";
 import { ModelConfig } from "@/common/configModels.ts";
 
-export const ModelLoadRequest = ModelConfig.extend({
-    model_name: z.string(),
-}).omit({
-    model_dir: true,
-});
+export const ModelLoadRequest = z.aliasedObject(
+    ModelConfig.extend({
+        model_name: z.string(),
+    }).omit({
+        model_dir: true,
+    }),
+    [{ field: "model_name", aliases: ["name"] }],
+);
 
 export const ModelCard = z.object({
     id: z.string().default("test"),

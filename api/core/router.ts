@@ -16,6 +16,11 @@ import { jsonContent } from "@/common/networking.ts";
 import authMiddleware from "../middleware/authMiddleware.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 import { HTTPException } from "hono/http-exception";
+import {
+    TemplateList,
+    TemplateSwitchRequest,
+} from "@/api/core/types/template.ts";
+import { PromptTemplate } from "@/common/templating.ts";
 
 const router = new Hono();
 
@@ -25,8 +30,9 @@ const modelsRoute = describeRoute({
     },
 });
 
-router.get(
-    "/v1/models",
+router.on(
+    "GET",
+    ["/v1/models", "/v1/model/list"],
     modelsRoute,
     authMiddleware(AuthKeyPermission.API),
     async (c) => {
@@ -149,6 +155,59 @@ router.post(
 
         c.status(200);
         return c.body(null);
+    },
+);
+
+const templatesRoute = describeRoute({
+    responses: {
+        200: jsonContent(TemplateList, "List of prompt templates"),
+    },
+});
+
+router.on(
+    "GET",
+    ["/v1/templates", "/v1/template/list"],
+    templatesRoute,
+    authMiddleware(AuthKeyPermission.API),
+    async (c) => {
+        const templates: string[] = [];
+        for await (const file of Deno.readDir("templates")) {
+            if (!file.name.endsWith(".jinja")) {
+                continue;
+            }
+
+            templates.push(file.name.replace(".jinja", ""));
+        }
+
+        const templateList = await TemplateList.parseAsync({
+            data: templates,
+        });
+
+        return c.json(templateList);
+    },
+);
+
+const templateSwitchRoute = describeRoute({
+    responses: {
+        200: {
+            description: "Prompt template switched",
+        },
+    },
+});
+
+router.get(
+    "/v1/template/switch",
+    templateSwitchRoute,
+    authMiddleware(AuthKeyPermission.API),
+    checkModelMiddleware,
+    zValidator("json", TemplateSwitchRequest),
+    async (c) => {
+        const params = c.req.valid("json");
+
+        const templatePath = `templates/${params.prompt_template_name}`;
+        c.var.model.promptTemplate = await PromptTemplate.fromFile(
+            templatePath,
+        );
     },
 );
 
