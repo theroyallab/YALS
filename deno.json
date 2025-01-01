@@ -24,8 +24,5 @@
     "semiColons": true,
     "include": ["**/*.ts"],
     "lineWidth": 80
-  },
-  "compilerOptions": {
-    "types": ["types"]
   }
 }
