@@ -1,13 +1,14 @@
 import { SSEStreamingApi } from "hono/streaming";
 import { Model } from "@/bindings/bindings.ts";
+import { HonoRequest } from "hono";
+import { staticGenerate } from "@/api/OAI/utils/generation.ts";
+import { logger } from "@/common/logging.ts";
 
 import {
     CompletionRequest,
     CompletionRespChoice,
     CompletionResponse,
 } from "../types/completions.ts";
-import { HonoRequest } from "hono";
-import { logger } from "@/common/logging.ts";
 
 async function createResponse(text: string, modelName: string) {
     const choice = await CompletionRespChoice.parseAsync({
@@ -66,27 +67,12 @@ export async function streamCompletion(
 }
 
 export async function generateCompletion(
+    req: HonoRequest,
     model: Model,
     params: CompletionRequest,
-    req: HonoRequest,
 ) {
-    const abortController = new AbortController();
-    let finished = false;
-
-    req.raw.signal.addEventListener("abort", () => {
-        if (!finished) {
-            abortController.abort();
-            logger.error("Completion aborted");
-        }
-    });
-
-    const result = await model.generate(
-        params.prompt,
-        params,
-        abortController.signal,
-    );
-    const response = await createResponse(result, model.path.name);
-    finished = true;
+    const gen = await staticGenerate(req, model, params.prompt, params);
+    const response = await createResponse(gen, model.path.name);
 
     return response;
 }

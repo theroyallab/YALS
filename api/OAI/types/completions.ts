@@ -5,14 +5,26 @@ export const CompletionResponseFormat = z.object({
     type: z.string().default("text"),
 });
 
-export const CompletionRequest = z.object({
+export const CommonCompletionRequest = z.object({
     model: z.string().nullish(),
-    prompt: z.string(),
     stream: z.boolean().nullish().coalesce(false),
     logprobs: z.number().gte(0).nullish().coalesce(0),
-    response_format: CompletionResponseFormat.nullish(),
+    response_format: CompletionResponseFormat.nullish().coalesce(
+        CompletionResponseFormat.parse({}),
+    ),
     n: z.number().gte(1).nullish().coalesce(1),
+    best_of: z.number().nullish(),
+    echo: z.boolean().nullish().coalesce(false),
+    suffix: z.string().nullish(),
+    user: z.string().nullish(),
+});
+
+export const CompletionRequest = z.object({
+    prompt: z.union([z.string(), z.array(z.string())]).transform((prompt) =>
+        Array.isArray(prompt) ? prompt.join("\n") : prompt
+    ),
 })
+    .merge(CommonCompletionRequest)
     .and(BaseSamplerRequest)
     .openapi({
         description: "Completion Request parameters",
