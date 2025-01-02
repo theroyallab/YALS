@@ -6,7 +6,7 @@ import {
     ModelList,
     ModelLoadRequest,
 } from "@/api/core/types/model.ts";
-import { AuthKeyPermission } from "@/common/auth.ts";
+import { AuthKeyPermission, getAuthPermission } from "@/common/auth.ts";
 import { ModelConfig } from "@/common/configModels.ts";
 import { config } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
@@ -21,6 +21,7 @@ import {
     TemplateSwitchRequest,
 } from "@/api/core/types/template.ts";
 import { PromptTemplate } from "@/common/templating.ts";
+import { AuthPermissionResponse } from "@/api/core/types/auth.ts";
 
 const router = new Hono();
 
@@ -208,6 +209,35 @@ router.get(
         c.var.model.promptTemplate = await PromptTemplate.fromFile(
             templatePath,
         );
+    },
+);
+
+const authPermissionRoute = describeRoute({
+    responses: {
+        200: jsonContent(
+            AuthPermissionResponse,
+            "Returns permissions of a given auth key",
+        ),
+    },
+});
+
+router.get(
+    "/v1/auth/permission",
+    authPermissionRoute,
+    authMiddleware(AuthKeyPermission.API),
+    async (c) => {
+        try {
+            const permission = getAuthPermission(c.req.header());
+            const response = await AuthPermissionResponse.parseAsync({
+                permission,
+            });
+
+            return c.json(response);
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new HTTPException(400, error);
+            }
+        }
     },
 );
 

@@ -1,5 +1,6 @@
 import * as YAML from "@std/yaml";
 import * as z from "@/common/myZod.ts";
+import { config } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
 
 const AuthFileSchema = z.object({
@@ -87,4 +88,29 @@ export async function loadAuthKeys() {
             "If these keys get compromised, make sure to delete api_tokens.yml " +
             "and restart the server. Have fun!",
     );
+}
+
+export function getAuthPermission(headers: Record<string, string>) {
+    if (config.network.disable_auth) {
+        return AuthKeyPermission.Admin;
+    }
+
+    let testKey = headers["x-admin-key"] ?? headers["x-api-key"] ??
+        headers["authorization"];
+
+    if (!testKey) {
+        throw new Error("The provided authentication key is missing.");
+    }
+
+    if (testKey.toLowerCase().startsWith("bearer")) {
+        testKey = testKey.split(" ")[1];
+    }
+
+    if (authKeys?.verifyKey(testKey, AuthKeyPermission.Admin)) {
+        return AuthKeyPermission.Admin.toLowerCase();
+    } else if (authKeys?.verifyKey(testKey, AuthKeyPermission.API)) {
+        return AuthKeyPermission.API.toLowerCase();
+    } else {
+        throw new Error("The provided authentication key is invalid.");
+    }
 }
