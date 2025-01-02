@@ -30,3 +30,15 @@ model:
 
   # Number of model layers to offload on the GPU (default: 0)
   num_gpu_layers: 0
+
+  # Prompt template to use for chat completions (default: None)
+  prompt_template:
+
+  # Enable flash attention (default: false)
+  flash_attention: false
+
+  # Rope freq base. 0 = model default (default: 0)
+  rope_freq_base: 0
+
+  # Rope freq scale. 0 = model default (default: 0)
+  rope_freq_scale: 0

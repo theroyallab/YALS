@@ -13,6 +13,9 @@ export default {
             "pointer", // void* llamaModel
             "u32", // unsigned contextLength
             "u32", // unsigned numBatches
+            "bool", // bool flashAttn
+            "f32", // float ropeFreqBase
+            "f32", // float ropeFreqScale
         ],
         result: "pointer" as const, // void*
         nonblocking: true,

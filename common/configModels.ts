@@ -14,6 +14,9 @@ export const ModelConfig = z.object({
     num_gpu_layers: z.number().nullish().coalesce(0),
     max_seq_len: z.number().nullish(),
     prompt_template: z.string().nullish(),
+    flash_attention: z.boolean().nullish().coalesce(false),
+    rope_freq_base: z.number().nullish().coalesce(0),
+    rope_freq_scale: z.number().nullish().coalesce(0),
 });
 
 export type ModelConfig = z.infer<typeof ModelConfig>;

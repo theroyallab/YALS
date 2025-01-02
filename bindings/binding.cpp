@@ -23,12 +23,17 @@ llama_model* LoadModel(const char* modelPath, int numberGpuLayers, llama_progres
     return model;
 }
 
-llama_context* InitiateCtx(llama_model* model, const unsigned contextLength, const unsigned numBatches)
+llama_context *InitiateCtx(llama_model *model, const unsigned contextLength,
+                           const unsigned numBatches, const bool flashAttn,
+                           const float ropeFreqBase, const float ropeFreqScale)
 {
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = contextLength;
     ctx_params.n_batch = numBatches;
     ctx_params.no_perf = false;
+    ctx_params.flash_attn = flashAttn;
+    ctx_params.rope_freq_base = ropeFreqBase;
+    ctx_params.rope_freq_scale = ropeFreqScale;
     llama_context* ctx = llama_new_context_with_model(model, ctx_params);
 
     if (ctx == nullptr) {

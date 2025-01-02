@@ -419,6 +419,9 @@ export class Model {
                 model,
                 params.max_seq_len ?? 4096,
                 2048,
+                params.flash_attention,
+                params.rope_freq_base,
+                params.rope_freq_scale,
             );
 
             const parsedModelPath = Path.parse(modelPath);

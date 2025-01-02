@@ -16,7 +16,8 @@ extern "C" {
 
     void TestPrint(const char* text);
     llama_model* LoadModel(const char* modelPath, int numberGpuLayers, llama_progress_callback callback);
-    llama_context* InitiateCtx(llama_model* model, unsigned contextLength, unsigned numBatches);
+    llama_context* InitiateCtx(llama_model *model, unsigned contextLength, unsigned numBatches,
+        bool flashAttn, float ropeFreqBase, float ropeFreqScale);
     llama_token BosToken(const llama_model* model);
     llama_token EosToken(const llama_model* model);
     llama_token EotToken(const llama_model* model);
