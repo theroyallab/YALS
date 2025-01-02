@@ -26,13 +26,16 @@ lib/*
 
 # build
 build/*
-models/*
 venv/*
 .venv/*
 
 # User configuration
 config.yml
 api_tokens.yml
+
+# Models folder
+models/*
+!models/place_your_models_here.txt
 
 # Templates folder
 templates/*
