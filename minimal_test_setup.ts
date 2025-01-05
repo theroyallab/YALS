@@ -4,7 +4,7 @@ import { BaseSamplerRequest } from "./common/sampling.ts";
 
 // Create the model configuration matching the Model.init expectations
 const modelConfig = ModelConfig.parse({
-    model_dir: "/home/blackroot/Desktop/YALS/Models/",
+    model_dir: "/home/blackroot/Desktop/YALS/bindings/gguf/",
     model_name: "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
     num_gpu_layers: 999,
     max_seq_len: undefined,
@@ -18,6 +18,7 @@ const samplerRequest = BaseSamplerRequest.parse({
     max_tokens: 35,
 });
 
+let abort = new AbortController()
 const encoder = new TextEncoder();
 let buffer = "";
 for (let i = 0; i < 4; i++) {
@@ -26,7 +27,7 @@ for (let i = 0; i < 4; i++) {
     console.log();
 
     for await (
-        const chunk of model!.generateGen("Hi my name is", samplerRequest)
+        const chunk of model!.generateGen("Hi my name is", samplerRequest, abort)
     ) {
         await Deno.stdout.write(encoder.encode(chunk));
         buffer += chunk;

@@ -422,6 +422,8 @@ export class Model {
                 params.flash_attention,
                 params.rope_freq_base,
                 params.rope_freq_scale,
+                GGMLType.F16,
+                GGMLType.F16
             );
 
             const parsedModelPath = Path.parse(modelPath);
@@ -628,4 +630,42 @@ export class Model {
 
         console.log("Finished");
     }
+}
+
+export enum GGMLType {
+    F32 = 0,
+    F16 = 1,
+    Q4_0 = 2,
+    Q4_1 = 3,
+    // 4 and 5 were removed (Q4_2 and Q4_3)
+    Q5_0 = 6,
+    Q5_1 = 7,
+    Q8_0 = 8,
+    Q8_1 = 9,
+    Q2_K = 10,
+    Q3_K = 11,
+    Q4_K = 12,
+    Q5_K = 13,
+    Q6_K = 14,
+    Q8_K = 15,
+    IQ2_XXS = 16,
+    IQ2_XS = 17,
+    IQ3_XXS = 18,
+    IQ1_S = 19,
+    IQ4_NL = 20,
+    IQ3_S = 21,
+    IQ2_S = 22,
+    IQ4_XS = 23,
+    I8 = 24,
+    I16 = 25,
+    I32 = 26,
+    I64 = 27,
+    F64 = 28,
+    IQ1_M = 29,
+    BF16 = 30,
+    // 31-33 were removed (Q4_0_4_4, Q4_0_4_8, Q4_0_8_8)
+    TQ1_0 = 34,
+    TQ2_0 = 35,
+    // 36-38 were removed (IQ4_NL_4_4, IQ4_NL_4_8, IQ4_NL_8_8)
+    COUNT = 39
 }

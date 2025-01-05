@@ -16,6 +16,8 @@ export default {
             "bool", // bool flashAttn
             "f32", // float ropeFreqBase
             "f32", // float ropeFreqScale
+            "i32", // ggml_type kCacheQuantType
+            "i32", // ggml_type vCacheQuantType
         ],
         result: "pointer" as const, // void*
         nonblocking: true,

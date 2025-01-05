@@ -12,11 +12,18 @@ void TestPrint(const char* text)
 }
 
 //typedef bool (*llama_progress_callback)(float progress, void * user_data);
-llama_model* LoadModel(const char* modelPath, int numberGpuLayers, llama_progress_callback callback)
+llama_model* LoadModel(
+    const char* modelPath,
+    int numberGpuLayers,
+    llama_progress_callback callback)
 {
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = numberGpuLayers;
     model_params.progress_callback = callback;
+
+    //todo::@z
+    //model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
+    //model_params.tensor_split = float value
 
     llama_model* model = llama_load_model_from_file(modelPath, model_params);
 
@@ -25,7 +32,8 @@ llama_model* LoadModel(const char* modelPath, int numberGpuLayers, llama_progres
 
 llama_context *InitiateCtx(llama_model *model, const unsigned contextLength,
                            const unsigned numBatches, const bool flashAttn,
-                           const float ropeFreqBase, const float ropeFreqScale)
+                           const float ropeFreqBase, const float ropeFreqScale,
+                           const int kCacheQuantType, const int vCacheQuantType)
 {
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = contextLength;
@@ -34,6 +42,9 @@ llama_context *InitiateCtx(llama_model *model, const unsigned contextLength,
     ctx_params.flash_attn = flashAttn;
     ctx_params.rope_freq_base = ropeFreqBase;
     ctx_params.rope_freq_scale = ropeFreqScale;
+
+    ctx_params.type_k = static_cast<ggml_type>(kCacheQuantType);
+    ctx_params.type_v = static_cast<ggml_type>(vCacheQuantType);
     llama_context* ctx = llama_new_context_with_model(model, ctx_params);
 
     if (ctx == nullptr) {
@@ -294,6 +305,7 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
     return std::string{buf, static_cast<size_t>(n)};
 }
 
+//todo::@z
 std::optional<std::vector<llama_token>> Tokenize(
     const llama_model* llamaModel, const llama_context* context, const std::string_view& prompt,
     const bool addSpecial, const bool parseSpecial) {
@@ -314,6 +326,9 @@ std::optional<std::vector<llama_token>> Tokenize(
     return tokenizedPrompt;
 }
 
+//todo::@z
+//JSON return like exl2
+//Stop reasons = End of string or Too long
 const char* InferToReadbackBuffer(
     const llama_model* model,
     llama_sampler* sampler,
@@ -330,7 +345,7 @@ const char* InferToReadbackBuffer(
     const unsigned numStoppingStrings)
 {
     if (abortCallback != nullptr) {
-        llama_set_abort_callback(context, abortCallback, NULL);
+        llama_set_abort_callback(context, abortCallback, nullptr);
     }
 
     auto promptTokens = Tokenize(model, context, prompt, addSpecial, parseSpecial).value();
