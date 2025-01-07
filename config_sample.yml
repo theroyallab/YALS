@@ -42,3 +42,9 @@ model:
 
   # Rope freq scale. 0 = model default (default: 0)
   rope_freq_scale: 0
+
+  # K cache quantization type (default: F16)
+  cache_mode_k: "F16"
+
+  # V cache quantization type (default: F16)
+  cache_mode_v: "F16"

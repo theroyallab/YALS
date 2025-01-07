@@ -1,4 +1,5 @@
 import * as z from "@/common/myZod.ts";
+import { GGMLType } from "@/bindings/bindings.ts";
 
 export const NetworkConfig = z.object({
     host: z.string().nullish().coalesce("127.0.0.1"),
@@ -17,6 +18,16 @@ export const ModelConfig = z.object({
     flash_attention: z.boolean().nullish().coalesce(false),
     rope_freq_base: z.number().nullish().coalesce(0),
     rope_freq_scale: z.number().nullish().coalesce(0),
+    cache_mode_k: z.union([
+        z.string().transform((str) => GGMLType[str as keyof typeof GGMLType]),
+        z.number(),
+    ])
+        .nullish().coalesce(GGMLType.F16),
+    cache_mode_v: z.union([
+        z.string().transform((str) => GGMLType[str as keyof typeof GGMLType]),
+        z.number(),
+    ])
+        .nullish().coalesce(GGMLType.F16),
 });
 
 export type ModelConfig = z.infer<typeof ModelConfig>;
