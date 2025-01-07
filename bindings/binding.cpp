@@ -15,15 +15,15 @@ void TestPrint(const char* text)
 llama_model* LoadModel(
     const char* modelPath,
     int numberGpuLayers,
+    const float* tensorSplit,
     llama_progress_callback callback)
 {
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = numberGpuLayers;
     model_params.progress_callback = callback;
 
-    //todo::@z
-    //model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
-    //model_params.tensor_split = float value
+    model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
+    model_params.tensor_split = tensorSplit;
 
     llama_model* model = llama_load_model_from_file(modelPath, model_params);
 

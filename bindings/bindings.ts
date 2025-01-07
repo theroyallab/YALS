@@ -418,7 +418,8 @@ export class Model {
         try {
             const model = await lib.symbols.LoadModel(
                 modelPathPtr,
-                params.num_gpu_layers as number,
+                params.num_gpu_layers,
+                Deno.UnsafePointer.of(new Float32Array(params.gpu_split)),
                 callback?.pointer ?? null,
             );
 
