@@ -30,21 +30,79 @@ llama_model* LoadModel(
     return model;
 }
 
-llama_context *InitiateCtx(llama_model *model, const unsigned contextLength,
-                           const unsigned numBatches, const bool flashAttn,
-                           const float ropeFreqBase, const float ropeFreqScale,
-                           const int kCacheQuantType, const int vCacheQuantType)
+// float yarn_ext_factor;  // YaRN extrapolation mix factor, negative = from model
+// float yarn_attn_factor; // YaRN magnitude scaling factor
+// float yarn_beta_fast; // YaRN low correction dim
+// float yarn_beta_slow; // YaRN high correction dim
+// uint32_t yarn_orig_ctx; // YaRN original context size
+
+// uint32_t n_ctx;             // text context, 0 = from model
+// uint32_t n_batch;           // logical maximum batch size that can be submitted to llama_decode
+// uint32_t n_ubatch;          // physical maximum batch size
+// uint32_t n_seq_max;         // max number of sequences (i.e. distinct states for recurrent models)
+// int32_t  n_threads;         // number of threads to use for generation
+// int32_t  n_threads_batch;   // number of threads to use for batch processing
+
+llama_context *InitiateCtx(
+    llama_model* model,
+    const unsigned contextLength, // 0 = Use from model config
+    const unsigned numBatches,
+    const bool flashAttn,
+
+    const bool useModelContextExtensionDefaults,
+
+    const bool useRope,
+    const float ropeFreqBase,
+    const float ropeFreqScale,
+
+    const bool useYarn,
+    const float yarnBetaFast,
+    const float yarnBetaSlow,
+    const uint32_t yarnOriginalContextLength,
+    const float yarnExtensionFactor,
+    const float yarnAttentionFactor,
+
+    const int kCacheQuantType,
+    const int vCacheQuantType,
+    const float kvDefragThreshold // -1 to disable
+    )
 {
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = contextLength;
     ctx_params.n_batch = numBatches;
     ctx_params.no_perf = false;
     ctx_params.flash_attn = flashAttn;
-    ctx_params.rope_freq_base = ropeFreqBase;
-    ctx_params.rope_freq_scale = ropeFreqScale;
+
+    ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
+    //Default
+    //This looks dubiously implemented on the llama cpp side, use with caution.
+    if (useModelContextExtensionDefaults) {
+        ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_UNSPECIFIED;
+        ctx_params.rope_freq_base = 0;
+        ctx_params.rope_freq_scale = 0;
+        ctx_params.yarn_ext_factor = -1;
+    }
+
+    //Linear Rope, 0's to default to model config
+    if (useRope) {
+        ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_LINEAR;
+        ctx_params.rope_freq_base = ropeFreqBase;
+        ctx_params.rope_freq_scale = ropeFreqScale;
+    }
+
+    //Yarn, allegedly ext_factor -1 to default to model cfg but it looks sussy.
+    if (useYarn) {
+        ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_YARN;
+        ctx_params.yarn_ext_factor = yarnExtensionFactor;
+        ctx_params.yarn_attn_factor = yarnAttentionFactor;
+        ctx_params.yarn_beta_fast = yarnBetaFast;
+        ctx_params.yarn_beta_slow = yarnBetaSlow;
+        ctx_params.yarn_orig_ctx = yarnOriginalContextLength;
+    }
 
     ctx_params.type_k = static_cast<ggml_type>(kCacheQuantType);
     ctx_params.type_v = static_cast<ggml_type>(vCacheQuantType);
+    ctx_params.defrag_thold = kvDefragThreshold;
     llama_context* ctx = llama_new_context_with_model(model, ctx_params);
 
     if (ctx == nullptr) {

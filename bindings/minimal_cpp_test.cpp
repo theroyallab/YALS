@@ -11,7 +11,8 @@ int main() {
     const auto numTokens = 35;
 
     const auto model = LoadModel(modelPath.c_str(), modelLayers, nullptr, nullptr);
-    const auto ctx = InitiateCtx(model, ctxLen, 1, true, 0, 0, 1, 1);
+
+    const auto ctx = InitiateCtx(model, ctxLen, 1, true, false, false, 0, 0, false, -1, -1, 0, -1, -1, 1, 1, -1);
     const auto sampler = MakeSampler();
     GreedySampler(sampler);
 

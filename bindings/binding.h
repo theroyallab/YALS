@@ -4,20 +4,37 @@
 
 #ifdef __cplusplus
 
-//Array of strings passed via FFI, equiv to const char[]*
-typedef struct {
-    const char** strings;
-    size_t count;
-} FfiStringArray;
-
 extern "C" {
 #endif
     struct ReadbackBuffer;
 
     void TestPrint(const char* text);
     llama_model* LoadModel(const char* modelPath, int numberGpuLayers, const float* tensorSplit, llama_progress_callback callback);
-    llama_context* InitiateCtx(llama_model *model, unsigned contextLength, unsigned numBatches,
-        bool flashAttn, float ropeFreqBase, float ropeFreqScale, int kCacheQuantType, int vCacheQuantType);
+
+    llama_context *InitiateCtx(
+        llama_model* model,
+        unsigned contextLength, // 0 = Use from model config
+        unsigned numBatches,
+        bool flashAttn,
+
+        bool useModelContextExtensionDefaults,
+
+        bool useRope,
+        float ropeFreqBase, //0 to use model defaults
+        float ropeFreqScale,
+
+        bool useYarn,
+        float yarnBetaFast, //-1 to use model defaults
+        float yarnBetaSlow,
+        uint32_t yarnOriginalContextLength,
+        float yarnExtensionFactor,
+        float yarnAttentionFactor,
+
+        int kCacheQuantType,
+        int vCacheQuantType,
+        float kvDefragThreshold // -1 to disable
+        );
+
     llama_token BosToken(const llama_model* model);
     llama_token EosToken(const llama_model* model);
     llama_token EotToken(const llama_model* model);

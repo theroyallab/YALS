@@ -11,16 +11,25 @@ export default {
     },
     InitiateCtx: {
         parameters: [
-            "pointer", // void* llamaModel
-            "u32", // unsigned contextLength
-            "u32", // unsigned numBatches
-            "bool", // bool flashAttn
-            "f32", // float ropeFreqBase
-            "f32", // float ropeFreqScale
-            "i32", // ggml_type kCacheQuantType
-            "i32", // ggml_type vCacheQuantType
+            "pointer",  // llama_model* model
+            "u32",      // unsigned contextLength
+            "u32",      // unsigned numBatches
+            "bool",     // bool flashAttn
+            "bool",     // bool useModelDefaults
+            "bool",     // bool useRope
+            "f32",      // float ropeFreqBase
+            "f32",      // float ropeFreqScale
+            "bool",     // bool useYarn
+            "f32",      // float yarnBetaFast
+            "f32",      // float yarnBetaSlow
+            "u32",      // uint32_t yarnOriginalContextLength
+            "f32",      // float yarnExtensionFactor
+            "f32",      // float yarnAttentionFactor
+            "i32",      // int kCacheQuantType
+            "i32",      // int vCacheQuantType
+            "f32",      // float kvDefragThreshold
         ],
-        result: "pointer" as const, // void*
+        result: "pointer" as const,  // llama_context*
         nonblocking: true,
     },
     BosToken: {
