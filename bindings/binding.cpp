@@ -422,6 +422,20 @@ std::optional<std::vector<llama_token>> Tokenize(
     return tokenizedPrompt;
 }
 
+std::string MakeJsonOutputString(llama_context* context, std::string stopReason, std::string stopToken) {
+    const auto data = llama_perf_context(context);
+
+    std::string json_string = "{"
+        "\"promptTokens\": " + std::to_string(data.n_p_eval) + ","
+        "\"genTokens\": " + std::to_string(data.n_eval) + ","
+        "\"genTokensPerSec\": " + std::to_string(1e3 / data.t_p_eval_ms * data.n_p_eval) + ","
+        "\"promptTokensPerSec\": " + std::to_string(1e3 / data.t_eval_ms * data.n_eval) + ","
+        "\"stopReason\": \"" + stopReason + "\","
+        "\"stopToken\": \"" + stopToken + "\""
+    "}";
+    return json_string;
+}
+
 //todo::@z
 //JSON return like exl2
 //Stop reasons = End of string or Too long
@@ -457,23 +471,27 @@ const char* InferToReadbackBuffer(
     std::string response;
     std::string buffer;
 
+    std::string stopReason = "Unspecified";
+    std::string stoppedAt = "";
+
     auto gen = [&](const llama_batch& batch, llama_sampler* smpl) -> std::pair<llama_token, bool> {
         int n_ctx = llama_n_ctx(context);
         int n_ctx_used = llama_get_kv_cache_used_cells(context);
         if (n_ctx_used + batch.n_tokens > n_ctx) {
-            std::cerr << "Context size exceeded, must abort." << std::endl;
+            stopReason = "Context size exceeded";
             return {0, true};
         }
 
         if (llama_decode(context, batch)) {
-            std::cerr << "error: failed to eval, return code 1 in Infer()" << std::endl;
+            stopReason = "Failed to decode initial batch";
             return {0, true};
         }
 
         auto newTokenId = llama_sampler_sample(smpl, context, -1);
 
         if (llama_token_is_eog(model, newTokenId)) {
-            std::cout << "Ended due to EOG" << std::endl;
+            stopReason = "End of generation.";
+            stoppedAt = TokenToPiece(model, newTokenId).value();
             return {newTokenId, true};
         }
 
@@ -481,7 +499,6 @@ const char* InferToReadbackBuffer(
     };
 
     auto [newTokenId, isEnd] = gen(firstBatch, sampler);
-    if (isEnd) return "";
 
     int rewindPos = 0;
     int rewindTokenId = 0;
@@ -490,13 +507,28 @@ const char* InferToReadbackBuffer(
     std::vector<llama_logit_bias> biases;
     llama_sampler* banSampler = nullptr;
     llama_batch batch = firstBatch;
-    while (!isEnd && (tokenCount + batch.n_tokens <= numTokensToGenerate)) {
+    while (true) {
         // Abort if callback is fired
+        if (isEnd) {
+            stopReason = "Reached stop token";
+            stoppedAt = TokenToPiece(model, newTokenId).value();
+            break;
+        }
+
+        if (tokenCount + batch.n_tokens > numTokensToGenerate) {
+            stopReason = "Reached max number of tokens to generate";
+            stoppedAt = TokenToPiece(model, newTokenId).value();
+            break;
+        }
+
         if (abortCallback != nullptr && abortCallback(nullptr)) {
+            stopReason = "Aborted generation";
+            stoppedAt = TokenToPiece(model, newTokenId).value();
             break;
         }
 
         const auto piece = TokenToPiece(model, newTokenId).value();
+
         buffer += piece;
         tokenCount += batch.n_tokens;
 
@@ -529,6 +561,7 @@ const char* InferToReadbackBuffer(
 
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
                 //Matched a stop, break.
+                stopReason = "Matched a stopping word";
                 break;
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_REWIND) {
                 llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
@@ -561,23 +594,17 @@ const char* InferToReadbackBuffer(
 
         batch = llama_batch_get_one(&newTokenId, 1);
         std::tie(newTokenId, isEnd) = gen(batch, sampler);
+
+        if (isEnd) {
+            stoppedAt = TokenToPiece(model, newTokenId).value();
+        }
     }
 
     if (banSampler != nullptr) {
         llama_sampler_free(banSampler);
     }
 
-    const auto data = llama_perf_context(context);
-    std::string jsonOut = "{"
-        "\"promptTokens\": " + std::to_string(data.n_p_eval) + ","
-        "\"genTokens\": " + std::to_string(data.n_eval) + ","
-        "\"genTokensPerSec\": " + std::to_string(1e3 / data.t_p_eval_ms * data.n_p_eval) + ","
-        "\"promptTokensPerSec\": " + std::to_string(1e3 / data.t_eval_ms * data.n_eval) + ","
-        "\"stopReason\": \"eos\","
-        "\"stopToken\": \"</s>\""
-    "}";
-
-    readbackBufferPtr->jsonOutputBuffer = strdup(jsonOut.c_str());
+    readbackBufferPtr->jsonOutputBuffer = strdup(MakeJsonOutputString(context, stopReason, stoppedAt).c_str());
     readbackBufferPtr->done = true;
     return strdup(response.c_str());
 }

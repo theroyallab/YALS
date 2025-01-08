@@ -15,25 +15,21 @@ await loadModel(modelConfig);
 
 const samplerRequest = BaseSamplerRequest.parse({
     temperature: 0,
-    max_tokens: 35,
+    max_tokens: 200,
 });
-
-const test = await model.tokenize("hello world", false, false);
-console.log(test);
-
-const detest = await model.detokenize(test, 200, false, false);
-console.log(detest);
 
 let abort = new AbortController()
 const encoder = new TextEncoder();
 let buffer = "";
+
+const prompt = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a robot<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nRespond litrally with \"Hi nice to meet you\"<|eot_id|><|start_header_id|>assistant<|end_header_id|>";
 for (let i = 0; i < 4; i++) {
     console.log();
     console.log("NEXT");
     console.log();
 
     for await (
-        const chunk of model!.generateGen("Hi my name is", samplerRequest, abort)
+        const chunk of model!.generateGen(prompt, samplerRequest, abort)
     ) {
         await Deno.stdout.write(encoder.encode(chunk));
         buffer += chunk;
