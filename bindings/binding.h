@@ -51,6 +51,23 @@ extern "C" {
     void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData);
     bool IsReadbackBufferDone(const ReadbackBuffer* buffer);
 
+    int32_t* EndpointTokenize(
+        const llama_model* llamaModel,
+        const char* prompt,
+        bool addSpecial,
+        bool parseSpecial);
+
+    char* EndpointDetokenize(
+        const llama_model* llamaModel,
+        int32_t* tokens,
+        size_t numTokens,
+        size_t maxTextSize,
+        bool addSpecial,
+        bool parseSpecial);
+
+    void EndpointFreeTokens(const int32_t* tokens);
+    void EndpointFreeString(const char* str);
+
     /* SAMPLERS
      * */
     llama_sampler* MakeSampler();

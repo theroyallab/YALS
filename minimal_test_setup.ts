@@ -18,18 +18,24 @@ const samplerRequest = BaseSamplerRequest.parse({
     max_tokens: 35,
 });
 
-let abort = new AbortController()
-const encoder = new TextEncoder();
-let buffer = "";
-for (let i = 0; i < 4; i++) {
-    console.log();
-    console.log("NEXT");
-    console.log();
+const test = await model.tokenize("hello world", false, false);
+console.log(test);
 
-    for await (
-        const chunk of model!.generateGen("Hi my name is", samplerRequest, abort)
-    ) {
-        await Deno.stdout.write(encoder.encode(chunk));
-        buffer += chunk;
-    }
-}
+const detest = await model.detokenize(test, 200, false, false);
+console.log(detest);
+
+// let abort = new AbortController()
+// const encoder = new TextEncoder();
+// let buffer = "";
+// for (let i = 0; i < 4; i++) {
+//     console.log();
+//     console.log("NEXT");
+//     console.log();
+
+//     for await (
+//         const chunk of model!.generateGen("Hi my name is", samplerRequest, abort)
+//     ) {
+//         await Deno.stdout.write(encoder.encode(chunk));
+//         buffer += chunk;
+//     }
+// }

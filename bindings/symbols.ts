@@ -193,4 +193,38 @@ export default {
         result: "pointer" as const,
         nonblocking: true,
     },
+    EndpointTokenize: {
+        parameters: [
+            "pointer", // const llama_model* llamaModel
+            "buffer",  // const char* prompt
+            "bool",    // bool addSpecial
+            "bool",    // bool parseSpecial
+        ],
+        result: "pointer" as const, // int32_t*
+    },
+    EndpointDetokenize: {
+        parameters: [
+            "pointer", // const llama_model* llamaModel
+            "pointer", // int32_t* tokens
+            "usize",   // size_t numTokens
+            "usize",   // size_t maxTextSize
+            "bool",    // bool addSpecial
+            "bool",    // bool parseSpecial
+        ],
+        result: "pointer" as const, // char*
+    },
+
+    EndpointFreeTokens: {
+        parameters: [
+            "pointer", // const int32_t* tokens
+        ],
+        result: "void",
+    },
+
+    EndpointFreeString: {
+        parameters: [
+            "pointer", // const char* str
+        ],
+        result: "void",
+    },
 } as const;

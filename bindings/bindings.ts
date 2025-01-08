@@ -434,10 +434,19 @@ export class Model {
                 params.max_seq_len ?? 4096,
                 2048,
                 params.flash_attention,
+                false, //use model ctx extension default
+                false, //use rope
                 params.rope_freq_base,
                 params.rope_freq_scale,
+                false, //use yarn
+                -1.0,
+                -1.0,
+                0,
+                0.0,
+                0.0,
                 params.cache_mode_k,
                 params.cache_mode_v,
+                -1.0 //kvDefrag thresehold
             );
 
             const parsedModelPath = Path.parse(modelPath);
@@ -643,5 +652,74 @@ export class Model {
         this.readbackBuffer.reset();
 
         console.log("Finished");
+    }
+
+    async tokenize(text: string, addSpecial: boolean = true, parseSpecial: boolean = true) {
+        const textPtr = new TextEncoder().encode(text + "\0");
+
+        // Get raw pointer from C++
+        const tokensPtr = lib.symbols.EndpointTokenize(
+            this.model,
+            textPtr,
+            addSpecial,
+            parseSpecial
+        );
+
+        if (tokensPtr === null) {
+            throw new Error("Tokenization failed");
+        }
+
+        // The first 4 bytes contain the length of the array
+        const ptrView = new Deno.UnsafePointerView(tokensPtr);
+        const length = new Int32Array(ptrView.getArrayBuffer(4))[0];
+
+        // Copy the actual tokens (starting after the length prefix)
+        const dataPtr = Deno.UnsafePointer.create(
+            Deno.UnsafePointer.value(tokensPtr) + 4n
+        )!;
+        const tokenData = new Int32Array(
+            new Deno.UnsafePointerView(dataPtr).getArrayBuffer(length * 4)
+        );
+
+        // Create owned copy
+        const ownedTokens = new Int32Array(tokenData);
+
+        // Free the original pointer
+        lib.symbols.EndpointFreeTokens(tokensPtr);
+
+        return ownedTokens;
+    }
+
+    async detokenize(
+        tokens: Int32Array,
+        maxTextSize: number = 4096,
+        addSpecial: boolean = true,
+        parseSpecial: boolean = true
+    ) {
+        // Create a pointer to the tokens data
+        const tokensPtr = Deno.UnsafePointer.of(tokens.buffer);
+
+        // Get raw pointer from C++
+        const textPtr = lib.symbols.EndpointDetokenize(
+            this.model,
+            tokensPtr,
+            BigInt(tokens.length),
+            BigInt(maxTextSize),
+            addSpecial,
+            parseSpecial
+        );
+
+        if (textPtr === null) {
+            throw new Error("Detokenization failed");
+        }
+
+        // Copy to owned string
+        const cString = new Deno.UnsafePointerView(textPtr);
+        const text: string = cString.getCString();
+
+        // Free the original pointer
+        lib.symbols.EndpointFreeString(textPtr);
+
+        return text;
     }
 }

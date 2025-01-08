@@ -30,19 +30,6 @@ llama_model* LoadModel(
     return model;
 }
 
-// float yarn_ext_factor;  // YaRN extrapolation mix factor, negative = from model
-// float yarn_attn_factor; // YaRN magnitude scaling factor
-// float yarn_beta_fast; // YaRN low correction dim
-// float yarn_beta_slow; // YaRN high correction dim
-// uint32_t yarn_orig_ctx; // YaRN original context size
-
-// uint32_t n_ctx;             // text context, 0 = from model
-// uint32_t n_batch;           // logical maximum batch size that can be submitted to llama_decode
-// uint32_t n_ubatch;          // physical maximum batch size
-// uint32_t n_seq_max;         // max number of sequences (i.e. distinct states for recurrent models)
-// int32_t  n_threads;         // number of threads to use for generation
-// int32_t  n_threads_batch;   // number of threads to use for batch processing
-
 llama_context *InitiateCtx(
     llama_model* model,
     const unsigned contextLength, // 0 = Use from model config
@@ -361,6 +348,48 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
     }
 
     return std::string{buf, static_cast<size_t>(n)};
+}
+
+int32_t* EndpointTokenize(
+    const llama_model* llamaModel,
+    const char* prompt,
+    const bool addSpecial,
+    const bool parseSpecial) {
+
+    const int32_t promptLength = strlen(prompt);
+    const int n_prompt = -llama_tokenize(llamaModel, prompt, promptLength,
+                                   nullptr, 0, addSpecial, parseSpecial);
+    auto tokenArray = new int32_t[n_prompt + 1];
+    tokenArray[0] = n_prompt;
+
+    if (llama_tokenize(llamaModel, prompt, promptLength,
+    tokenArray + 1, n_prompt + 1,
+        addSpecial, parseSpecial) < 0) {
+        std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
+        return nullptr;
+    }
+
+    return tokenArray;
+}
+
+void EndpointFreeTokens(const int32_t* tokens) {
+    delete[] tokens;
+}
+
+char* EndpointDetokenize(
+    const llama_model* llamaModel,
+    int32_t* tokens,
+    size_t numTokens,
+    size_t maxTextSize,
+    const bool addSpecial,
+    const bool parseSpecial) {
+    auto outText = new char[maxTextSize];
+    llama_detokenize(llamaModel, tokens, numTokens, outText, maxTextSize, addSpecial, parseSpecial);
+    return outText;
+}
+
+void EndpointFreeString(const char* str) {
+    delete[] str;
 }
 
 //todo::@z
