@@ -288,6 +288,15 @@ export class SamplerBuilder {
     }
 }
 
+interface StatusResponse {
+    promptTokens: number;
+    genTokens: number;
+    genTokensPerSec: number;
+    promptTokensPerSec: number;
+    stopReason: string;
+    stopToken: string;
+}
+
 export class ReadbackBuffer {
     public bufferPtr: Deno.PointerValue;
 
@@ -302,6 +311,21 @@ export class ReadbackBuffer {
         }
         const cString = new Deno.UnsafePointerView(stringPtr);
         return cString.getCString();
+    }
+
+    public async readJsonStatus(): Promise<StatusResponse | null> {
+        const stringPtr = await lib.symbols.ReadbackJsonStatus(this.bufferPtr);
+        if (stringPtr === null) {
+            return null;
+        }
+        const cString = new Deno.UnsafePointerView(stringPtr);
+        const jsonString = cString.getCString();
+        try {
+            return JSON.parse(jsonString) as StatusResponse;
+        } catch (e) {
+            console.error("Failed to parse JSON:", e);
+            return null;
+        }
     }
 
     isDone(): boolean {
@@ -649,6 +673,11 @@ export class Model {
         for await (const chunk of this.readbackBuffer.read()) {
             yield chunk;
         }
+
+        const result = await this.readbackBuffer.readJsonStatus();
+
+        console.log(result);
+
         this.readbackBuffer.reset();
 
         console.log("Finished");

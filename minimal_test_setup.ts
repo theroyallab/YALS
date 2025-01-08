@@ -24,18 +24,18 @@ console.log(test);
 const detest = await model.detokenize(test, 200, false, false);
 console.log(detest);
 
-// let abort = new AbortController()
-// const encoder = new TextEncoder();
-// let buffer = "";
-// for (let i = 0; i < 4; i++) {
-//     console.log();
-//     console.log("NEXT");
-//     console.log();
+let abort = new AbortController()
+const encoder = new TextEncoder();
+let buffer = "";
+for (let i = 0; i < 4; i++) {
+    console.log();
+    console.log("NEXT");
+    console.log();
 
-//     for await (
-//         const chunk of model!.generateGen("Hi my name is", samplerRequest, abort)
-//     ) {
-//         await Deno.stdout.write(encoder.encode(chunk));
-//         buffer += chunk;
-//     }
-// }
+    for await (
+        const chunk of model!.generateGen("Hi my name is", samplerRequest, abort)
+    ) {
+        await Deno.stdout.write(encoder.encode(chunk));
+        buffer += chunk;
+    }
+}

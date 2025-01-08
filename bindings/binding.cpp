@@ -5,6 +5,7 @@
 #include <cstring>
 #include <iomanip>
 #include <vector>
+#include <string>
 
 void TestPrint(const char* text)
 {
@@ -155,6 +156,8 @@ struct ReadbackBuffer
     unsigned lastReadbackIndex {0};
     bool done {false};
     std::vector<char*>* data = new std::vector<char*>();
+
+    char* jsonOutputBuffer = nullptr;
 };
 
 void ResetReadbackBuffer(ReadbackBuffer* buffer) {
@@ -162,6 +165,9 @@ void ResetReadbackBuffer(ReadbackBuffer* buffer) {
     buffer->lastReadbackIndex = 0;
     //Keep capacity, no resize.
     buffer->data->clear();
+
+    delete[] buffer->jsonOutputBuffer;
+    buffer->jsonOutputBuffer = nullptr;
 }
 
 bool IsReadbackBufferDone(const ReadbackBuffer* buffer)
@@ -191,6 +197,10 @@ char* ReadbackNext(ReadbackBuffer* buffer)
     buffer->lastReadbackIndex++;
 
     return stringPtr;
+}
+
+char* ReadbackJsonStatus(const ReadbackBuffer* buffer) {
+    return buffer->jsonOutputBuffer;
 }
 
 llama_sampler* MakeSampler()
@@ -392,7 +402,6 @@ void EndpointFreeString(const char* str) {
     delete[] str;
 }
 
-//todo::@z
 std::optional<std::vector<llama_token>> Tokenize(
     const llama_model* llamaModel, const llama_context* context, const std::string_view& prompt,
     const bool addSpecial, const bool parseSpecial) {
@@ -558,7 +567,17 @@ const char* InferToReadbackBuffer(
         llama_sampler_free(banSampler);
     }
 
-    PrintPerformanceInfo(context);
+    const auto data = llama_perf_context(context);
+    std::string jsonOut = "{"
+        "\"promptTokens\": " + std::to_string(data.n_p_eval) + ","
+        "\"genTokens\": " + std::to_string(data.n_eval) + ","
+        "\"genTokensPerSec\": " + std::to_string(1e3 / data.t_p_eval_ms * data.n_p_eval) + ","
+        "\"promptTokensPerSec\": " + std::to_string(1e3 / data.t_eval_ms * data.n_eval) + ","
+        "\"stopReason\": \"eos\","
+        "\"stopToken\": \"</s>\""
+    "}";
+
+    readbackBufferPtr->jsonOutputBuffer = strdup(jsonOut.c_str());
     readbackBufferPtr->done = true;
     return strdup(response.c_str());
 }

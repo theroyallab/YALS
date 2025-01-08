@@ -170,6 +170,11 @@ export default {
         result: "pointer" as const, // void*
         nonblocking: true,
     },
+    ReadbackJsonStatus: {
+        parameters: ["pointer"], // void* readbackBufferPtr
+        result: "pointer" as const, // void*
+        nonblocking: true,
+    },
     IsReadbackBufferDone: {
         parameters: ["pointer"], // void* readbackBufferPtr
         result: "bool" as const,

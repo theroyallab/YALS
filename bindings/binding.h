@@ -48,6 +48,7 @@ extern "C" {
     void ResetReadbackBuffer(ReadbackBuffer* buffer);
 
     char* ReadbackNext(ReadbackBuffer *buffer);
+    char* ReadbackJsonStatus(const ReadbackBuffer* buffer);
     void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData);
     bool IsReadbackBufferDone(const ReadbackBuffer* buffer);
 
