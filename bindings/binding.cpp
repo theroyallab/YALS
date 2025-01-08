@@ -593,10 +593,6 @@ const char* InferToReadbackBuffer(
 
         batch = llama_batch_get_one(&newTokenId, 1);
         std::tie(newTokenId, isEnd) = gen(batch, sampler);
-
-        if (isEnd) {
-            stoppedAt = TokenToPiece(model, newTokenId).value();
-        }
     }
 
     if (banSampler != nullptr) {
