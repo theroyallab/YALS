@@ -481,15 +481,13 @@ const char* InferToReadbackBuffer(
         }
 
         if (llama_decode(context, batch)) {
-            stopReason = "Failed to decode initial batch";
+            stopReason = "Failed to decode batch";
             return {0, true};
         }
 
         auto newTokenId = llama_sampler_sample(smpl, context, -1);
 
         if (llama_token_is_eog(model, newTokenId)) {
-            stopReason = "End of generation.";
-            stoppedAt = TokenToPiece(model, newTokenId).value();
             return {newTokenId, true};
         }
 
