@@ -422,6 +422,7 @@ std::optional<std::vector<llama_token>> Tokenize(
     return tokenizedPrompt;
 }
 
+//todo::@z This is fucking horrible actually do this correctly.
 std::string MakeJsonOutputString(llama_context* context, std::string stopReason, std::string stopToken) {
     const auto data = llama_perf_context(context);
 
@@ -436,9 +437,6 @@ std::string MakeJsonOutputString(llama_context* context, std::string stopReason,
     return json_string;
 }
 
-//todo::@z
-//JSON return like exl2
-//Stop reasons = End of string or Too long
 const char* InferToReadbackBuffer(
     const llama_model* model,
     llama_sampler* sampler,
@@ -562,6 +560,7 @@ const char* InferToReadbackBuffer(
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
                 //Matched a stop, break.
                 stopReason = "Matched a stopping word";
+                stoppedAt = TokenToPiece(model, newTokenId).value();
                 break;
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_REWIND) {
                 llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
