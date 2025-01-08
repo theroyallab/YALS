@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <vector>
 #include <string>
+#include <sstream>
 
 void TestPrint(const char* text)
 {
@@ -422,19 +423,20 @@ std::optional<std::vector<llama_token>> Tokenize(
     return tokenizedPrompt;
 }
 
-//todo::@z This is fucking horrible actually do this correctly.
 std::string MakeJsonOutputString(llama_context* context, std::string stopReason, std::string stopToken) {
     const auto data = llama_perf_context(context);
 
-    std::string json_string = "{"
-        "\"promptTokens\": " + std::to_string(data.n_p_eval) + ","
-        "\"genTokens\": " + std::to_string(data.n_eval) + ","
-        "\"genTokensPerSec\": " + std::to_string(1e3 / data.t_p_eval_ms * data.n_p_eval) + ","
-        "\"promptTokensPerSec\": " + std::to_string(1e3 / data.t_eval_ms * data.n_eval) + ","
-        "\"stopReason\": \"" + stopReason + "\","
-        "\"stopToken\": \"" + stopToken + "\""
-    "}";
-    return json_string;
+    std::stringstream ss;
+    ss << "{"
+       << "\"promptTokens\": " << data.n_p_eval << ","
+       << "\"genTokens\": " << data.n_eval << ","
+       << "\"genTokensPerSec\": " << (1e3 / data.t_p_eval_ms * data.n_p_eval) << ","
+       << "\"promptTokensPerSec\": " << (1e3 / data.t_eval_ms * data.n_eval) << ","
+       << "\"stopReason\": \"" << stopReason << "\","
+       << "\"stopToken\": \"" << stopToken << "\""
+       << "}";
+
+    return ss.str();
 }
 
 const char* InferToReadbackBuffer(
@@ -470,7 +472,7 @@ const char* InferToReadbackBuffer(
     std::string buffer;
 
     std::string stopReason = "Unspecified";
-    std::string stoppedAt = "";
+    std::string stoppedAt;
 
     auto gen = [&](const llama_batch& batch, llama_sampler* smpl) -> std::pair<llama_token, bool> {
         int n_ctx = llama_n_ctx(context);
