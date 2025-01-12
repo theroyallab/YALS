@@ -42,7 +42,7 @@ extern "C" {
     void FreeModel(llama_model* model);
     void FreeCtx(llama_context* ctx);
     void ClearContextKVCache(llama_context* ctx);
-    const char* TokenToString(const llama_model* model, const llama_token token);
+    const char* TokenToString(const llama_model* model, llama_token token);
 
     ReadbackBuffer* CreateReadbackBuffer();
     void ResetReadbackBuffer(ReadbackBuffer* buffer);
@@ -105,14 +105,14 @@ extern "C" {
         llama_context* context,
         ReadbackBuffer* readbackBufferPtr,
         const char* prompt,
-        const unsigned numberTokensToPredict,
-        const bool addSpecial,
-        const bool parseSpecial,
+        unsigned numberTokensToPredict,
+        bool addSpecial,
+        bool parseSpecial,
         ggml_abort_callback abortCallback,
         const char** rewindStrings,
-        const unsigned numRewindStrings,
+        unsigned numRewindStrings,
         const char** stoppingStrings,
-        const unsigned numStoppingStrings);
+        unsigned numStoppingStrings);
 
 #ifdef __cplusplus
 }
