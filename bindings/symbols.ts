@@ -11,25 +11,25 @@ export default {
     },
     InitiateCtx: {
         parameters: [
-            "pointer",  // llama_model* model
-            "u32",      // unsigned contextLength
-            "u32",      // unsigned numBatches
-            "bool",     // bool flashAttn
-            "bool",     // bool useModelDefaults
-            "bool",     // bool useRope
-            "f32",      // float ropeFreqBase
-            "f32",      // float ropeFreqScale
-            "bool",     // bool useYarn
-            "f32",      // float yarnBetaFast
-            "f32",      // float yarnBetaSlow
-            "u32",      // uint32_t yarnOriginalContextLength
-            "f32",      // float yarnExtensionFactor
-            "f32",      // float yarnAttentionFactor
-            "i32",      // int kCacheQuantType
-            "i32",      // int vCacheQuantType
-            "f32",      // float kvDefragThreshold
+            "pointer", // llama_model* model
+            "u32", // unsigned contextLength
+            "u32", // unsigned numBatches
+            "bool", // bool flashAttn
+            "bool", // bool useModelDefaults
+            "bool", // bool useRope
+            "f32", // float ropeFreqBase
+            "f32", // float ropeFreqScale
+            "bool", // bool useYarn
+            "f32", // float yarnBetaFast
+            "f32", // float yarnBetaSlow
+            "u32", // uint32_t yarnOriginalContextLength
+            "f32", // float yarnExtensionFactor
+            "f32", // float yarnAttentionFactor
+            "i32", // int kCacheQuantType
+            "i32", // int vCacheQuantType
+            "f32", // float kvDefragThreshold
         ],
-        result: "pointer" as const,  // llama_context*
+        result: "pointer" as const, // llama_context*
         nonblocking: true,
     },
     BosToken: {
@@ -201,22 +201,24 @@ export default {
     EndpointTokenize: {
         parameters: [
             "pointer", // const llama_model* llamaModel
-            "buffer",  // const char* prompt
-            "bool",    // bool addSpecial
-            "bool",    // bool parseSpecial
+            "buffer", // const char* prompt
+            "bool", // bool addSpecial
+            "bool", // bool parseSpecial
         ],
         result: "pointer" as const, // int32_t*
+        nonblocking: true,
     },
     EndpointDetokenize: {
         parameters: [
             "pointer", // const llama_model* llamaModel
             "pointer", // int32_t* tokens
-            "usize",   // size_t numTokens
-            "usize",   // size_t maxTextSize
-            "bool",    // bool addSpecial
-            "bool",    // bool parseSpecial
+            "usize", // size_t numTokens
+            "usize", // size_t maxTextSize
+            "bool", // bool addSpecial
+            "bool", // bool parseSpecial
         ],
         result: "pointer" as const, // char*
+        nonblocking: true,
     },
 
     EndpointFreeTokens: {
@@ -224,6 +226,7 @@ export default {
             "pointer", // const int32_t* tokens
         ],
         result: "void",
+        nonblocking: true,
     },
 
     EndpointFreeString: {
@@ -231,5 +234,6 @@ export default {
             "pointer", // const char* str
         ],
         result: "void",
+        nonblocking: true,
     },
 } as const;

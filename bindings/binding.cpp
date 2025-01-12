@@ -410,7 +410,7 @@ std::optional<std::vector<llama_token>> Tokenize(
     const int n_prompt = -llama_tokenize(llamaModel, prompt.data(), prompt.size(),
                                        nullptr, 0, addSpecial, parseSpecial);
     std::vector<llama_token> tokenizedPrompt(n_prompt);
-    
+
     bool add_bos = (llama_get_kv_cache_used_cells(context) == 0) & addSpecial;
 
     if (llama_tokenize(llamaModel, prompt.data(), prompt.size(),
@@ -423,17 +423,21 @@ std::optional<std::vector<llama_token>> Tokenize(
     return tokenizedPrompt;
 }
 
-std::string MakeJsonOutputString(llama_context* context, std::string stopReason, std::string stopToken) {
-    const auto data = llama_perf_context(context);
+std::string MakeJsonOutputString(const llama_context* context, const std::string &finishReason, const std::string &stopToken) {
+    const auto [t_start_ms, t_load_ms, t_p_eval_ms, t_eval_ms, n_p_eval, n_eval] = llama_perf_context(context);
+    const double t_p_eval_s = 1e3 / t_p_eval_ms;
+    const double t_eval_s = 1e3 / t_eval_ms;
 
     std::stringstream ss;
     ss << "{"
-       << "\"promptTokens\": " << data.n_p_eval << ","
-       << "\"genTokens\": " << data.n_eval << ","
-       << "\"genTokensPerSec\": " << (1e3 / data.t_p_eval_ms * data.n_p_eval) << ","
-       << "\"promptTokensPerSec\": " << (1e3 / data.t_eval_ms * data.n_eval) << ","
-       << "\"stopReason\": \"" << stopReason << "\","
-       << "\"stopToken\": \"" << stopToken << "\""
+       << R"("promptTokens":)" << n_p_eval << ","
+       << R"("genTokens":)" << n_eval << ","
+       << R"("promptSec":)" << t_p_eval_s << ","
+       << R"("genSec":)" << t_eval_s << ","
+       << R"("genTokensPerSec":)" << (1e3 / t_p_eval_ms * n_p_eval) << ","
+       << R"("promptTokensPerSec":)" << (1e3 / t_eval_ms * n_eval) << ","
+       << R"("finishReason": ")" << finishReason << "\","
+       << R"("stopToken": ")" << stopToken << "\""
        << "}";
 
     return ss.str();
@@ -471,19 +475,19 @@ const char* InferToReadbackBuffer(
     std::string response;
     std::string buffer;
 
-    std::string stopReason = "Unspecified";
+    std::string finishReason = "Unspecified";
     std::string stoppedAt;
 
     auto gen = [&](const llama_batch& batch, llama_sampler* smpl) -> std::pair<llama_token, bool> {
         int n_ctx = llama_n_ctx(context);
         int n_ctx_used = llama_get_kv_cache_used_cells(context);
         if (n_ctx_used + batch.n_tokens > n_ctx) {
-            stopReason = "Context size exceeded";
+            finishReason = "CtxExceeded";
             return {0, true};
         }
 
         if (llama_decode(context, batch)) {
-            stopReason = "Failed to decode batch";
+            finishReason = "BatchDecode";
             return {0, true};
         }
 
@@ -508,19 +512,19 @@ const char* InferToReadbackBuffer(
     while (true) {
         // Abort if callback is fired
         if (isEnd) {
-            stopReason = "Reached stop token";
+            finishReason = "StopToken";
             stoppedAt = TokenToPiece(model, newTokenId).value();
             break;
         }
 
         if (tokenCount + batch.n_tokens > numTokensToGenerate) {
-            stopReason = "Reached max number of tokens to generate";
+            finishReason = "MaxNewTokens";
             stoppedAt = TokenToPiece(model, newTokenId).value();
             break;
         }
 
         if (abortCallback != nullptr && abortCallback(nullptr)) {
-            stopReason = "Aborted generation";
+            finishReason = "AbortGeneration";
             stoppedAt = TokenToPiece(model, newTokenId).value();
             break;
         }
@@ -559,7 +563,7 @@ const char* InferToReadbackBuffer(
 
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
                 //Matched a stop, break.
-                stopReason = "Matched a stopping word";
+                finishReason = "StopString";
                 stoppedAt = TokenToPiece(model, newTokenId).value();
                 break;
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_REWIND) {
@@ -599,7 +603,7 @@ const char* InferToReadbackBuffer(
         llama_sampler_free(banSampler);
     }
 
-    readbackBufferPtr->jsonOutputBuffer = strdup(MakeJsonOutputString(context, stopReason, stoppedAt).c_str());
+    readbackBufferPtr->jsonOutputBuffer = strdup(MakeJsonOutputString(context, finishReason, stoppedAt).c_str());
     readbackBufferPtr->done = true;
     return strdup(response.c_str());
 }

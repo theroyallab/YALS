@@ -8,6 +8,7 @@ import llamaSymbols from "./symbols.ts";
 import { pointerArrayFromStrings } from "./utils.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 import { logger } from "@/common/logging.ts";
+import { asyncDefer } from "@/common/utils.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -74,6 +75,39 @@ export enum GGMLType {
     Q5_1 = 7,
     Q8_0 = 8,
     Q8_1 = 9,
+}
+
+enum BindingFinishReason {
+    CtxExceeded = "CtxExceeded",
+    BatchDecode = "BatchDecode",
+    StopToken = "StopToken",
+    MaxNewTokens = "MaxNewTokens",
+    AbortGeneration = "AbortGeneration",
+    StopString = "StopString",
+}
+
+export type GenerationChunk = StreamChunk | FinishChunk;
+
+interface StreamChunk {
+    kind: "data";
+    text: string;
+}
+
+interface FinishChunk {
+    kind: "finish";
+    text: string;
+    promptTokens: number;
+    genTokens: number;
+    finishReason: string;
+    stopToken: string;
+}
+
+interface BindingFinishResponse extends FinishChunk {
+    promptSec: number;
+    genSec: number;
+    genTokensPerSec: number;
+    promptTokensPerSec: number;
+    finishReason: BindingFinishReason;
 }
 
 export class SamplerBuilder {
@@ -288,15 +322,6 @@ export class SamplerBuilder {
     }
 }
 
-interface StatusResponse {
-    promptTokens: number;
-    genTokens: number;
-    genTokensPerSec: number;
-    promptTokensPerSec: number;
-    stopReason: string;
-    stopToken: string;
-}
-
 export class ReadbackBuffer {
     public bufferPtr: Deno.PointerValue;
 
@@ -313,15 +338,20 @@ export class ReadbackBuffer {
         return cString.getCString();
     }
 
-    public async readJsonStatus(): Promise<StatusResponse | null> {
+    public async readJsonStatus(): Promise<BindingFinishResponse | null> {
         const stringPtr = await lib.symbols.ReadbackJsonStatus(this.bufferPtr);
         if (stringPtr === null) {
             return null;
         }
+
         const cString = new Deno.UnsafePointerView(stringPtr);
         const jsonString = cString.getCString();
+
         try {
-            return JSON.parse(jsonString) as StatusResponse;
+            return {
+                ...JSON.parse(jsonString),
+                kind: "finish",
+            };
         } catch (e) {
             console.error("Failed to parse JSON:", e);
             return null;
@@ -470,7 +500,7 @@ export class Model {
                 0.0,
                 params.cache_mode_k,
                 params.cache_mode_v,
-                -1.0 //kvDefrag thresehold
+                -1.0, //kvDefrag thresehold
             );
 
             const parsedModelPath = Path.parse(modelPath);
@@ -531,21 +561,37 @@ export class Model {
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
-    ) {
-        let result = "";
+    ): Promise<GenerationChunk> {
+        let result: FinishChunk | undefined;
+        const textParts: string[] = [];
+
         const generator = this.generateGen(prompt, params, abortSignal);
         for await (const chunk of generator) {
-            result += chunk;
+            if (chunk.kind === "finish") {
+                result = chunk;
+            } else {
+                textParts.push(chunk.text);
+            }
         }
 
-        return result;
+        // This shouldn't fire
+        if (!result) {
+            throw new Error(
+                "Generation completed without receiving finish chunk",
+            );
+        }
+
+        return {
+            ...result,
+            text: textParts.join(""),
+        };
     }
 
     async *generateGen(
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
-    ) {
+    ): AsyncGenerator<GenerationChunk> {
         // Get out if the model is shutting down
         if (this.shutdown) {
             return;
@@ -671,28 +717,68 @@ export class Model {
 
         // Read from the read buffer
         for await (const chunk of this.readbackBuffer.read()) {
-            yield chunk;
+            yield { kind: "data", text: chunk };
         }
 
-        const result = await this.readbackBuffer.readJsonStatus();
+        const finishResponse = await this.readbackBuffer.readJsonStatus();
+        if (finishResponse) {
+            if (
+                finishResponse.finishReason == BindingFinishReason.CtxExceeded
+            ) {
+                throw new Error("Prompt exceeds max context length");
+            } else if (
+                finishResponse.finishReason ==
+                    BindingFinishReason.AbortGeneration
+            ) {
+                throw new Error("Generation aborted");
+            }
 
-        console.log(result);
+            const totalTime = finishResponse.promptSec + finishResponse.genSec;
+            logger.info(
+                `Metrics: ` +
+                    `${finishResponse.genTokens} tokens ` +
+                    `generated in ${totalTime.toFixed(2)} seconds ` +
+                    `(Prompt: ${finishResponse.promptTokens} tokens in ` +
+                    `${finishResponse.promptTokensPerSec.toFixed(2)} T/s, ` +
+                    `Generate: ${
+                        finishResponse.genTokensPerSec.toFixed(2)
+                    } T/s, ` +
+                    `Context: ${finishResponse.promptTokens} tokens)`,
+            );
+
+            const finishReason =
+                finishResponse.finishReason == BindingFinishReason.MaxNewTokens
+                    ? "length"
+                    : "stop";
+
+            yield {
+                ...finishResponse,
+                finishReason,
+            };
+        }
 
         this.readbackBuffer.reset();
-
-        console.log("Finished");
     }
 
-    async tokenize(text: string, addSpecial: boolean = true, parseSpecial: boolean = true) {
+    async tokenize(
+        text: string,
+        addSpecial: boolean = true,
+        parseSpecial: boolean = true,
+    ) {
         const textPtr = new TextEncoder().encode(text + "\0");
 
         // Get raw pointer from C++
-        const tokensPtr = lib.symbols.EndpointTokenize(
+        const tokensPtr = await lib.symbols.EndpointTokenize(
             this.model,
             textPtr,
             addSpecial,
-            parseSpecial
+            parseSpecial,
         );
+
+        // Always free the original pointer
+        await using _ = asyncDefer(async () => {
+            await lib.symbols.EndpointFreeTokens(tokensPtr);
+        });
 
         if (tokensPtr === null) {
             throw new Error("Tokenization failed");
@@ -704,17 +790,14 @@ export class Model {
 
         // Copy the actual tokens (starting after the length prefix)
         const dataPtr = Deno.UnsafePointer.create(
-            Deno.UnsafePointer.value(tokensPtr) + 4n
+            Deno.UnsafePointer.value(tokensPtr) + 4n,
         )!;
         const tokenData = new Int32Array(
-            new Deno.UnsafePointerView(dataPtr).getArrayBuffer(length * 4)
+            new Deno.UnsafePointerView(dataPtr).getArrayBuffer(length * 4),
         );
 
         // Create owned copy
         const ownedTokens = new Int32Array(tokenData);
-
-        // Free the original pointer
-        lib.symbols.EndpointFreeTokens(tokensPtr);
 
         return ownedTokens;
     }
@@ -723,20 +806,25 @@ export class Model {
         tokens: Int32Array,
         maxTextSize: number = 4096,
         addSpecial: boolean = true,
-        parseSpecial: boolean = true
+        parseSpecial: boolean = true,
     ) {
         // Create a pointer to the tokens data
         const tokensPtr = Deno.UnsafePointer.of(tokens.buffer);
 
         // Get raw pointer from C++
-        const textPtr = lib.symbols.EndpointDetokenize(
+        const textPtr = await lib.symbols.EndpointDetokenize(
             this.model,
             tokensPtr,
             BigInt(tokens.length),
             BigInt(maxTextSize),
             addSpecial,
-            parseSpecial
+            parseSpecial,
         );
+
+        // Always free the original pointer
+        await using _ = asyncDefer(async () => {
+            await lib.symbols.EndpointFreeString(textPtr);
+        });
 
         if (textPtr === null) {
             throw new Error("Detokenization failed");
@@ -745,9 +833,6 @@ export class Model {
         // Copy to owned string
         const cString = new Deno.UnsafePointerView(textPtr);
         const text: string = cString.getCString();
-
-        // Free the original pointer
-        lib.symbols.EndpointFreeString(textPtr);
 
         return text;
     }

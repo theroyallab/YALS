@@ -1,5 +1,5 @@
 import { SSEStreamingApi } from "hono/streaming";
-import { Model } from "@/bindings/bindings.ts";
+import { GenerationChunk, Model } from "@/bindings/bindings.ts";
 import { HonoRequest } from "hono";
 import { staticGenerate } from "@/api/OAI/utils/generation.ts";
 import { logger } from "@/common/logging.ts";
@@ -10,9 +10,9 @@ import {
     CompletionResponse,
 } from "../types/completions.ts";
 
-async function createResponse(text: string, modelName: string) {
+async function createResponse(chunk: GenerationChunk, modelName: string) {
     const choice = await CompletionRespChoice.parseAsync({
-        text: text,
+        text: chunk.kind == "data" ? chunk.text : "",
     });
 
     const response = await CompletionResponse.parseAsync({
