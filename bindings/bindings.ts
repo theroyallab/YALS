@@ -767,7 +767,6 @@ export class Model {
     ) {
         const textPtr = new TextEncoder().encode(text + "\0");
 
-        // Get raw pointer from C++
         const tokensPtr = await lib.symbols.EndpointTokenize(
             this.model,
             textPtr,
@@ -808,7 +807,6 @@ export class Model {
         addSpecial: boolean = true,
         parseSpecial: boolean = true,
     ) {
-        // Create a pointer to the tokens data
         const tokensPtr = Deno.UnsafePointer.of(tokens.buffer);
 
         // Get raw pointer from C++
@@ -835,5 +833,23 @@ export class Model {
         const text: string = cString.getCString();
 
         return text;
+    }
+
+    async getChatTemplate() {
+        const templatePtr = await lib.symbols.GetModelChatTemplate(this.model);
+
+        await using _ = asyncDefer(async () => {
+            await lib.symbols.EndpointFreeString(templatePtr);
+        });
+
+        if (templatePtr === null) {
+            throw new Error("Failed to get chat template");
+        }
+
+        // Copy to owned string
+        const cString = new Deno.UnsafePointerView(templatePtr);
+        const template: string = cString.getCString();
+
+        return template;
     }
 }

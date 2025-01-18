@@ -32,6 +32,15 @@ llama_model* LoadModel(
     return model;
 }
 
+char* GetModelChatTemplate(const llama_model* model) {
+    static const char* tokenizerTemplateKey = "tokenizer.chat_template";
+    const int32_t bufSize = llama_model_meta_val_str(model, tokenizerTemplateKey, nullptr, 0);
+
+    const auto buffer = new char[bufSize];
+    llama_model_meta_val_str(model, tokenizerTemplateKey, buffer, bufSize);
+    return buffer;
+}
+
 llama_context *InitiateCtx(
     llama_model* model,
     const unsigned contextLength, // 0 = Use from model config

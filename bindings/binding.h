@@ -11,6 +11,8 @@ extern "C" {
     void TestPrint(const char* text);
     llama_model* LoadModel(const char* modelPath, int numberGpuLayers, const float* tensorSplit, llama_progress_callback callback);
 
+    char* GetModelChatTemplate(const llama_model* model);
+
     llama_context *InitiateCtx(
         llama_model* model,
         unsigned contextLength, // 0 = Use from model config

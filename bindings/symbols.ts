@@ -236,4 +236,11 @@ export default {
         result: "void",
         nonblocking: true,
     },
+    GetModelChatTemplate: {
+        parameters: [
+            "pointer", // const llama_model* model
+        ],
+        result: "pointer" as const, // char*
+        nonblocking: true,
+    },
 } as const;
