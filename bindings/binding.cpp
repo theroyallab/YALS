@@ -532,12 +532,6 @@ const char* InferToReadbackBuffer(
             break;
         }
 
-        if (abortCallback != nullptr && abortCallback(nullptr)) {
-            finishReason = "AbortGeneration";
-            stoppedAt = TokenToPiece(model, newTokenId).value();
-            break;
-        }
-
         const auto piece = TokenToPiece(model, newTokenId).value();
 
         buffer += piece;

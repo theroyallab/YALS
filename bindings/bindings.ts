@@ -82,7 +82,6 @@ enum BindingFinishReason {
     BatchDecode = "BatchDecode",
     StopToken = "StopToken",
     MaxNewTokens = "MaxNewTokens",
-    AbortGeneration = "AbortGeneration",
     StopString = "StopString",
 }
 
@@ -727,11 +726,6 @@ export class Model {
                 finishResponse.finishReason == BindingFinishReason.CtxExceeded
             ) {
                 throw new Error("Prompt exceeds max context length");
-            } else if (
-                finishResponse.finishReason ==
-                    BindingFinishReason.AbortGeneration
-            ) {
-                throw new Error("Generation aborted");
             }
 
             const totalTime = finishResponse.promptSec + finishResponse.genSec;
