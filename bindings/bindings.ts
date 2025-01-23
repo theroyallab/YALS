@@ -793,16 +793,18 @@ export class Model {
         // Create owned copy
         const ownedTokens = new Int32Array(tokenData);
 
-        return ownedTokens;
+        return [...ownedTokens];
     }
 
     async detokenize(
-        tokens: Int32Array,
+        tokens: number[],
         maxTextSize: number = 4096,
         addSpecial: boolean = true,
         parseSpecial: boolean = true,
     ) {
-        const tokensPtr = Deno.UnsafePointer.of(tokens.buffer);
+        // Create a pointer to the tokens data
+        const tokensArray = new Int32Array(tokens);
+        const tokensPtr = Deno.UnsafePointer.of(tokensArray.buffer);
 
         // Get raw pointer from C++
         const textPtr = await lib.symbols.EndpointDetokenize(

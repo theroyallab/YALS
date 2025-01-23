@@ -22,6 +22,12 @@ import {
 } from "@/api/core/types/template.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 import { AuthPermissionResponse } from "@/api/core/types/auth.ts";
+import {
+    TokenDecodeRequest,
+    TokenDecodeResponse,
+    TokenEncodeRequest,
+    TokenEncodeResponse,
+} from "@/api/core/types/token.ts";
 
 const router = new Hono();
 
@@ -196,7 +202,7 @@ const templateSwitchRoute = describeRoute({
     },
 });
 
-router.get(
+router.post(
     "/v1/template/switch",
     templateSwitchRoute,
     authMiddleware(AuthKeyPermission.API),
@@ -238,6 +244,66 @@ router.get(
                 throw new HTTPException(400, error);
             }
         }
+    },
+);
+
+const tokenEncodeRoute = describeRoute({
+    responses: {
+        200: jsonContent(TokenEncodeResponse, "Encode token response"),
+    },
+});
+
+router.post(
+    "/v1/token/encode",
+    tokenEncodeRoute,
+    authMiddleware(AuthKeyPermission.API),
+    checkModelMiddleware,
+    zValidator("json", TokenEncodeRequest),
+    async (c) => {
+        const params = c.req.valid("json");
+
+        const tokens = await c.var.model.tokenize(
+            params.text as string,
+            params.add_bos_token,
+            params.encode_special_tokens,
+        );
+
+        const resp = await TokenEncodeResponse.parseAsync({
+            tokens,
+            length: tokens.length,
+        });
+
+        return c.json(resp);
+    },
+);
+
+const tokenDecodeRoute = describeRoute({
+    responses: {
+        200: jsonContent(TokenDecodeResponse, "Decode token response"),
+    },
+});
+
+router.post(
+    "/v1/token/decode",
+    tokenDecodeRoute,
+    authMiddleware(AuthKeyPermission.API),
+    checkModelMiddleware,
+    zValidator("json", TokenDecodeRequest),
+    async (c) => {
+        const params = c.req.valid("json");
+
+        const text = await c.var.model.detokenize(
+            params.tokens,
+            undefined,
+            params.add_bos_token,
+            params.decode_special_tokens,
+        );
+
+        const resp = await TokenDecodeResponse.parseAsync({
+            text,
+        });
+
+        return c.json(resp);
     },
 );
 
