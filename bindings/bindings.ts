@@ -93,7 +93,7 @@ interface StreamChunk {
     text: string;
 }
 
-interface FinishChunk {
+export interface FinishChunk {
     kind: "finish";
     text: string;
     promptTokens: number;
@@ -350,6 +350,7 @@ export class ReadbackBuffer {
         try {
             return {
                 ...JSON.parse(jsonString),
+                text: "",
                 kind: "finish",
             };
         } catch (e) {
@@ -561,7 +562,7 @@ export class Model {
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
-    ): Promise<GenerationChunk> {
+    ): Promise<FinishChunk> {
         let result: FinishChunk | undefined;
         const textParts: string[] = [];
 

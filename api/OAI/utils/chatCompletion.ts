@@ -1,7 +1,10 @@
 import { HonoRequest } from "hono";
 import { SSEStreamingApi } from "hono/streaming";
-import { staticGenerate } from "@/api/OAI/utils/generation.ts";
-import { Model } from "@/bindings/bindings.ts";
+import {
+    createUsageStats,
+    staticGenerate,
+} from "@/api/OAI/utils/generation.ts";
+import { FinishChunk, GenerationChunk, Model } from "@/bindings/bindings.ts";
 import { logger } from "@/common/logging.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 
@@ -15,17 +18,43 @@ import {
     ChatCompletionStreamChunk,
 } from "../types/chatCompletions.ts";
 
-async function createResponse(text: string, modelName: string) {
+async function createResponse(chunk: FinishChunk, modelName: string) {
     const message = await ChatCompletionMessage.parseAsync({
         role: "assistant",
-        content: text,
+        content: chunk.text,
     });
 
     const choice = await ChatCompletionRespChoice.parseAsync({
         message: message,
     });
 
+    const usage = await createUsageStats(chunk);
+
     const response = await ChatCompletionResponse.parseAsync({
+        choices: [choice],
+        model: modelName,
+        usage,
+    });
+
+    return response;
+}
+
+async function createStreamChunk(
+    chunk: GenerationChunk,
+    modelName: string,
+    cmplId: string,
+) {
+    const message = await ChatCompletionMessage.parseAsync({
+        role: "assistant",
+        content: chunk.text,
+    });
+
+    const choice = await ChatCompletionStreamChoice.parseAsync({
+        delta: message,
+    });
+
+    const response = await ChatCompletionStreamChunk.parseAsync({
+        id: cmplId,
         choices: [choice],
         model: modelName,
     });
@@ -33,25 +62,18 @@ async function createResponse(text: string, modelName: string) {
     return response;
 }
 
-async function createStreamChunk(
-    text: string,
+async function createUsageChunk(
+    chunk: FinishChunk,
     modelName: string,
     cmplId: string,
 ) {
-    const message = await ChatCompletionMessage.parseAsync({
-        role: "assistant",
-        content: text,
-    });
-
-    const choice = await ChatCompletionStreamChoice.parseAsync({
-        delta: message,
-    });
-
-    return ChatCompletionStreamChunk.parseAsync({
+    const response = ChatCompletionStreamChunk.parseAsync({
         id: cmplId,
-        choices: [choice],
         model: modelName,
+        usage: await createUsageStats(chunk),
     });
+
+    return response;
 }
 
 function applyChatTemplate(
@@ -127,6 +149,19 @@ export async function streamChatCompletion(
         await stream.writeSSE({
             data: JSON.stringify(streamChunk),
         });
+
+        // Write usage stats if user requests it
+        if (params.stream_options?.include_usage && chunk.kind === "finish") {
+            const usageChunk = await createUsageChunk(
+                chunk,
+                model.path.name,
+                cmplId,
+            );
+
+            await stream.writeSSE({
+                data: JSON.stringify(usageChunk),
+            });
+        }
     }
 }
 

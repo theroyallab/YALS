@@ -5,6 +5,14 @@ export const CompletionResponseFormat = z.object({
     type: z.string().default("text"),
 });
 
+export const UsageStats = z.object({
+    prompt_tokens: z.number(),
+    completion_tokens: z.number(),
+    total_tokens: z.number(),
+});
+
+export type UsageStats = z.infer<typeof UsageStats>;
+
 export const CommonCompletionRequest = z.object({
     model: z.string().nullish(),
     stream: z.boolean().nullish().coalesce(false),
@@ -42,7 +50,8 @@ export const CompletionRespChoice = z.object({
 export const CompletionResponse = z.object({
     id: z.string().default(`cmpl-${crypto.randomUUID().replaceAll("-", "")}`),
     choices: z.array(CompletionRespChoice),
-    created: z.number().default((new Date()).getSeconds()),
+    created: z.number().default(Math.floor(Date.now() / 1000)),
     model: z.string(),
     object: z.string().default("text_completion"),
+    usage: UsageStats.optional(),
 });

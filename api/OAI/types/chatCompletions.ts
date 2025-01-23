@@ -1,5 +1,8 @@
 import * as z from "@/common/myZod.ts";
-import { CommonCompletionRequest } from "@/api/OAI/types/completions.ts";
+import {
+    CommonCompletionRequest,
+    UsageStats,
+} from "@/api/OAI/types/completions.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 
 const ChatCompletionImageUrl = z.object({
@@ -25,11 +28,16 @@ const ChatCompletionResponseFormat = z.object({
     type: z.string().default("text"),
 });
 
+const ChatCompletionStreamOptions = z.object({
+    include_usage: z.boolean().nullish().coalesce(false),
+});
+
 export const ChatCompletionRequest = z.object({
     messages: z.array(ChatCompletionMessage).nullish().coalesce([]),
     response_format: ChatCompletionResponseFormat.nullish().coalesce(
         ChatCompletionResponseFormat.parse({}),
     ),
+    stream_options: ChatCompletionStreamOptions.nullish(),
     add_generation_prompt: z.boolean().nullish().coalesce(true),
     prompt_template: z.string().nullish(),
     template_vars: z.record(z.unknown()).nullish().coalesce({}),
@@ -50,9 +58,10 @@ export const ChatCompletionResponse = z.object({
         `chatcmpl-${crypto.randomUUID().replaceAll("-", "")}`,
     ),
     choices: z.array(ChatCompletionRespChoice),
-    created: z.number().default((new Date()).getSeconds()),
+    created: z.number().default(Math.floor(Date.now() / 1000)),
     model: z.string(),
     object: z.string().default("chat.completion"),
+    usage: UsageStats.optional(),
 });
 
 export const ChatCompletionStreamChoice = z.object({
@@ -65,8 +74,9 @@ export const ChatCompletionStreamChunk = z.object({
     id: z.string().default(
         `chatcmpl-${crypto.randomUUID().replaceAll("-", "")}`,
     ),
-    choices: z.array(ChatCompletionStreamChoice),
-    created: z.number().default((new Date()).getSeconds()),
+    choices: z.array(ChatCompletionStreamChoice).default([]),
+    created: z.number().default(Math.floor(Date.now() / 1000)),
     model: z.string(),
     object: z.string().default("chat.completion.chunk"),
+    usage: UsageStats.optional(),
 });

@@ -1,7 +1,10 @@
 import { SSEStreamingApi } from "hono/streaming";
 import { GenerationChunk, Model } from "@/bindings/bindings.ts";
 import { HonoRequest } from "hono";
-import { staticGenerate } from "@/api/OAI/utils/generation.ts";
+import {
+    createUsageStats,
+    staticGenerate,
+} from "@/api/OAI/utils/generation.ts";
 import { logger } from "@/common/logging.ts";
 
 import {
@@ -12,12 +15,17 @@ import {
 
 async function createResponse(chunk: GenerationChunk, modelName: string) {
     const choice = await CompletionRespChoice.parseAsync({
-        text: chunk.kind == "data" ? chunk.text : "",
+        text: chunk.text,
     });
+
+    const usage = chunk.kind === "finish"
+        ? await createUsageStats(chunk)
+        : undefined;
 
     const response = await CompletionResponse.parseAsync({
         choices: [choice],
         model: modelName,
+        usage,
     });
 
     return response;
