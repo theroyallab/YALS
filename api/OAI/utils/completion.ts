@@ -72,6 +72,8 @@ export async function streamCompletion(
             data: JSON.stringify(streamChunk),
         });
     }
+
+    finished = true;
 }
 
 export async function generateCompletion(

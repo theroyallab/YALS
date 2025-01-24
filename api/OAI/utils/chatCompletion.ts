@@ -189,6 +189,8 @@ export async function streamChatCompletion(
             });
         }
     }
+
+    finished = true;
 }
 
 export async function generateChatCompletion(
