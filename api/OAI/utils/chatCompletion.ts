@@ -18,6 +18,13 @@ import {
     ChatCompletionStreamChunk,
 } from "../types/chatCompletions.ts";
 
+interface TemplateFormatOptions {
+    addBosToken?: boolean;
+    banEosToken?: boolean;
+    addGenerationPrompt?: boolean;
+    templateVars?: Record<string, unknown>;
+}
+
 async function createResponse(chunk: FinishChunk, modelName: string) {
     const message = await ChatCompletionMessage.parseAsync({
         role: "assistant",
@@ -76,12 +83,20 @@ async function createUsageChunk(
     return response;
 }
 
-function applyChatTemplate(
+export function applyChatTemplate(
     model: Model,
     promptTemplate: PromptTemplate,
-    params: ChatCompletionRequest,
+    messages: ChatCompletionMessage[],
+    options: TemplateFormatOptions = {},
 ): string {
-    params.messages.forEach((message) => {
+    const {
+        addBosToken = true,
+        banEosToken = false,
+        addGenerationPrompt = true,
+        templateVars = {},
+    } = options;
+
+    messages.forEach((message) => {
         if (Array.isArray(message.content)) {
             const messageParts = message.content as ChatCompletionMessagePart[];
             message.content = messageParts.find((part) =>
@@ -91,11 +106,11 @@ function applyChatTemplate(
     });
 
     const prompt = promptTemplate.render({
-        ...params.template_vars,
-        messages: params.messages,
-        bos_token: params.add_bos_token ? model.tokenizer.bosToken.piece : "",
-        eos_token: params.ban_eos_token ? "" : model.tokenizer.eosToken.piece,
-        add_generation_prompt: params.add_generation_prompt,
+        ...templateVars,
+        messages: messages,
+        bos_token: addBosToken ? model.tokenizer.bosToken.piece : "",
+        eos_token: banEosToken ? "" : model.tokenizer.eosToken.piece,
+        add_generation_prompt: addGenerationPrompt,
     });
 
     return prompt;
@@ -121,7 +136,18 @@ export async function streamChatCompletion(
         }
     });
 
-    const prompt = applyChatTemplate(model, promptTemplate, params);
+    const prompt = applyChatTemplate(
+        model,
+        promptTemplate,
+        params.messages,
+        {
+            addBosToken: params.add_bos_token,
+            banEosToken: params.ban_eos_token,
+            addGenerationPrompt: params.add_generation_prompt,
+            templateVars: params.template_vars,
+        },
+    );
+
     const generator = model.generateGen(
         prompt,
         params,
@@ -171,7 +197,18 @@ export async function generateChatCompletion(
     promptTemplate: PromptTemplate,
     params: ChatCompletionRequest,
 ) {
-    const prompt = applyChatTemplate(model, promptTemplate, params);
+    const prompt = applyChatTemplate(
+        model,
+        promptTemplate,
+        params.messages,
+        {
+            addBosToken: params.add_bos_token,
+            banEosToken: params.ban_eos_token,
+            addGenerationPrompt: params.add_generation_prompt,
+            templateVars: params.template_vars,
+        },
+    );
+
     const gen = await staticGenerate(req, model, prompt, params);
     const response = await createResponse(gen, model.path.name);
 

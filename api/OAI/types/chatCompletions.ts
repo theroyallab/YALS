@@ -24,6 +24,8 @@ export const ChatCompletionMessage = z.object({
     content: z.union([z.string(), z.array(ChatCompletionMessagePart)]),
 });
 
+export type ChatCompletionMessage = z.infer<typeof ChatCompletionMessage>;
+
 const ChatCompletionResponseFormat = z.object({
     type: z.string().default("text"),
 });

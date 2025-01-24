@@ -8,8 +8,7 @@ const CommonTokenRequest = z.object({
 });
 
 export const TokenEncodeRequest = z.object({
-    text: z.string(),
-    //text: z.union([z.string(), z.array(ChatCompletionMessage)])
+    text: z.union([z.string(), z.array(ChatCompletionMessage)]),
 })
     .merge(CommonTokenRequest);
 

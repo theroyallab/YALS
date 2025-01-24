@@ -28,6 +28,7 @@ import {
     TokenEncodeRequest,
     TokenEncodeResponse,
 } from "@/api/core/types/token.ts";
+import { applyChatTemplate } from "@/api/OAI/utils/chatCompletion.ts";
 
 const router = new Hono();
 
@@ -262,8 +263,35 @@ router.post(
     async (c) => {
         const params = c.req.valid("json");
 
+        let text: string;
+        if (typeof params.text === "string") {
+            text = params.text;
+        } else if (Array.isArray(params.text)) {
+            if (!c.var.model.promptTemplate) {
+                throw new HTTPException(422, {
+                    message: "Cannot tokenize chat completion " +
+                        "because a prompt template is not set",
+                });
+            }
+
+            text = applyChatTemplate(
+                c.var.model,
+                c.var.model.promptTemplate,
+                params.text,
+                {
+                    addBosToken: params.add_bos_token,
+                    addGenerationPrompt: false,
+                },
+            );
+        } else {
+            throw new HTTPException(422, {
+                message: "Unable to tokenize the provided text. " +
+                    "Check your formatting?",
+            });
+        }
+
         const tokens = await c.var.model.tokenize(
-            params.text as string,
+            text,
             params.add_bos_token,
             params.encode_special_tokens,
         );
