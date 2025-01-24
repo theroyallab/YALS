@@ -18,11 +18,12 @@ const samplerRequest = BaseSamplerRequest.parse({
     max_tokens: 200,
 });
 
-let abort = new AbortController()
+let abort = new AbortController();
 const encoder = new TextEncoder();
 let buffer = "";
 
-const prompt = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a robot<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nRespond litrally with \"Hi nice to meet you\"<|eot_id|><|start_header_id|>assistant<|end_header_id|>";
+const prompt =
+    '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a robot<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nRespond litrally with "Hi nice to meet you"<|eot_id|><|start_header_id|>assistant<|end_header_id|>';
 for (let i = 0; i < 4; i++) {
     console.log();
     console.log("NEXT");

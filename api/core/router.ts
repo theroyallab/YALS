@@ -1,34 +1,34 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { describeRoute } from "hono-openapi";
 import { validator as zValidator } from "hono-openapi/zod";
+import { AuthPermissionResponse } from "@/api/core/types/auth.ts";
+import { applyChatTemplate } from "@/api/OAI/utils/chatCompletion.ts";
 import {
     ModelCard,
     ModelList,
     ModelLoadRequest,
 } from "@/api/core/types/model.ts";
-import { AuthKeyPermission, getAuthPermission } from "@/common/auth.ts";
-import { ModelConfig } from "@/common/configModels.ts";
-import { config } from "@/common/config.ts";
-import { logger } from "@/common/logging.ts";
-import * as modelContainer from "@/common/modelContainer.ts";
-import { jsonContent } from "@/common/networking.ts";
-
-import authMiddleware from "../middleware/authMiddleware.ts";
-import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
-import { HTTPException } from "hono/http-exception";
 import {
     TemplateList,
     TemplateSwitchRequest,
 } from "@/api/core/types/template.ts";
-import { PromptTemplate } from "@/common/templating.ts";
-import { AuthPermissionResponse } from "@/api/core/types/auth.ts";
 import {
     TokenDecodeRequest,
     TokenDecodeResponse,
     TokenEncodeRequest,
     TokenEncodeResponse,
 } from "@/api/core/types/token.ts";
-import { applyChatTemplate } from "@/api/OAI/utils/chatCompletion.ts";
+import { AuthKeyPermission, getAuthPermission } from "@/common/auth.ts";
+import { ModelConfig } from "@/common/configModels.ts";
+import { config } from "@/common/config.ts";
+import { logger } from "@/common/logging.ts";
+import * as modelContainer from "@/common/modelContainer.ts";
+import { jsonContent } from "@/common/networking.ts";
+import { PromptTemplate } from "@/common/templating.ts";
+
+import authMiddleware from "../middleware/authMiddleware.ts";
+import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 
 const router = new Hono();
 
