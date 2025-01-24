@@ -68,6 +68,7 @@ llama_context *InitiateCtx(
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = contextLength;
     ctx_params.n_batch = numBatches;
+    ctx_params.n_ubatch = numBatches;
     ctx_params.no_perf = false;
     ctx_params.flash_attn = flashAttn;
 
@@ -165,9 +166,10 @@ struct ReadbackBuffer
 {
     unsigned lastReadbackIndex {0};
     bool done {false};
-    std::vector<char*>* data = new std::vector<char*>();
-
     char* jsonOutputBuffer = nullptr;
+
+    std::vector<char*>* data = new std::vector<char*>();
+    std::vector<llama_token>* ids = new std::vector<llama_token>();
 };
 
 void ResetReadbackBuffer(ReadbackBuffer* buffer) {
@@ -190,23 +192,23 @@ ReadbackBuffer* CreateReadbackBuffer()
     return new ReadbackBuffer {};
 }
 
-void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData)
+void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData, const llama_token token)
 {
     buffer->data->push_back(stringData);
+    buffer->ids->push_back(token);
 }
 
-char* ReadbackNext(ReadbackBuffer* buffer)
+bool ReadbackNext(ReadbackBuffer *buffer, char** outChar, llama_token* outToken)
 {
-    //we're racing faster than writes or at the end of the buffer.
     if (buffer->lastReadbackIndex >= buffer->data->size())
     {
-        return nullptr;
+        return false;
     }
 
-    char* stringPtr = buffer->data->at(buffer->lastReadbackIndex);
+    *outChar = buffer->data->at(buffer->lastReadbackIndex);
+    *outToken = buffer->ids->at(buffer->lastReadbackIndex);
     buffer->lastReadbackIndex++;
-
-    return stringPtr;
+    return true;
 }
 
 char* ReadbackJsonStatus(const ReadbackBuffer* buffer) {
@@ -549,7 +551,7 @@ const char* InferToReadbackBuffer(
 
             if (matchResult == MatchTrie::MatchResult::NO) {
 
-                WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()));
+                WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()), newTokenId);
                 response += buffer;
                 buffer = "";
 

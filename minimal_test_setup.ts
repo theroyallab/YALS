@@ -29,10 +29,11 @@ for (let i = 0; i < 4; i++) {
     console.log("NEXT");
     console.log();
 
-    for await (
-        const chunk of model!.generateGen(prompt, samplerRequest, abort)
-    ) {
-        await Deno.stdout.write(encoder.encode(chunk));
-        buffer += chunk;
+    for await (const chunk of model!.generateGen(prompt, samplerRequest, abort.signal)) {
+        if (chunk.kind === "data") {
+            await Deno.stdout.write(encoder.encode(chunk.text));
+            await Deno.stdout.write(encoder.encode(chunk.token));
+            buffer += chunk.text;
+        }
     }
 }

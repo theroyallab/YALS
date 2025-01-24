@@ -166,8 +166,8 @@ export default {
         result: "void",
     },
     ReadbackNext: {
-        parameters: ["pointer"], // void* readbackBufferPtr
-        result: "pointer" as const, // void*
+        parameters: ["pointer", "pointer", "pointer"], // void* readbackBufferPtr, char* outChar, int outTokenId
+        result: "bool" as const, // True if data is filled, false if outran buffer (no data)
         nonblocking: true,
     },
     ReadbackJsonStatus: {

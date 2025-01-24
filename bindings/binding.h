@@ -49,9 +49,10 @@ extern "C" {
     ReadbackBuffer* CreateReadbackBuffer();
     void ResetReadbackBuffer(ReadbackBuffer* buffer);
 
-    char* ReadbackNext(ReadbackBuffer *buffer);
+    bool ReadbackNext(ReadbackBuffer *buffer, char** outChar, llama_token* outToken);
+
     char* ReadbackJsonStatus(const ReadbackBuffer* buffer);
-    void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData);
+    void WriteToReadbackBuffer(const ReadbackBuffer* buffer, char* stringData, llama_token token);
     bool IsReadbackBufferDone(const ReadbackBuffer* buffer);
 
     int32_t* EndpointTokenize(

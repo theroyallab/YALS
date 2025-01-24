@@ -328,13 +328,25 @@ export class ReadbackBuffer {
         this.bufferPtr = lib.symbols.CreateReadbackBuffer();
     }
 
-    private async readNext(): Promise<string | null> {
-        const stringPtr = await lib.symbols.ReadbackNext(this.bufferPtr);
-        if (stringPtr === null) {
-            return null;
-        }
-        const cString = new Deno.UnsafePointerView(stringPtr);
-        return cString.getCString();
+    private async readNext(): Promise<{char: string | null, token: number} | null> {
+        // Create a buffer for the char pointer and token
+        const outCharPtr = new Uint8Array(8);
+        const outTokenPtr = new Int32Array(1);
+
+        const success = await lib.symbols.ReadbackNext(
+            this.bufferPtr,
+            Deno.UnsafePointer.of(outCharPtr),
+            Deno.UnsafePointer.of(outTokenPtr)
+        );
+
+        if (!success) return null;
+
+        // Read the pointer value from outCharPtr
+        const charPtr = new BigUint64Array(outCharPtr.buffer)[0];
+        return {
+            char: charPtr ? new Deno.UnsafePointerView(Deno.UnsafePointer.create(charPtr)).getCString() : null,
+            token: outTokenPtr[0]
+        };
     }
 
     public async readJsonStatus(): Promise<BindingFinishResponse | null> {
@@ -366,14 +378,14 @@ export class ReadbackBuffer {
         lib.symbols.ResetReadbackBuffer(this.bufferPtr);
     }
 
-    async *read(): AsyncGenerator<string, void, unknown> {
+    async *read(): AsyncGenerator<{char: string, token: number}, void, unknown> {
         do {
-            const nextString = await this.readNext();
-            if (nextString === null) {
+            const next = await this.readNext();
+            if (next === null) {
                 await delay(10);
                 continue;
             }
-            yield nextString;
+            yield next;
         } while (!this.isDone());
     }
 }
@@ -717,7 +729,7 @@ export class Model {
 
         // Read from the read buffer
         for await (const chunk of this.readbackBuffer.read()) {
-            yield { kind: "data", text: chunk };
+            yield { kind: "data", text: chunk.char, token: chunk.token };
         }
 
         const finishResponse = await this.readbackBuffer.readJsonStatus();
