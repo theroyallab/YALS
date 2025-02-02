@@ -90,7 +90,10 @@ export type GenerationChunk = StreamChunk | FinishChunk;
 interface StreamChunk {
     kind: "data";
     text: string;
+    token: number;
 }
+
+type BindingStreamResponse = StreamChunk;
 
 export interface FinishChunk {
     kind: "finish";
@@ -328,7 +331,7 @@ export class ReadbackBuffer {
         this.bufferPtr = lib.symbols.CreateReadbackBuffer();
     }
 
-    private async readNext(): Promise<{char: string | null, token: number} | null> {
+    private async readNext(): Promise<BindingStreamResponse | null> {
         // Create a buffer for the char pointer and token
         const outCharPtr = new Uint8Array(8);
         const outTokenPtr = new Int32Array(1);
@@ -342,9 +345,18 @@ export class ReadbackBuffer {
         if (!success) return null;
 
         // Read the pointer value from outCharPtr
+        let char = "";
         const charPtr = new BigUint64Array(outCharPtr.buffer)[0];
+
+        // Convert to owned
+        const ownedCharPtr = Deno.UnsafePointer.create(charPtr);
+        if (ownedCharPtr) {
+            char = new Deno.UnsafePointerView(ownedCharPtr).getCString()
+        }
+
         return {
-            char: charPtr ? new Deno.UnsafePointerView(Deno.UnsafePointer.create(charPtr)).getCString() : null,
+            kind: "data",
+            text: char,
             token: outTokenPtr[0]
         };
     }
@@ -378,15 +390,16 @@ export class ReadbackBuffer {
         lib.symbols.ResetReadbackBuffer(this.bufferPtr);
     }
 
-    async *read(): AsyncGenerator<{char: string, token: number}, void, unknown> {
-        do {
+    async *read(): AsyncGenerator<BindingStreamResponse, void, unknown> {
+        while (!this.isDone()) {
             const next = await this.readNext();
             if (next === null) {
                 await delay(10);
                 continue;
             }
+
             yield next;
-        } while (!this.isDone());
+        }
     }
 }
 
@@ -729,7 +742,8 @@ export class Model {
 
         // Read from the read buffer
         for await (const chunk of this.readbackBuffer.read()) {
-            yield { kind: "data", text: chunk.char, token: chunk.token };
+            console.log(chunk);
+            yield chunk;
         }
 
         const finishResponse = await this.readbackBuffer.readJsonStatus();
