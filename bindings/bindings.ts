@@ -339,7 +339,7 @@ export class ReadbackBuffer {
         const success = await lib.symbols.ReadbackNext(
             this.bufferPtr,
             Deno.UnsafePointer.of(outCharPtr),
-            Deno.UnsafePointer.of(outTokenPtr)
+            Deno.UnsafePointer.of(outTokenPtr),
         );
 
         if (!success) return null;
@@ -351,13 +351,13 @@ export class ReadbackBuffer {
         // Convert to owned
         const ownedCharPtr = Deno.UnsafePointer.create(charPtr);
         if (ownedCharPtr) {
-            char = new Deno.UnsafePointerView(ownedCharPtr).getCString()
+            char = new Deno.UnsafePointerView(ownedCharPtr).getCString();
         }
 
         return {
             kind: "data",
             text: char,
-            token: outTokenPtr[0]
+            token: outTokenPtr[0],
         };
     }
 
