@@ -8,6 +8,10 @@
   "imports": {
     "@/": "./",
     "@core/asyncutil": "jsr:@core/asyncutil@^1.2.0",
+    "@types/command-line-args": "npm:@types/command-line-args@^5.2.3",
+    "@types/command-line-usage": "npm:@types/command-line-usage@^5.0.4",
+    "command-line-args": "npm:command-line-args@^6.0.1",
+    "command-line-usage": "npm:command-line-usage@^7.0.3",
     "hono": "npm:hono@^4.6.20",
     "@huggingface/jinja": "npm:@huggingface/jinja@^0.3.3",
     "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.5.170",
@@ -16,6 +20,7 @@
     "hono-openapi": "npm:hono-openapi@^0.3.1",
     "logtape": "jsr:@logtape/logtape@^0.8.1",
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
+    "@types/yargs": "npm:@types/yargs@^17.0.33",
     "zod": "npm:zod@^3.24.1",
     "zod-openapi": "npm:zod-openapi@^4.2.3"
   },
