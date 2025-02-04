@@ -8,16 +8,16 @@
   "imports": {
     "@/": "./",
     "@core/asyncutil": "jsr:@core/asyncutil@^1.2.0",
-    "hono": "npm:hono@^4.6.14",
-    "@huggingface/jinja": "npm:@huggingface/jinja@^0.3.2",
-    "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.5.165",
-    "@std/async": "jsr:@std/async@^1.0.9",
+    "hono": "npm:hono@^4.6.20",
+    "@huggingface/jinja": "npm:@huggingface/jinja@^0.3.3",
+    "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@^0.5.170",
+    "@std/async": "jsr:@std/async@^1.0.10",
     "@std/path": "jsr:@std/path@^1.0.8",
-    "hono-openapi": "npm:hono-openapi@^0.3.0",
-    "logtape": "jsr:@logtape/logtape@^0.8.0",
+    "hono-openapi": "npm:hono-openapi@^0.3.1",
+    "logtape": "jsr:@logtape/logtape@^0.8.1",
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
     "zod": "npm:zod@^3.24.1",
-    "zod-openapi": "npm:zod-openapi@^4.2.1"
+    "zod-openapi": "npm:zod-openapi@^4.2.3"
   },
   "fmt": {
     "indentWidth": 4,

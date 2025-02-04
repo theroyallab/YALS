@@ -2,27 +2,27 @@
   "version": "4",
   "specifiers": {
     "jsr:@core/asyncutil@^1.2.0": "1.2.0",
-    "jsr:@logtape/logtape@0.8": "0.8.0",
-    "jsr:@std/async@^1.0.9": "1.0.9",
+    "jsr:@logtape/logtape@~0.8.1": "0.8.1",
+    "jsr:@std/async@^1.0.10": "1.0.10",
     "jsr:@std/path@^1.0.8": "1.0.8",
     "jsr:@std/yaml@^1.0.5": "1.0.5",
-    "npm:@huggingface/jinja@~0.3.2": "0.3.2",
-    "npm:@scalar/hono-api-reference@~0.5.165": "0.5.165_hono@4.6.14",
+    "npm:@huggingface/jinja@~0.3.3": "0.3.3",
+    "npm:@scalar/hono-api-reference@~0.5.170": "0.5.170_hono@4.6.20",
     "npm:@types/node@*": "22.5.4",
-    "npm:hono-openapi@0.3": "0.3.0_arktype@2.0.0-rc.25_hono@4.6.14_effect@3.12.0_@sinclair+typebox@0.34.13_valibot@1.0.0-beta.9_zod@3.24.1",
-    "npm:hono@^4.6.14": "4.6.14",
-    "npm:zod-openapi@^4.2.1": "4.2.1_zod@3.24.1",
+    "npm:hono-openapi@~0.3.1": "0.3.1_arktype@2.0.0-rc.25_hono@4.6.20_effect@3.12.7_@sinclair+typebox@0.34.15_valibot@1.0.0-beta.14_zod@3.24.1",
+    "npm:hono@^4.6.20": "4.6.20",
+    "npm:zod-openapi@^4.2.3": "4.2.3_zod@3.24.1",
     "npm:zod@^3.24.1": "3.24.1"
   },
   "jsr": {
     "@core/asyncutil@1.2.0": {
       "integrity": "9967f15190c60df032c13f72ce5ac73d185c34f31c53dc918d8800025854c118"
     },
-    "@logtape/logtape@0.8.0": {
-      "integrity": "12bdf406a713f754d99c2ff65deb45127ce4e2c59e7136d608042250629428bd"
+    "@logtape/logtape@0.8.1": {
+      "integrity": "deb3b276d4be0a697e94f6a79ddb309f993e1870166a6d43d8eca86cd00871a8"
     },
-    "@std/async@1.0.9": {
-      "integrity": "c6472fd0623b3f3daae023cdf7ca5535e1b721dfbf376562c0c12b3fb4867f91"
+    "@std/async@1.0.10": {
+      "integrity": "2ff1b1c7d33d1416159989b0f69e59ec7ee8cb58510df01e454def2108b3dbec"
     },
     "@std/path@1.0.8": {
       "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
@@ -32,8 +32,8 @@
     }
   },
   "npm": {
-    "@apidevtools/json-schema-ref-parser@11.7.3": {
-      "integrity": "sha512-WApSdLdXEBb/1FUPca2lteASewEfpjEYJ8oXZP+0gExK5qSfsEKBKcA+WjY6Q4wvXwyv0+W6Kvc372pSceib9w==",
+    "@apidevtools/json-schema-ref-parser@11.9.0": {
+      "integrity": "sha512-8Q/r5mXLa8Rfyh6r4SgEEFJgISVN5cDNFlcfSWLgFn3odzQhTfHAqzI3hMGdcROViL+8NrDNVVFQtEUrYOksDg==",
       "dependencies": [
         "@jsdevtools/ono",
         "@types/json-schema",
@@ -49,66 +49,66 @@
     "@ark/util@0.25.0": {
       "integrity": "sha512-yo2Me+tYnmr6E0E3maZzu643/rL07oR25yBHkH24gllssqYcd6EPCvZE23GEKgbk0iac9J73GlJ9pkgZj43Q2g=="
     },
-    "@hono/arktype-validator@2.0.0_arktype@2.0.0-rc.25_hono@4.6.14": {
+    "@hono/arktype-validator@2.0.0_arktype@2.0.0-rc.25_hono@4.6.20": {
       "integrity": "sha512-ICNZrK6Qcw6gyPfW53ONXI4JomRcks0fQhqzn9EWsfr6nlL6BNXQ96vIgVDU8qimcbJ2m3GJFAqgzOvWbZk3jw==",
       "dependencies": [
         "arktype",
         "hono"
       ]
     },
-    "@hono/effect-validator@1.2.0_effect@3.12.0_hono@4.6.14": {
+    "@hono/effect-validator@1.2.0_effect@3.12.7_hono@4.6.20": {
       "integrity": "sha512-PJTTVsF3bN/ld7w3g3rcWRzhbgn2wG4CcAtZpgGAz90DF3TLD5ByVkkRI3SK0HnbtPQKT2Ndng+bJvLwV1lZZQ==",
       "dependencies": [
         "effect",
         "hono"
       ]
     },
-    "@hono/typebox-validator@0.2.6_@sinclair+typebox@0.34.13_hono@4.6.14": {
+    "@hono/typebox-validator@0.2.6_@sinclair+typebox@0.34.15_hono@4.6.20": {
       "integrity": "sha512-x+Q7RWiw6rJmJs7MDgtvRbS7ViXXEzqimC0duY4or7y1f89f5Z3KCQSdUSVka+Uv0HZ/O0ZNt+ixNDxfJLi4hA==",
       "dependencies": [
         "@sinclair/typebox",
         "hono"
       ]
     },
-    "@hono/valibot-validator@0.5.1_hono@4.6.14_valibot@1.0.0-beta.9": {
-      "integrity": "sha512-TXNFh1jofWNCX9sOX2gyw6qCXuAKr4yk//hOf9Lc8vcdIhQXTRQY6RPkKwL/14EldoIngkLj3iMHTXXhjgMCWg==",
+    "@hono/valibot-validator@0.5.2_hono@4.6.20_valibot@1.0.0-beta.14": {
+      "integrity": "sha512-WbTr8PCFNAME0ale62rmmq+E8bGp5a7VPiVNmNT+Ue12GJE3Ax+CWBGtHhR0TzAEiloPvJND3IbjHIgtNtsqhw==",
       "dependencies": [
         "hono",
         "valibot"
       ]
     },
-    "@hono/zod-validator@0.4.2_hono@4.6.14_zod@3.24.1": {
+    "@hono/zod-validator@0.4.2_hono@4.6.20_zod@3.24.1": {
       "integrity": "sha512-1rrlBg+EpDPhzOV4hT9pxr5+xDVmKuz6YJl+la7VCwK6ass5ldyKm5fD+umJdV2zhHD6jROoCCv8NbTwyfhT0g==",
       "dependencies": [
         "hono",
         "zod"
       ]
     },
-    "@huggingface/jinja@0.3.2": {
-      "integrity": "sha512-F2FvuIc+w1blGsaqJI/OErRbWH6bVJDCBI8Rm5D86yZ2wlwrGERsfIaru7XUv9eYC3DMP3ixDRRtF0h6d8AZcQ=="
+    "@huggingface/jinja@0.3.3": {
+      "integrity": "sha512-vQQr2JyWvVFba3Lj9es4q9vCl1sAc74fdgnEMoX8qHrXtswap9ge9uO3ONDzQB0cQ0PUyaKY2N6HaVbTBvSXvw=="
     },
     "@jsdevtools/ono@7.1.3": {
       "integrity": "sha512-4JQNk+3mVzK3xh2rqd6RB4J46qUR19azEHBneZyTZM+c456qOrbbM/5xcR8huNCCcbVt7+UmizG6GuUvPvKUYg=="
     },
-    "@scalar/hono-api-reference@0.5.165_hono@4.6.14": {
-      "integrity": "sha512-UOdH9vKQxNC5wi3fQufq44g93x3oE7YoeI1bdLncbrK3Nm+XtLe4Wc0kSpz1n6gsjvqSJij/ioXmkC8OJpM5hA==",
+    "@scalar/hono-api-reference@0.5.170_hono@4.6.20": {
+      "integrity": "sha512-WZsBHZutARsszArsn2jC8aPM1KrMtkyIJzt/Dhigr3KPaDMTVBZEmO/NILrYAMnLYkboAs7DedtSHt59D41dew==",
       "dependencies": [
         "@scalar/types",
         "hono"
       ]
     },
-    "@scalar/openapi-types@0.1.5": {
-      "integrity": "sha512-6geH9ehvQ/sG/xUyy3e0lyOw3BaY5s6nn22wHjEJhcobdmWyFER0O6m7AU0ZN4QTjle/gYvFJOjj552l/rsNSw=="
+    "@scalar/openapi-types@0.1.6": {
+      "integrity": "sha512-V+KnESyVJqorJzEN0QFlu3tAImCHjnvPov6QcQvjfY7s0+CjrI3rRO3oVIRlXURTQrQGrnhxvK0SkXGAZ+dxvw=="
     },
-    "@scalar/types@0.0.25": {
-      "integrity": "sha512-sGnOFnfiSn4o23rklU/jrg81hO+630bsFIdHg8MZ/w2Nc6IoUwARA2hbe4d4Fg+D0KBu40Tan/L+WAYDXkTJQg==",
+    "@scalar/types@0.0.29": {
+      "integrity": "sha512-Z5tnRVtKHV/Gx4hCPeyFsxM1Gx92KUqpZ/HhM4KexPh5StKJo6MSLSTeFXqdVM8dbsnfw+xFBoLF9yE0eEHK3Q==",
       "dependencies": [
         "@scalar/openapi-types",
         "@unhead/schema"
       ]
     },
-    "@sinclair/typebox@0.34.13": {
-      "integrity": "sha512-ceVKqyCEgC355Kw0s/0tyfY9MzMQINSykJ/pG2w6YnaZyrcjV48svZpr8lVZrYgWjzOmrIPBhQRAtr/7eJpA5g=="
+    "@sinclair/typebox@0.34.15": {
+      "integrity": "sha512-xeIzl3h1Znn9w/LTITqpiwag0gXjA+ldi2ZkXIBxGEppGCW211Tza+eL6D4pKqs10bj5z2umBWk5WL6spQ2OCQ=="
     },
     "@types/json-schema@7.0.15": {
       "integrity": "sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA=="
@@ -119,15 +119,15 @@
         "undici-types"
       ]
     },
-    "@unhead/schema@1.11.14": {
-      "integrity": "sha512-V9W9u5tF1/+TiLqxu+Qvh1ShoMDkPEwHoEo4DKdDG6ko7YlbzFfDxV6el9JwCren45U/4Vy/4Xi7j8OH02wsiA==",
+    "@unhead/schema@1.11.18": {
+      "integrity": "sha512-a3TA/OJCRdfbFhcA3Hq24k1ZU1o9szicESrw8DZcGyQFacHnh84mVgnyqSkMnwgCmfN4kvjSiTBlLEHS6+wATw==",
       "dependencies": [
         "hookable",
         "zhead"
       ]
     },
-    "@valibot/to-json-schema@1.0.0-beta.3_valibot@1.0.0-beta.9": {
-      "integrity": "sha512-20XQh1u5sOLwS3NOB7oHCo3clQ9h4GlavXgLKMux2PYpHowb7P97cND0dg8T3+fE1WoKVACcLppvzAPpSx0F+Q==",
+    "@valibot/to-json-schema@1.0.0-beta.5_valibot@1.0.0-beta.14": {
+      "integrity": "sha512-8aI2sG98gWS+6YuIL3OMkg60sImhICPdZIFCV1XDyX8k6UOCX+MgXaeR3f2fDShuNXYHV46vcjWRpov8ojzDNw==",
       "dependencies": [
         "valibot"
       ]
@@ -145,8 +145,8 @@
     "clone@2.1.2": {
       "integrity": "sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w=="
     },
-    "effect@3.12.0": {
-      "integrity": "sha512-b/u9s3b9HfTo0qygVouegP0hkbiuxRIeaCe1ppf8P88hPyl6lKCbErtn7Az4jG7LuU7f0Wgm4c8WXbMcL2j8+g==",
+    "effect@3.12.7": {
+      "integrity": "sha512-BsDTgSjLbL12g0+vGn5xkOgOVhRSaR3VeHmjcUb0gLvpXACJ9OgmlfeH+/FaAZwM5+omIF3I/j1gC5KJrbK1Aw==",
       "dependencies": [
         "fast-check"
       ]
@@ -157,8 +157,8 @@
         "pure-rand"
       ]
     },
-    "hono-openapi@0.3.0_arktype@2.0.0-rc.25_hono@4.6.14_effect@3.12.0_@sinclair+typebox@0.34.13_valibot@1.0.0-beta.9_zod@3.24.1": {
-      "integrity": "sha512-TN3zsXbFGBrwQgWRipgNt/HlRmfGbclqSUmBcQiTbpaetg+GEA9jhqbPBnGEyAIfJLooeIXvat9Xe9wPxn09yQ==",
+    "hono-openapi@0.3.1_arktype@2.0.0-rc.25_hono@4.6.20_effect@3.12.7_@sinclair+typebox@0.34.15_valibot@1.0.0-beta.14_zod@3.24.1": {
+      "integrity": "sha512-8j02qmkE3BJkr+s/tqiauiHy+/OMmM/bvf33G9CZpBRdyM95aVL3fgRj4tNsRdkL+e/rM5+EClozD3jxnwr4eA==",
       "dependencies": [
         "@hono/arktype-validator",
         "@hono/effect-validator",
@@ -177,8 +177,8 @@
         "zod-openapi"
       ]
     },
-    "hono@4.6.14": {
-      "integrity": "sha512-j4VkyUp2xazGJ8eCCLN1Vm/bxdvm/j5ZuU9AIjLu9vapn2M44p9L3Ktr9Vnb2RN2QtcR/wVjZVMlT5k7GJQgPw=="
+    "hono@4.6.20": {
+      "integrity": "sha512-5qfNQeaIptMaJKyoJ6N/q4gIq0DBp2FCRaLNuUI3LlJKL4S37DY/rLL1uAxA4wrPB39tJ3s+f7kgI79O4ScSug=="
     },
     "hookable@5.5.3": {
       "integrity": "sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ=="
@@ -205,14 +205,14 @@
     "undici-types@6.19.8": {
       "integrity": "sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw=="
     },
-    "valibot@1.0.0-beta.9": {
-      "integrity": "sha512-yEX8gMAZ2R1yI2uwOO4NCtVnJQx36zn3vD0omzzj9FhcoblvPukENIiRZXKZwCnqSeV80bMm8wNiGhQ0S8fiww=="
+    "valibot@1.0.0-beta.14": {
+      "integrity": "sha512-tLyV2rE5QL6U29MFy3xt4AqMrn+/HErcp2ZThASnQvPMwfSozjV1uBGKIGiegtZIGjinJqn0SlBdannf18wENA=="
     },
     "zhead@2.2.4": {
       "integrity": "sha512-8F0OI5dpWIA5IGG5NHUg9staDwz/ZPxZtvGVf01j7vHqSyZ0raHY+78atOVxRqb73AotX22uV1pXt3gYSstGag=="
     },
-    "zod-openapi@4.2.1_zod@3.24.1": {
-      "integrity": "sha512-/JRJUIrg2W6rxiy90QNYiThSgD27+IQncK3l6JIxtXwu6I68TV66qlS/6gpdFOmvYfLOyafqTfxOj3OldUPOUA==",
+    "zod-openapi@4.2.3_zod@3.24.1": {
+      "integrity": "sha512-i0SqpcdXfsvVWTIY1Jl3Tk421s9fBIkpXvaA86zDas+8FjfZjm+GX6ot6SPB2SyuHwUNTN02gE5uIVlYXlyrDQ==",
       "dependencies": [
         "zod"
       ]
@@ -224,15 +224,15 @@
   "workspace": {
     "dependencies": [
       "jsr:@core/asyncutil@^1.2.0",
-      "jsr:@logtape/logtape@0.8",
-      "jsr:@std/async@^1.0.9",
+      "jsr:@logtape/logtape@~0.8.1",
+      "jsr:@std/async@^1.0.10",
       "jsr:@std/path@^1.0.8",
       "jsr:@std/yaml@^1.0.5",
-      "npm:@huggingface/jinja@~0.3.2",
-      "npm:@scalar/hono-api-reference@~0.5.165",
-      "npm:hono-openapi@0.3",
-      "npm:hono@^4.6.14",
-      "npm:zod-openapi@^4.2.1",
+      "npm:@huggingface/jinja@~0.3.3",
+      "npm:@scalar/hono-api-reference@~0.5.170",
+      "npm:hono-openapi@~0.3.1",
+      "npm:hono@^4.6.20",
+      "npm:zod-openapi@^4.2.3",
       "npm:zod@^3.24.1"
     ]
   }
