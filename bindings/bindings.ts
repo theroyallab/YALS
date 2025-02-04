@@ -8,7 +8,7 @@ import llamaSymbols from "./symbols.ts";
 import { pointerArrayFromStrings } from "./utils.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 import { logger } from "@/common/logging.ts";
-import { asyncDefer } from "@/common/utils.ts";
+import { asyncDefer, defer } from "@/common/utils.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -494,75 +494,88 @@ export class Model {
             );
         }
 
-        try {
-            const model = await lib.symbols.LoadModel(
-                modelPathPtr,
-                params.num_gpu_layers,
-                Deno.UnsafePointer.of(new Float32Array(params.gpu_split)),
-                callback?.pointer ?? null,
+        // Always close progress callback
+        using _ = defer(() => {
+            callback?.close();
+        });
+
+        const model = await lib.symbols.LoadModel(
+            modelPathPtr,
+            params.num_gpu_layers,
+            Deno.UnsafePointer.of(new Float32Array(params.gpu_split)),
+            callback?.pointer ?? null,
+        );
+
+        // Was the load aborted?
+        if (!model) {
+            return;
+        }
+
+        // Use 2048 for chunk size for now, need more info on what to actually use
+        const context = await lib.symbols.InitiateCtx(
+            model,
+            params.max_seq_len ?? 4096,
+            2048,
+            params.flash_attention,
+            false, //use model ctx extension default
+            false, //use rope
+            params.rope_freq_base,
+            params.rope_freq_scale,
+            false, //use yarn
+            -1.0,
+            -1.0,
+            0,
+            0.0,
+            0.0,
+            params.cache_mode_k,
+            params.cache_mode_v,
+            -1.0, //kvDefrag thresehold
+        );
+
+        const parsedModelPath = Path.parse(modelPath);
+        const tokenizer = await Tokenizer.init(model);
+        const findTemplateFunctions = [
+            Model.getChatTemplate(model),
+        ];
+
+        let promptTemplate: PromptTemplate | undefined = undefined;
+        if (params.prompt_template) {
+            findTemplateFunctions.unshift(
+                PromptTemplate.fromFile(`templates/${params.prompt_template}`),
             );
+        }
 
-            // Was the load aborted?
-            if (!model) {
-                return;
-            }
-
-            // Use 2048 for chunk size for now, need more info on what to actually use
-            const context = await lib.symbols.InitiateCtx(
-                model,
-                params.max_seq_len ?? 4096,
-                2048,
-                params.flash_attention,
-                false, //use model ctx extension default
-                false, //use rope
-                params.rope_freq_base,
-                params.rope_freq_scale,
-                false, //use yarn
-                -1.0,
-                -1.0,
-                0,
-                0.0,
-                0.0,
-                params.cache_mode_k,
-                params.cache_mode_v,
-                -1.0, //kvDefrag thresehold
-            );
-
-            const parsedModelPath = Path.parse(modelPath);
-            const tokenizer = await Tokenizer.init(model);
-
-            let promptTemplate: PromptTemplate | undefined = undefined;
-            if (params.prompt_template) {
-                try {
-                    promptTemplate = await PromptTemplate.fromFile(
-                        `templates/${params.prompt_template}`,
+        for (const templateFunc of findTemplateFunctions) {
+            try {
+                promptTemplate = await templateFunc;
+            } catch (error) {
+                if (error instanceof Error) {
+                    logger.warn(
+                        `${error.stack} \nAttempting next template method.`,
                     );
-
-                    logger.info(
-                        `Using template "${promptTemplate.name}" for chat completions`,
-                    );
-                } catch (error) {
-                    if (error instanceof Error) {
-                        logger.warn(
-                            "Could not create a prompt template because of the following error:\n " +
-                                `${error.stack}\n\n` +
-                                "YALS will continue loading without the prompt template.\n" +
-                                "Please proofread the template and make sure it's compatible with huggingface's jinja subset.",
-                        );
-                    }
                 }
             }
-
-            return new Model(
-                model,
-                context,
-                parsedModelPath,
-                tokenizer,
-                promptTemplate,
-            );
-        } finally {
-            callback?.close();
         }
+
+        if (promptTemplate) {
+            logger.info(
+                `Using template "${promptTemplate.name}" for chat completions`,
+            );
+        } else {
+            logger.warn(
+                "Could not create a prompt template because of the above errors\n " +
+                    "YALS will continue loading without the prompt template.\n" +
+                    "Please proofread the template and make sure it's compatible with huggingface's jinja subset.",
+            );
+        }
+
+        return new Model(
+            model,
+            context,
+            parsedModelPath,
+            tokenizer,
+            promptTemplate,
+        );
     }
 
     resetKVCache() {
@@ -742,7 +755,6 @@ export class Model {
 
         // Read from the read buffer
         for await (const chunk of this.readbackBuffer.read()) {
-            console.log(chunk);
             yield chunk;
         }
 
@@ -858,21 +870,21 @@ export class Model {
         return text;
     }
 
-    async getChatTemplate() {
-        const templatePtr = await lib.symbols.GetModelChatTemplate(this.model);
+    static async getChatTemplate(model: Deno.PointerValue) {
+        const templatePtr = await lib.symbols.GetModelChatTemplate(model);
 
         await using _ = asyncDefer(async () => {
             await lib.symbols.EndpointFreeString(templatePtr);
         });
 
         if (templatePtr === null) {
-            throw new Error("Failed to get chat template");
+            throw new Error("Failed to get model chat template");
         }
 
         // Copy to owned string
         const cString = new Deno.UnsafePointerView(templatePtr);
         const template: string = cString.getCString();
 
-        return template;
+        return new PromptTemplate("from_gguf", template);
     }
 }

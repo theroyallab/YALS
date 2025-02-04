@@ -34,10 +34,10 @@ llama_model* LoadModel(
 
 char* GetModelChatTemplate(const llama_model* model) {
     static const char* tokenizerTemplateKey = "tokenizer.chat_template";
-    const int32_t bufSize = llama_model_meta_val_str(model, tokenizerTemplateKey, nullptr, 0);
+    const int32_t bufSize = llama_model_meta_val_str(model, tokenizerTemplateKey, nullptr, 0) + 1;
 
     const auto buffer = new char[bufSize];
-    llama_model_meta_val_str(model, tokenizerTemplateKey, buffer, bufSize);
+    const int32_t written = llama_model_meta_val_str(model, tokenizerTemplateKey, buffer, bufSize);
     return buffer;
 }
 
