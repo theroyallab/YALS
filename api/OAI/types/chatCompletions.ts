@@ -10,7 +10,9 @@ const ChatCompletionImageUrl = z.object({
 });
 
 const ChatCompletionMessagePart = z.object({
-    type: z.string().nullish().coalesce("text").openapi({ effectType: "input" }),
+    type: z.string().nullish().coalesce("text").openapi({
+        effectType: "input",
+    }),
     text: z.string().nullish(),
     image_url: ChatCompletionImageUrl.nullish(),
 });

@@ -56,6 +56,14 @@ export let authKeys: AuthKeys | undefined = undefined;
 export async function loadAuthKeys() {
     const authFilePath = "api_tokens.yml";
 
+    if (config.network.disable_auth) {
+        logger.warn(
+            "Disabling authentication makes your instance vulnerable. \n" +
+                "Set the `disable_auth` flag to false in config.yml " +
+                "to share this instance with others.",
+        );
+    }
+
     const fileInfo = await Deno.stat(authFilePath).catch(() => null);
     if (fileInfo?.isFile) {
         const rawKeys = await Deno.readTextFile(authFilePath);
