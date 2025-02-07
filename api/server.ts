@@ -1,6 +1,6 @@
 import { cors } from "hono/cors";
 import { logger as loggerMiddleware } from "hono/logger";
-import { StatusCode } from "hono/utils/http-status";
+import { ContentfulStatusCode } from "hono/utils/http-status";
 import { apiReference } from "@scalar/hono-api-reference";
 
 import { Hono } from "hono";
@@ -57,7 +57,7 @@ export function createApi() {
             ? err.status
             : c.newResponse(null).status;
         const statusCode = currentStatus != 200
-            ? (currentStatus as StatusCode)
+            ? (currentStatus as ContentfulStatusCode)
             : 500;
 
         if (err.stack) {
