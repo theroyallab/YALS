@@ -1,8 +1,8 @@
 {
   "tasks": {
     "dev": "deno run -A --watch main.ts",
-    "start": "deno run --allow-read --allow-env --allow-net --allow-ffi main.ts",
-    "compile": "deno compile --allow-read --allow-write=api_tokens.yml --allow-env --allow-net --allow-ffi main.ts",
+    "start": "deno run --allow-read --allow-write=api_tokens.yml --allow-env --allow-sys --allow-net --allow-ffi main.ts",
+    "compile": "deno compile --allow-read --allow-write=api_tokens.yml --allow-env --allow-sys --allow-net --allow-ffi main.ts",
     "bindings": "cd bindings && cmake . -B build && cmake --build build"
   },
   "imports": {
