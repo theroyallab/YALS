@@ -371,7 +371,6 @@ export class ReadbackBuffer {
         const jsonString = cString.getCString();
 
         try {
-            console.log(jsonString);
             return {
                 ...JSON.parse(jsonString),
                 text: "",

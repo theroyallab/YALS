@@ -154,8 +154,10 @@ void FreeModel(llama_model* model)
 void PrintPerformanceInfo(const llama_context* context) {
     const auto data = llama_perf_context(context);
 
-    const double prompt_tok_per_sec = 1e3 / data.t_p_eval_ms * data.n_p_eval;
-    const double gen_tok_per_sec = 1e3 / data.t_eval_ms * data.n_eval;
+    // Calculate tokens per second by dividing number of tokens by time in seconds
+    // Convert milliseconds to seconds by dividing by 1000
+    const double prompt_tok_per_sec = data.n_p_eval / (data.t_p_eval_ms / 1000.0);
+    const double gen_tok_per_sec = data.n_eval / (data.t_eval_ms / 1000.0);
 
     std::cout << "\n\n" << std::fixed << std::setprecision(2)
               << "Prompt Processing: " << prompt_tok_per_sec << " tok/s, "
@@ -434,10 +436,43 @@ std::optional<std::vector<llama_token>> Tokenize(
     return tokenizedPrompt;
 }
 
+// Escapes a string's special characters
+std::string EscapeString(const std::string& input) {
+    std::stringstream ss;
+    for (unsigned char ch : input) {
+        switch (ch) {
+            case '"':  ss << "\\\""; break;
+            case '\\': ss << "\\\\"; break;
+            case '\b': ss << "\\b";  break;
+            case '\f': ss << "\\f";  break;
+            case '\n': ss << "\\n";  break;
+            case '\r': ss << "\\r";  break;
+            case '\t': ss << "\\t";  break;
+            default:
+                if (ch < 0x20) {
+                    // Escape ASCII control characters with \u00x
+                    ss << "\\u" << std::setw(4) << std::setfill('0') << std::hex << static_cast<int>(ch);
+                } else {
+                    ss << ch;
+                }
+        }
+    }
+
+    return ss.str();
+}
+
 std::string MakeJsonOutputString(const llama_context* context, const std::string &finishReason, const std::string &stopToken) {
     const auto [t_start_ms, t_load_ms, t_p_eval_ms, t_eval_ms, n_p_eval, n_eval] = llama_perf_context(context);
-    const double t_p_eval_s = 1e3 / t_p_eval_ms;
-    const double t_eval_s = 1e3 / t_eval_ms;
+
+    const double t_p_eval_s = t_p_eval_ms / 1000.0;
+    const double t_eval_s = t_eval_ms / 1000.0;
+
+    // Calculate tokens per second, return 0 if division by 0
+    const double prompt_tokens_per_sec = t_p_eval_s > 0 ? n_p_eval / t_p_eval_s : 0;
+    const double gen_tokens_per_sec = t_eval_s > 0 ? n_eval / t_eval_s : 0;
+
+    // Escape the stop token to avoid errors in Deno
+    const std::string escapedStopToken = EscapeString(stopToken);
 
     std::stringstream ss;
     ss << "{"
@@ -445,10 +480,10 @@ std::string MakeJsonOutputString(const llama_context* context, const std::string
        << R"("genTokens":)" << n_eval << ","
        << R"("promptSec":)" << t_p_eval_s << ","
        << R"("genSec":)" << t_eval_s << ","
-       << R"("genTokensPerSec":)" << (1e3 / t_p_eval_ms * n_p_eval) << ","
-       << R"("promptTokensPerSec":)" << (1e3 / t_eval_ms * n_eval) << ","
+       << R"("genTokensPerSec":)" << gen_tokens_per_sec << ","
+       << R"("promptTokensPerSec":)" << prompt_tokens_per_sec << ","
        << R"("finishReason": ")" << finishReason << "\","
-       << R"("stopToken": ")" << stopToken << "\""
+       << R"("stopToken": ")" << escapedStopToken << "\""
        << "}";
 
     return ss.str();
