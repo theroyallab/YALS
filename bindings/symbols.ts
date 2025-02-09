@@ -2,7 +2,7 @@ export default {
     LoadModel: {
         parameters: [
             "buffer", // const char *modelPath
-            "i32", // int numberGpuLayers
+            "i32", // int32_t numberGpuLayers
             "pointer", // const float* tensorSplit
             "pointer", // llama_progress_callback callback
         ],

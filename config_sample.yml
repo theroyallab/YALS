@@ -17,7 +17,7 @@ network:
 model:
   # Directory to look for models (default: models).
   # Windows users, do NOT put this path in quotes!
-  model_dir:
+  model_dir: models
 
   # An initial model to load.
   # Make sure the model is located in the model directory!
@@ -26,9 +26,10 @@ model:
 
   # Max sequence length (default: Empty).
   # Fetched from the model's base sequence length in config.json by default.
-  max_seq_len: 8192
+  max_seq_len:
 
   # Number of model layers to offload on the GPU (default: 0)
+  # Set this to 999 to offload all layers to the GPU
   num_gpu_layers: 0
 
   # Prompt template to use for chat completions (default: None)

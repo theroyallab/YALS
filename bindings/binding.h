@@ -9,7 +9,7 @@ extern "C" {
     struct ReadbackBuffer;
 
     void TestPrint(const char* text);
-    llama_model* LoadModel(const char* modelPath, int numberGpuLayers, const float* tensorSplit, llama_progress_callback callback);
+    llama_model* LoadModel(const char* modelPath, int32_t numberGpuLayers, const float* tensorSplit, llama_progress_callback callback);
 
     char* GetModelChatTemplate(const llama_model* model);
 

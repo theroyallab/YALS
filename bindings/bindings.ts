@@ -371,6 +371,7 @@ export class ReadbackBuffer {
         const jsonString = cString.getCString();
 
         try {
+            console.log(jsonString);
             return {
                 ...JSON.parse(jsonString),
                 text: "",
@@ -515,7 +516,7 @@ export class Model {
         const context = await lib.symbols.InitiateCtx(
             model,
             params.max_seq_len ?? 4096,
-            2048,
+            512,
             params.flash_attention,
             false, //use model ctx extension default
             false, //use rope

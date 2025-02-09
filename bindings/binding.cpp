@@ -16,7 +16,7 @@ void TestPrint(const char* text)
 //typedef bool (*llama_progress_callback)(float progress, void * user_data);
 llama_model* LoadModel(
     const char* modelPath,
-    const int numberGpuLayers,
+    const int32_t numberGpuLayers,
     const float* tensorSplit,
     const llama_progress_callback callback)
 {
@@ -473,22 +473,51 @@ const char* InferToReadbackBuffer(
         llama_set_abort_callback(context, abortCallback, nullptr);
     }
 
-    auto promptTokens = Tokenize(model, context, prompt, addSpecial, parseSpecial).value();
+    std::string finishReason = "Unspecified";
+    std::string stoppedAt;
 
+    // Lambda function to process the prompt in chunked batches
+    auto processPromptBatches = [&](std::vector<llama_token>& tokens) -> bool {
+        const int batchSize = llama_n_batch(context);
+        
+        for (size_t i = 0; i < tokens.size(); i += batchSize) {
+            const size_t remaining = tokens.size() - i;
+            const size_t currentBatchSize = std::min(remaining, static_cast<size_t>(batchSize));
+            
+            llama_batch batch = llama_batch_get_one(
+                tokens.data() + i,
+                currentBatchSize
+            );
+
+            if (llama_decode(context, batch)) {
+                finishReason = "BatchDecode";
+                return false;
+            }
+        }
+        return true;
+    };
+
+    // Tokenize and determine the amount of tokens to generate
+    auto promptTokens = Tokenize(model, context, prompt, addSpecial, parseSpecial).value();
     const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
-    llama_batch firstBatch = llama_batch_get_one(promptTokens.data(), promptTokens.size());
+
+    // Process the prompt in chunked batches
+    if (!processPromptBatches(promptTokens)) {
+        return nullptr;
+    }
 
     MatchTrie::MatchTrie matchingTrie;
-
     matchingTrie.AddMatchableWords(rewindStrings, numRewindStrings, MatchTrie::MatchType::REWIND);
     matchingTrie.AddMatchableWords(stoppingStrings, numStoppingStrings, MatchTrie::MatchType::STOP);
 
     std::string response;
     std::string buffer;
 
-    std::string finishReason = "Unspecified";
-    std::string stoppedAt;
+    // Kickstart generation with a single token
+    llama_token firstToken = promptTokens.back();
+    llama_batch firstBatch = llama_batch_get_one(&firstToken, 1);
 
+    // Continue generation
     auto gen = [&](const llama_batch& batch, llama_sampler* smpl) -> std::pair<llama_token, bool> {
         int n_ctx = llama_n_ctx(context);
         int n_ctx_used = llama_get_kv_cache_used_cells(context);
@@ -511,8 +540,10 @@ const char* InferToReadbackBuffer(
         return {newTokenId, false};
     };
 
+    // Append to the generation batch
     auto [newTokenId, isEnd] = gen(firstBatch, sampler);
 
+    // Extra samplers - Banned strings
     int rewindPos = 0;
     int rewindTokenId = 0;
     int tokenCount = 0;

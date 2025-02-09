@@ -28,7 +28,7 @@ export async function loadConfig(args: Record<string, unknown>) {
         const group = parsedConfig[groupName] as Record<string, unknown>;
 
         if (args[groupName]) {
-            parsedConfig[groupName] = { ...group, ...args[groupName] }
+            parsedConfig[groupName] = { ...group, ...args[groupName] };
         }
     }
 
