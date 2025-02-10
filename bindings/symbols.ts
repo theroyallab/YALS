@@ -13,18 +13,11 @@ export default {
         parameters: [
             "pointer", // llama_model* model
             "u32", // unsigned contextLength
+            "i32", // int32_t numberGpuLayers
             "u32", // unsigned numBatches
             "bool", // bool flashAttn
-            "bool", // bool useModelDefaults
-            "bool", // bool useRope
             "f32", // float ropeFreqBase
-            "f32", // float ropeFreqScale
             "bool", // bool useYarn
-            "f32", // float yarnBetaFast
-            "f32", // float yarnBetaSlow
-            "u32", // uint32_t yarnOriginalContextLength
-            "f32", // float yarnExtensionFactor
-            "f32", // float yarnAttentionFactor
             "i32", // int kCacheQuantType
             "i32", // int vCacheQuantType
             "f32", // float kvDefragThreshold

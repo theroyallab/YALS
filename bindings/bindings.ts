@@ -515,18 +515,11 @@ export class Model {
         const context = await lib.symbols.InitiateCtx(
             model,
             params.max_seq_len ?? 4096,
+            params.num_gpu_layers,
             512,
             params.flash_attention,
-            false, //use model ctx extension default
-            false, //use rope
             params.rope_freq_base,
-            params.rope_freq_scale,
-            false, //use yarn
-            -1.0,
-            -1.0,
-            0,
-            0.0,
-            0.0,
+            params.enable_yarn, // Use yarn
             params.cache_mode_k,
             params.cache_mode_v,
             -1.0, //kvDefrag thresehold

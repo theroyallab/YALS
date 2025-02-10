@@ -41,25 +41,47 @@ char* GetModelChatTemplate(const llama_model* model) {
     return buffer;
 }
 
+float GetModelFreqBase(const llama_model* model) {
+    static const char* freqBaseKey = "general.rope_freq_base";
+
+    // Get string length
+    const int32_t bufSize = llama_model_meta_val_str(model, freqBaseKey, nullptr, 0) + 1;
+    if (bufSize <= 1) {
+        return 10000.0f; // Default if key not found
+    }
+
+    // Get string value
+    std::vector<char> buffer(bufSize);
+    const int32_t written = llama_model_meta_val_str(model, freqBaseKey, buffer.data(), bufSize);
+    if (written <= 0) {
+        return 10000.0f; // Default if read failed
+    }
+
+    try {
+        // Convert string to float using string stream for locale-independent parsing
+        std::stringstream ss(buffer.data());
+        ss.imbue(std::locale::classic()); // Use classic locale for consistent decimal point
+        float value;
+        ss >> value;
+        
+        if (ss.fail()) {
+            return 10000.0f; // Default on parse failure
+        }
+        
+        return value;
+    } catch (...) {
+        return 10000.0f; // Default on any error
+    }
+}
+
 llama_context *InitiateCtx(
     llama_model* model,
     const unsigned contextLength, // 0 = Use from model config
+    const int32_t numberGpuLayers,
     const unsigned numBatches,
     const bool flashAttn,
-
-    const bool useModelContextExtensionDefaults,
-
-    const bool useRope,
     const float ropeFreqBase,
-    const float ropeFreqScale,
-
     const bool useYarn,
-    const float yarnBetaFast,
-    const float yarnBetaSlow,
-    const uint32_t yarnOriginalContextLength,
-    const float yarnExtensionFactor,
-    const float yarnAttentionFactor,
-
     const int kCacheQuantType,
     const int vCacheQuantType,
     const float kvDefragThreshold // -1 to disable
@@ -73,34 +95,25 @@ llama_context *InitiateCtx(
     ctx_params.flash_attn = flashAttn;
 
     ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
-    //Default
-    //This looks dubiously implemented on the llama cpp side, use with caution.
-    if (useModelContextExtensionDefaults) {
-        ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_UNSPECIFIED;
-        ctx_params.rope_freq_base = 0;
-        ctx_params.rope_freq_scale = 0;
-        ctx_params.yarn_ext_factor = -1;
-    }
 
-    //Linear Rope, 0's to default to model config
-    if (useRope) {
-        ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_LINEAR;
-        ctx_params.rope_freq_base = ropeFreqBase;
-        ctx_params.rope_freq_scale = ropeFreqScale;
-    }
+    float freqBaseTrain = GetModelFreqBase(model);
 
-    //Yarn, allegedly ext_factor -1 to default to model cfg but it looks sussy.
+    // Yarn, allegedly ext_factor -1 to default to model cfg but it looks sussy.
+    // Only set linear RoPE if freq base is greater than the trained base
     if (useYarn) {
         ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_YARN;
-        ctx_params.yarn_ext_factor = yarnExtensionFactor;
-        ctx_params.yarn_attn_factor = yarnAttentionFactor;
-        ctx_params.yarn_beta_fast = yarnBetaFast;
-        ctx_params.yarn_beta_slow = yarnBetaSlow;
-        ctx_params.yarn_orig_ctx = yarnOriginalContextLength;
+        ctx_params.yarn_ext_factor = -1;
+    } else if (ropeFreqBase > freqBaseTrain) {
+        ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_LINEAR;
+        ctx_params.rope_freq_base = ropeFreqBase;
+        ctx_params.rope_freq_scale = 0;
     }
 
-    ctx_params.n_threads = 1;
-    ctx_params.n_threads_batch = 1;
+    // Decrease CPU threads if model is fully offloaded on GPU
+    if (numberGpuLayers >= llama_n_layer(model) || numberGpuLayers == -1) {
+        ctx_params.n_threads = 1;
+        ctx_params.n_threads_batch = 1;
+    }
 
     ctx_params.type_k = static_cast<ggml_type>(kCacheQuantType);
     ctx_params.type_v = static_cast<ggml_type>(vCacheQuantType);

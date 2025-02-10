@@ -16,22 +16,11 @@ extern "C" {
     llama_context *InitiateCtx(
         llama_model* model,
         unsigned contextLength, // 0 = Use from model config
+        int32_t numberGpuLayers,
         unsigned numBatches,
         bool flashAttn,
-
-        bool useModelContextExtensionDefaults,
-
-        bool useRope,
-        float ropeFreqBase, //0 to use model defaults
-        float ropeFreqScale,
-
+        float ropeFreqBase, // 0 to use model defaults
         bool useYarn,
-        float yarnBetaFast, //-1 to use model defaults
-        float yarnBetaSlow,
-        uint32_t yarnOriginalContextLength,
-        float yarnExtensionFactor,
-        float yarnAttentionFactor,
-
         int kCacheQuantType,
         int vCacheQuantType,
         float kvDefragThreshold // -1 to disable

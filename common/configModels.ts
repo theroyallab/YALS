@@ -18,7 +18,7 @@ export const ModelConfig = z.object({
     prompt_template: z.string().nullish(),
     flash_attention: z.boolean().nullish().coalesce(false),
     rope_freq_base: z.number().nullish().coalesce(0),
-    rope_freq_scale: z.number().nullish().coalesce(0),
+    enable_yarn: z.boolean().nullish().coalesce(false),
     cache_mode_k: z.union([
         z.string().transform((str) => GGMLType[str as keyof typeof GGMLType]),
         z.number(),

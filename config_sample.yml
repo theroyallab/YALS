@@ -39,10 +39,12 @@ model:
   flash_attention: false
 
   # Rope freq base. 0 = model default (default: 0)
+  # Adjust this value for NTK scaling
   rope_freq_base: 0
 
-  # Rope freq scale. 0 = model default (default: 0)
-  rope_freq_scale: 0
+  # Enable YaRN scaling. All other parameters inherited from the model (default: 0)
+  # Turning this on disables linear/NTK RoPE scaling
+  enable_yarn: false
 
   # K cache quantization type (default: F16)
   cache_mode_k: "F16"
