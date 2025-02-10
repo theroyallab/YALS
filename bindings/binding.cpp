@@ -552,7 +552,6 @@ const char* InferToReadbackBuffer(
 
     // Tokenize and determine the amount of tokens to generate
     auto promptTokens = Tokenize(model, context, prompt, addSpecial, parseSpecial).value();
-    const int numTokensToGenerate = (promptTokens.size() - 1) + numberTokensToPredict;
 
     // Process the prompt in chunked batches
     if (!processPromptBatches(promptTokens)) {
@@ -612,7 +611,8 @@ const char* InferToReadbackBuffer(
             break;
         }
 
-        if (tokenCount + batch.n_tokens > numTokensToGenerate) {
+        // End on length if max tokens is exceeded
+        if (tokenCount + batch.n_tokens > numberTokensToPredict) {
             finishReason = "MaxNewTokens";
             stoppedAt = TokenToPiece(model, newTokenId).value();
             break;
