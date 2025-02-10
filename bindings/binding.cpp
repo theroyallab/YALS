@@ -99,6 +99,9 @@ llama_context *InitiateCtx(
         ctx_params.yarn_orig_ctx = yarnOriginalContextLength;
     }
 
+    ctx_params.n_threads = 1;
+    ctx_params.n_threads_batch = 1;
+
     ctx_params.type_k = static_cast<ggml_type>(kCacheQuantType);
     ctx_params.type_v = static_cast<ggml_type>(vCacheQuantType);
     ctx_params.defrag_thold = kvDefragThreshold;
@@ -508,17 +511,19 @@ const char* InferToReadbackBuffer(
         llama_set_abort_callback(context, abortCallback, nullptr);
     }
 
+    llama_perf_context_reset(context);
+
     std::string finishReason = "Unspecified";
     std::string stoppedAt;
 
     // Lambda function to process the prompt in chunked batches
     auto processPromptBatches = [&](std::vector<llama_token>& tokens) -> bool {
         const int batchSize = llama_n_batch(context);
-        
+
         for (size_t i = 0; i < tokens.size(); i += batchSize) {
             const size_t remaining = tokens.size() - i;
             const size_t currentBatchSize = std::min(remaining, static_cast<size_t>(batchSize));
-            
+
             llama_batch batch = llama_batch_get_one(
                 tokens.data() + i,
                 currentBatchSize
