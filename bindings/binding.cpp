@@ -4,6 +4,7 @@
 #include <optional>
 #include <cstring>
 #include <iomanip>
+#include <llama-model.h>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -27,7 +28,7 @@ llama_model* LoadModel(
     model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
     model_params.tensor_split = tensorSplit;
 
-    llama_model* model = llama_load_model_from_file(modelPath, model_params);
+    llama_model* model = llama_model_load_from_file(modelPath, model_params);
 
     return model;
 }
@@ -37,7 +38,6 @@ char* GetModelChatTemplate(const llama_model* model) {
     const int32_t bufSize = llama_model_meta_val_str(model, tokenizerTemplateKey, nullptr, 0) + 1;
 
     const auto buffer = new char[bufSize];
-    const int32_t written = llama_model_meta_val_str(model, tokenizerTemplateKey, buffer, bufSize);
     return buffer;
 }
 
@@ -110,7 +110,7 @@ llama_context *InitiateCtx(
     }
 
     // Decrease CPU threads if model is fully offloaded on GPU
-    if (numberGpuLayers >= llama_n_layer(model) || numberGpuLayers == -1) {
+    if (numberGpuLayers >= llama_model_n_layer(model) || numberGpuLayers == -1) {
         ctx_params.n_threads = 1;
         ctx_params.n_threads_batch = 1;
     }
@@ -118,7 +118,7 @@ llama_context *InitiateCtx(
     ctx_params.type_k = static_cast<ggml_type>(kCacheQuantType);
     ctx_params.type_v = static_cast<ggml_type>(vCacheQuantType);
     ctx_params.defrag_thold = kvDefragThreshold;
-    llama_context* ctx = llama_new_context_with_model(model, ctx_params);
+    llama_context* ctx = llama_init_from_model(model, ctx_params);
 
     if (ctx == nullptr) {
         std::cerr << "error: couldn't make llama ctx in InitiateCtx()" << std::endl;
@@ -130,21 +130,21 @@ llama_context *InitiateCtx(
 
 llama_token BosToken(const llama_model* model)
 {
-    return llama_token_bos(model);
+    return llama_vocab_bos(&model->vocab);
 }
 
 llama_token EosToken(const llama_model* model)
 {
-    return llama_token_eos(model);
+    return llama_vocab_eos(&model->vocab);
 }
 
 llama_token EotToken(const llama_model* model)
 {
-    return llama_token_eot(model);
+    return llama_vocab_eot(&model->vocab);
 }
 
 const char* TokenToString(const llama_model* model, const llama_token token) {
-    return llama_token_get_text(model, token);
+    return llama_vocab_get_text(&model->vocab, token);
 }
 
 void FreeSampler(llama_sampler* sampler)
@@ -164,7 +164,7 @@ void ClearContextKVCache(llama_context* ctx)
 
 void FreeModel(llama_model* model)
 {
-    llama_free_model(model);
+    llama_model_free(model);
 }
 
 void PrintPerformanceInfo(const llama_context* context) {
@@ -251,7 +251,7 @@ llama_sampler* DistSampler(llama_sampler* sampler, const uint32_t seed)
 // Independent of order
 llama_sampler* GrammarSampler(llama_sampler* sampler, const llama_model* model, const char* grammar, const char* root)
 {
-    llama_sampler_chain_add(sampler, llama_sampler_init_grammar(model, grammar, root));
+    llama_sampler_chain_add(sampler, llama_sampler_init_grammar(&model->vocab, grammar, root));
     return sampler;
 }
 
@@ -262,7 +262,7 @@ llama_sampler* DrySampler(llama_sampler* sampler, const llama_model* model, cons
     llama_sampler_chain_add(
         sampler,
         llama_sampler_init_dry(
-            model, multiplier, base, allowed_length,
+            &model->vocab, llama_model_n_ctx_train(model), multiplier, base, allowed_length,
             penalty_last_n, sequence_breakers, n_breakers
         )
     );
@@ -279,7 +279,7 @@ llama_sampler* GreedySampler(llama_sampler* sampler)
 // Independent of order
 llama_sampler* InfillSampler(llama_sampler* sampler, const llama_model* model)
 {
-    llama_sampler_chain_add(sampler, llama_sampler_init_infill(model));
+    llama_sampler_chain_add(sampler, llama_sampler_init_infill(&model->vocab));
     return sampler;
 }
 
@@ -290,7 +290,7 @@ llama_sampler* LogitBiasSampler(
     llama_sampler_chain_add(
         sampler,
         llama_sampler_init_logit_bias(
-            llama_n_vocab(model),
+            llama_vocab_n_tokens(&model->vocab),
             nBias,
             logitBias
         )
@@ -310,7 +310,7 @@ llama_sampler* MirostatSampler(
     llama_sampler* sampler, const llama_model* model, const uint32_t seed,
     const float tau, const float eta, const int m)
 {
-    const int nVocab = llama_n_vocab(model);
+    const int nVocab = llama_vocab_n_tokens(&model->vocab);
     llama_sampler_chain_add(sampler, llama_sampler_init_mirostat(nVocab, seed, tau, eta, m));
     return sampler;
 }
@@ -381,7 +381,7 @@ llama_sampler* XtcSampler(
 std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const llama_token id)
 {
     char buf[128];
-    const int n = llama_token_to_piece(llamaModel, id, buf, sizeof(buf), 0, true);
+    const int n = llama_token_to_piece(&llamaModel->vocab, id, buf, sizeof(buf), 0, true);
     if (n < 0) {
         std::cerr << "error: failed to convert token to piece in TokenToPiece()" << std::endl;
         return std::nullopt;
@@ -397,12 +397,12 @@ int32_t* EndpointTokenize(
     const bool parseSpecial) {
 
     const int32_t promptLength = strlen(prompt);
-    const int n_prompt = -llama_tokenize(llamaModel, prompt, promptLength,
+    const int n_prompt = -llama_tokenize(&llamaModel->vocab, prompt, promptLength,
                                    nullptr, 0, addSpecial, parseSpecial);
     auto tokenArray = new int32_t[n_prompt + 1];
     tokenArray[0] = n_prompt;
 
-    if (llama_tokenize(llamaModel, prompt, promptLength,
+    if (llama_tokenize(&llamaModel->vocab, prompt, promptLength,
     tokenArray + 1, n_prompt + 1,
         addSpecial, parseSpecial) < 0) {
         std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
@@ -424,7 +424,7 @@ char* EndpointDetokenize(
     const bool addSpecial,
     const bool parseSpecial) {
     auto outText = new char[maxTextSize];
-    llama_detokenize(llamaModel, tokens, numTokens, outText, maxTextSize, addSpecial, parseSpecial);
+    llama_detokenize(&llamaModel->vocab, tokens, numTokens, outText, maxTextSize, addSpecial, parseSpecial);
     return outText;
 }
 
@@ -436,13 +436,13 @@ std::optional<std::vector<llama_token>> Tokenize(
     const llama_model* llamaModel, const llama_context* context, const std::string_view& prompt,
     const bool addSpecial, const bool parseSpecial) {
 
-    const int n_prompt = -llama_tokenize(llamaModel, prompt.data(), prompt.size(),
+    const int n_prompt = -llama_tokenize(&llamaModel->vocab, prompt.data(), prompt.size(),
                                        nullptr, 0, addSpecial, parseSpecial);
     std::vector<llama_token> tokenizedPrompt(n_prompt);
 
     bool add_bos = (llama_get_kv_cache_used_cells(context) == 0) & addSpecial;
 
-    if (llama_tokenize(llamaModel, prompt.data(), prompt.size(),
+    if (llama_tokenize(&llamaModel->vocab, prompt.data(), prompt.size(),
         tokenizedPrompt.data(), tokenizedPrompt.size(),
         add_bos, parseSpecial) < 0) {
         std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
@@ -527,7 +527,7 @@ const char* InferToReadbackBuffer(
     llama_perf_context_reset(context);
 
     std::string finishReason = "Unspecified";
-    std::string stoppedAt = "";
+    std::string stoppedAt;
 
     // Lambda function to process the prompt in chunked batches
     auto processPromptBatches = [&](std::vector<llama_token>& tokens) -> bool {
@@ -543,7 +543,7 @@ const char* InferToReadbackBuffer(
             const size_t remaining = tokens.size() - i;
             const size_t currentBatchSize = std::min(remaining, static_cast<size_t>(batchSize));
 
-            llama_batch batch = llama_batch_get_one(
+            const llama_batch batch = llama_batch_get_one(
                 tokens.data() + i,
                 currentBatchSize
             );
@@ -586,7 +586,7 @@ const char* InferToReadbackBuffer(
 
         llama_token newTokenId = llama_sampler_sample(smpl, context, -1);
 
-        if (llama_token_is_eog(model, newTokenId)) {
+        if (llama_vocab_is_eog(&model->vocab, newTokenId)) {
             return {newTokenId, true};
         }
 
