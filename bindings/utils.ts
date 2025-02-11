@@ -2,7 +2,8 @@ export function pointerArrayFromStrings(strings: string[]): BigUint64Array {
     const encoder = new TextEncoder();
 
     // Calculate total buffer size needed including null terminators
-    const totalSize = strings.reduce((sum, str) => sum + str.length + 1, 0);
+    const encodedStrings = strings.map(str => encoder.encode(str + "\0"));
+    const totalSize = encodedStrings.reduce((sum, encoded) => sum + encoded.length, 0);
 
     // Allocate single buffer for all strings
     const buffer = new Uint8Array(totalSize);
