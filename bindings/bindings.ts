@@ -623,6 +623,11 @@ export class Model {
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
     ): AsyncGenerator<GenerationChunk> {
+        // Cleanup operations
+        using _ = defer(() => {
+            this.readbackBuffer.reset();
+        });
+
         // Get out if the model is shutting down
         if (this.shutdown) {
             return;
@@ -757,6 +762,13 @@ export class Model {
                 finishResponse.finishReason == BindingFinishReason.CtxExceeded
             ) {
                 throw new Error("Prompt exceeds max context length");
+            } else if (
+                finishResponse.finishReason == BindingFinishReason.BatchDecode
+            ) {
+                throw new Error(
+                    "Internal generation state is broken due to llama_decode error. " +
+                        "Please restart the server.",
+                );
             }
 
             const totalTime = finishResponse.promptSec + finishResponse.genSec;
@@ -782,8 +794,6 @@ export class Model {
                 finishReason,
             };
         }
-
-        this.readbackBuffer.reset();
     }
 
     async tokenize(

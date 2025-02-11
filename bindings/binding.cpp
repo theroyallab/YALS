@@ -527,11 +527,17 @@ const char* InferToReadbackBuffer(
     llama_perf_context_reset(context);
 
     std::string finishReason = "Unspecified";
-    std::string stoppedAt;
+    std::string stoppedAt = "";
 
     // Lambda function to process the prompt in chunked batches
     auto processPromptBatches = [&](std::vector<llama_token>& tokens) -> bool {
         const int batchSize = llama_n_batch(context);
+        int n_ctx = llama_n_ctx(context);
+
+        if (tokens.size() > n_ctx) {
+            finishReason = "CtxExceeded";
+            return false;
+        }
 
         for (size_t i = 0; i < tokens.size(); i += batchSize) {
             const size_t remaining = tokens.size() - i;
@@ -555,6 +561,8 @@ const char* InferToReadbackBuffer(
 
     // Process the prompt in chunked batches
     if (!processPromptBatches(promptTokens)) {
+        readbackBufferPtr->jsonOutputBuffer = strdup(MakeJsonOutputString(context, finishReason, stoppedAt).c_str());
+        readbackBufferPtr->done = true;
         return nullptr;
     }
 
@@ -571,19 +579,12 @@ const char* InferToReadbackBuffer(
 
     // Continue generation
     auto gen = [&](const llama_batch& batch, llama_sampler* smpl) -> std::pair<llama_token, bool> {
-        int n_ctx = llama_n_ctx(context);
-        int n_ctx_used = llama_get_kv_cache_used_cells(context);
-        if (n_ctx_used + batch.n_tokens > n_ctx) {
-            finishReason = "CtxExceeded";
-            return {0, true};
-        }
-
         if (llama_decode(context, batch)) {
             finishReason = "BatchDecode";
             return {0, true};
         }
 
-        auto newTokenId = llama_sampler_sample(smpl, context, -1);
+        llama_token newTokenId = llama_sampler_sample(smpl, context, -1);
 
         if (llama_token_is_eog(model, newTokenId)) {
             return {newTokenId, true};
