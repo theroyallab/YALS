@@ -71,17 +71,4 @@ if(WIN32)
     set_target_properties(deno_cpp_binding PROPERTIES
             WINDOWS_EXPORT_ALL_SYMBOLS TRUE
     )
-
-    # Gather and copy all DLLs
-    file(GLOB DLL_FILES
-            ${CMAKE_CURRENT_BINARY_DIR}/bin/*.dll
-            ${CMAKE_CURRENT_BINARY_DIR}/deno_cpp_binding.dll
-    )
-
-    add_custom_command(TARGET deno_cpp_binding POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-            ${DLL_FILES}
-            ${CMAKE_CURRENT_SOURCE_DIR}/../lib
-            COMMENT "Copying DLLs to lib"
-    )
 endif()
