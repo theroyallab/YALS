@@ -1,8 +1,10 @@
 import { HonoRequest } from "hono";
+
+import { UsageStats } from "@/api/OAI/types/completions.ts";
 import { FinishChunk, Model } from "@/bindings/bindings.ts";
 import { logger } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
-import { UsageStats } from "@/api/OAI/types/completions.ts";
+import { toHttpException } from "@/common/networking.ts";
 
 export async function createUsageStats(chunk: FinishChunk) {
     const usage = await UsageStats.parseAsync({
@@ -30,12 +32,16 @@ export async function staticGenerate(
         }
     });
 
-    const result = await model.generate(
-        prompt,
-        params,
-        abortController.signal,
-    );
+    try {
+        const result = await model.generate(
+            prompt,
+            params,
+            abortController.signal,
+        );
 
-    finished = true;
-    return result;
+        finished = true;
+        return result;
+    } catch (error) {
+        throw toHttpException(error);
+    }
 }

@@ -24,16 +24,20 @@ extern "C" {
         int kCacheQuantType,
         int vCacheQuantType,
         float kvDefragThreshold // -1 to disable
-        );
+    );
 
+    // Info functions
     llama_token BosToken(const llama_model* model);
     llama_token EosToken(const llama_model* model);
     llama_token EotToken(const llama_model* model);
+    const char* TokenToString(const llama_model* model, llama_token token);
+    uint32_t MaxSeqLen(const llama_context* ctx);
+
+    // Clear functions
     void FreeSampler(llama_sampler* sampler);
     void FreeModel(llama_model* model);
     void FreeCtx(llama_context* ctx);
     void ClearContextKVCache(llama_context* ctx);
-    const char* TokenToString(const llama_model* model, llama_token token);
 
     ReadbackBuffer* CreateReadbackBuffer();
     void ResetReadbackBuffer(ReadbackBuffer* buffer);

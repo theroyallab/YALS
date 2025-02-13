@@ -147,6 +147,11 @@ const char* TokenToString(const llama_model* model, const llama_token token) {
     return llama_vocab_get_text(&model->vocab, token);
 }
 
+uint32_t MaxSeqLen(const llama_context* ctx)
+{
+    return llama_n_ctx(ctx);
+}
+
 void FreeSampler(llama_sampler* sampler)
 {
     llama_sampler_free(sampler);

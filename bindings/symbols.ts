@@ -43,6 +43,15 @@ export default {
         ],
         result: "i32" as const, // llama_token
     },
+    TokenToString: {
+        parameters: ["pointer", "i32"],
+        result: "pointer" as const,
+        nonblocking: true,
+    },
+    MaxSeqLen: {
+        parameters: ["pointer"], // llama_context* ctx
+        result: "u32" as const, // uint32_t
+    },
     FreeSampler: {
         parameters: ["pointer"],
         result: "void",
@@ -60,11 +69,6 @@ export default {
     FreeModel: {
         parameters: ["pointer"],
         result: "void",
-        nonblocking: true,
-    },
-    TokenToString: {
-        parameters: ["pointer", "i32"],
-        result: "pointer" as const,
         nonblocking: true,
     },
     MakeSampler: {

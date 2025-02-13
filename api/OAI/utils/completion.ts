@@ -12,6 +12,7 @@ import {
     CompletionRespChoice,
     CompletionResponse,
 } from "../types/completions.ts";
+import { toGeneratorError } from "@/common/networking.ts";
 
 async function createResponse(chunk: GenerationChunk, modelName: string) {
     const choice = await CompletionRespChoice.parseAsync({
@@ -48,28 +49,34 @@ export async function streamCompletion(
         }
     });
 
-    const generator = model.generateGen(
-        params.prompt,
-        params,
-        abortController.signal,
-    );
+    try {
+        const generator = model.generateGen(
+            params.prompt,
+            params,
+            abortController.signal,
+        );
 
-    for await (const chunk of generator) {
-        stream.onAbort(() => {
-            if (!finished) {
-                abortController.abort();
-                logger.error("Streaming completion aborted");
-                finished = true;
+        for await (const chunk of generator) {
+            const streamChunk = await createResponse(chunk, model.path.name);
 
-                // Break out of the stream loop
-                return;
-            }
-        });
+            stream.onAbort(() => {
+                if (!finished) {
+                    abortController.abort();
+                    logger.error("Streaming completion aborted");
+                    finished = true;
 
-        const streamChunk = await createResponse(chunk, model.path.name);
+                    // Break out of the stream loop
+                    return;
+                }
+            });
 
+            await stream.writeSSE({
+                data: JSON.stringify(streamChunk),
+            });
+        }
+    } catch (error) {
         await stream.writeSSE({
-            data: JSON.stringify(streamChunk),
+            data: JSON.stringify(toGeneratorError(error)),
         });
     }
 

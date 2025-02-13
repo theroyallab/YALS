@@ -460,11 +460,15 @@ export class Model {
     shutdown: boolean = false;
     generationLock: Mutex = new Mutex();
 
+    // Extra model info
+    maxSeqLen: number;
+
     private constructor(
         model: Deno.PointerValue,
         context: Deno.PointerValue,
         path: Path.ParsedPath,
         tokenizer: Tokenizer,
+        maxSeqLen: number,
         promptTemplate?: PromptTemplate,
     ) {
         this.model = model;
@@ -472,6 +476,7 @@ export class Model {
         this.path = path;
         this.tokenizer = tokenizer;
         this.promptTemplate = promptTemplate;
+        this.maxSeqLen = maxSeqLen;
         this.readbackBuffer = new ReadbackBuffer();
     }
 
@@ -525,6 +530,14 @@ export class Model {
             -1.0, //kvDefrag thresehold
         );
 
+        if (context === null) {
+            throw new Error(
+                "Model context not initialized. Read above logs for errors.",
+            );
+        }
+
+        const maxSeqLen = lib.symbols.MaxSeqLen(context);
+
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = await Tokenizer.init(model);
         const findTemplateFunctions = [
@@ -558,7 +571,8 @@ export class Model {
             logger.warn(
                 "Could not create a prompt template because of the above errors\n " +
                     "YALS will continue loading without the prompt template.\n" +
-                    "Please proofread the template and make sure it's compatible with huggingface's jinja subset.",
+                    "Please proofread the template and make sure it's compatible " +
+                    "with huggingface's jinja subset.",
             );
         }
 
@@ -567,6 +581,7 @@ export class Model {
             context,
             parsedModelPath,
             tokenizer,
+            maxSeqLen,
             promptTemplate,
         );
     }
@@ -761,7 +776,9 @@ export class Model {
             if (
                 finishResponse.finishReason == BindingFinishReason.CtxExceeded
             ) {
-                throw new Error("Prompt exceeds max context length");
+                throw new Error(
+                    `Prompt exceeds max context length of ${this.maxSeqLen}`,
+                );
             } else if (
                 finishResponse.finishReason == BindingFinishReason.BatchDecode
             ) {
@@ -881,7 +898,7 @@ export class Model {
         });
 
         if (templatePtr === null) {
-            throw new Error("Failed to get model chat template");
+            throw new Error("Failed to get model chat template from model");
         }
 
         // Copy to owned string

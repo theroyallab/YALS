@@ -60,13 +60,13 @@ export function createApi() {
             ? (currentStatus as ContentfulStatusCode)
             : 500;
 
-        if (err.stack) {
+        // Don't log a traceback for unauthorized
+        if (err.stack && currentStatus != 401) {
             logger.error(err.stack);
         }
 
         return c.json({
-            message: err.message,
-            stack: err.stack,
+            detail: err.message,
         }, statusCode);
     });
 

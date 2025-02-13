@@ -6,6 +6,7 @@ import {
 } from "@/api/OAI/utils/generation.ts";
 import { FinishChunk, GenerationChunk, Model } from "@/bindings/bindings.ts";
 import { logger } from "@/common/logging.ts";
+import { toGeneratorError } from "@/common/networking.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 
 import {
@@ -148,46 +149,54 @@ export async function streamChatCompletion(
         },
     );
 
-    const generator = model.generateGen(
-        prompt,
-        params,
-        abortController.signal,
-    );
-
-    for await (const chunk of generator) {
-        stream.onAbort(() => {
-            if (!finished) {
-                abortController.abort();
-                logger.error("Streaming completion aborted");
-                finished = true;
-
-                // Break out of the stream loop
-                return;
-            }
-        });
-
-        const streamChunk = await createStreamChunk(
-            chunk,
-            model.path.name,
-            cmplId,
+    try {
+        const generator = model.generateGen(
+            prompt,
+            params,
+            abortController.signal,
         );
 
-        await stream.writeSSE({
-            data: JSON.stringify(streamChunk),
-        });
+        for await (const chunk of generator) {
+            stream.onAbort(() => {
+                if (!finished) {
+                    abortController.abort();
+                    logger.error("Streaming completion aborted");
+                    finished = true;
 
-        // Write usage stats if user requests it
-        if (params.stream_options?.include_usage && chunk.kind === "finish") {
-            const usageChunk = await createUsageChunk(
+                    // Break out of the stream loop
+                    return;
+                }
+            });
+
+            const streamChunk = await createStreamChunk(
                 chunk,
                 model.path.name,
                 cmplId,
             );
 
             await stream.writeSSE({
-                data: JSON.stringify(usageChunk),
+                data: JSON.stringify(streamChunk),
             });
+
+            // Write usage stats if user requests it
+            if (
+                params.stream_options?.include_usage && chunk.kind === "finish"
+            ) {
+                const usageChunk = await createUsageChunk(
+                    chunk,
+                    model.path.name,
+                    cmplId,
+                );
+
+                await stream.writeSSE({
+                    data: JSON.stringify(usageChunk),
+                });
+            }
         }
+    } catch (error) {
+        await stream.writeSSE({
+            data: JSON.stringify(toGeneratorError(error)),
+        });
     }
 
     finished = true;
