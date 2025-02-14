@@ -1,13 +1,32 @@
 // @ts-types="@/types/jinja.d.ts"
 import {
     ArrayLiteral,
+    Environment,
     Identifier,
+    Interpreter,
     Literal,
     SetStatement,
     Template,
 } from "@huggingface/jinja";
 import * as z from "@/common/myZod.ts";
 import * as Path from "@std/path";
+
+// ts-types="@types/strftime"
+import strftime from "strftime";
+
+// From @huggingface/jinja
+export function range(start: number, stop?: number, step = 1): number[] {
+    if (stop === undefined) {
+        stop = start;
+        start = 0;
+    }
+
+    const result: number[] = [];
+    for (let i = start; i < stop; i += step) {
+        result.push(i);
+    }
+    return result;
+}
 
 const TemplateMetadataSchema = z.object({
     stop_strings: z.array(z.string()).optional(),
@@ -33,8 +52,34 @@ export class PromptTemplate {
         this.metadata = this.extractMetadata(this.template);
     }
 
+    // Overrides the template's render function to expose the env
     public render(context: Record<string, unknown> = {}): string {
-        return this.template.render(context);
+        const env = new Environment();
+
+        // Environment vars
+        env.set("false", false);
+        env.set("true", true);
+
+        // Function vars
+        env.set("raise_exception", (args: string) => {
+            throw new Error(args);
+        });
+        env.set("strftime_now", (format: string) => {
+            return strftime(format);
+        });
+        env.set("range", range);
+
+        // Add custom template vars
+        for (const [key, value] of Object.entries(context)) {
+            env.set(key, value);
+        }
+
+        // Run the template
+        const interpreter = new Interpreter(env);
+        const response = interpreter.run(this.template.parsed);
+
+        // Value is always a string here
+        return response.value as string;
     }
 
     private extractMetadata(template: Template) {

@@ -553,7 +553,9 @@ export class Model {
 
         for (const templateFunc of findTemplateFunctions) {
             try {
-                promptTemplate = await templateFunc;
+                if (!promptTemplate) {
+                    promptTemplate = await templateFunc;
+                }
             } catch (error) {
                 if (error instanceof Error) {
                     logger.warn(

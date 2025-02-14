@@ -12,6 +12,7 @@
     "@hono/zod-validator": "npm:@hono/zod-validator@^0.4.2",
     "@types/command-line-args": "npm:@types/command-line-args@^5.2.3",
     "@types/command-line-usage": "npm:@types/command-line-usage@^5.0.4",
+    "@types/strftime": "npm:@types/strftime@^0.9.8",
     "command-line-args": "npm:command-line-args@^6.0.1",
     "command-line-usage": "npm:command-line-usage@^7.0.3",
     "hono": "npm:hono@^4.6.20",
@@ -22,6 +23,7 @@
     "hono-openapi": "npm:hono-openapi@^0.4.4",
     "logtape": "jsr:@logtape/logtape@^0.8.1",
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
+    "strftime": "npm:strftime@^0.10.3",
     "zod": "npm:zod@^3.24.1",
     "zod-openapi": "npm:zod-openapi@^4.2.3"
   },
