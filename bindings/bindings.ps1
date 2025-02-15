@@ -7,12 +7,11 @@ if (Get-Command cmake -ErrorAction SilentlyContinue) {
 
 if (Test-Path env:CUDA_PATH) {
     $extraCmakeArgs += @(
-        "-DGGML_CUDA=ON",
-        "-DCMAKE_GENERATOR_TOOLSET='cuda=$env:CUDA_PATH'"
+        "-DGGML_CUDA=ON"
     )
 }
 
-cmake . -B build -DCMAKE_BUILD_TYPE=Release $extraCmakeArgs
-cmake --build build --config Release --target deno_cpp_binding
-cp build/Release/*.dll ../lib
-cp build/bin/Release/*.dll ../lib
+cmake . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release $extraCmakeArgs
+cmake --build build --config Release --target deno_cpp_binding\
+Copy-File build/*.dll ../lib
+Copy-File build/bin/*.dll ../lib
