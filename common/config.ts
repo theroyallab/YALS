@@ -39,5 +39,5 @@ export async function loadConfig(args: Record<string, unknown>) {
     }
 
     // Parse config
-    config = await ConfigSchema.parseAsync(parsedConfig);
+    config = ConfigSchema.parse(parsedConfig);
 }

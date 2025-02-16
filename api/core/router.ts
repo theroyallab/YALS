@@ -24,7 +24,7 @@ import { ModelConfig } from "@/common/configModels.ts";
 import { config } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
 import * as modelContainer from "@/common/modelContainer.ts";
-import { jsonContent } from "@/common/networking.ts";
+import { jsonContent, toHttpException } from "@/common/networking.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 
 import authMiddleware from "../middleware/authMiddleware.ts";
@@ -50,14 +50,14 @@ router.on(
                 continue;
             }
 
-            const modelCard = await ModelCard.parseAsync({
+            const modelCard = ModelCard.parse({
                 id: file.name.replace(".gguf", ""),
             });
 
             modelCards.push(modelCard);
         }
 
-        const modelList = await ModelList.parseAsync({
+        const modelList = ModelList.parse({
             data: modelCards,
         });
 
@@ -79,8 +79,8 @@ router.get(
     currentModelRoute,
     authMiddleware(AuthKeyPermission.API),
     checkModelMiddleware,
-    async (c) => {
-        const modelCard = await ModelCard.parseAsync({
+    (c) => {
+        const modelCard = ModelCard.parse({
             id: c.var.model.path.base,
         });
 
@@ -104,7 +104,7 @@ router.post(
     zValidator("json", ModelLoadRequest),
     async (c) => {
         const params = c.req.valid("json");
-        const loadParams = await ModelConfig.parseAsync({
+        const loadParams = ModelConfig.parse({
             ...params,
             model_dir: config.model.model_dir,
         });
@@ -187,7 +187,7 @@ router.on(
             templates.push(file.name.replace(".jinja", ""));
         }
 
-        const templateList = await TemplateList.parseAsync({
+        const templateList = TemplateList.parse({
             data: templates,
         });
 
@@ -232,18 +232,16 @@ router.get(
     "/v1/auth/permission",
     authPermissionRoute,
     authMiddleware(AuthKeyPermission.API),
-    async (c) => {
+    (c) => {
         try {
             const permission = getAuthPermission(c.req.header());
-            const response = await AuthPermissionResponse.parseAsync({
+            const response = AuthPermissionResponse.parse({
                 permission,
             });
 
             return c.json(response);
         } catch (error) {
-            if (error instanceof Error) {
-                throw new HTTPException(400, error);
-            }
+            throw toHttpException(error, 400);
         }
     },
 );
@@ -296,7 +294,7 @@ router.post(
             params.encode_special_tokens,
         );
 
-        const resp = await TokenEncodeResponse.parseAsync({
+        const resp = TokenEncodeResponse.parse({
             tokens,
             length: tokens.length,
         });
@@ -327,7 +325,7 @@ router.post(
             params.decode_special_tokens,
         );
 
-        const resp = await TokenDecodeResponse.parseAsync({
+        const resp = TokenDecodeResponse.parse({
             text,
         });
 

@@ -67,13 +67,13 @@ export async function loadAuthKeys() {
     const fileInfo = await Deno.stat(authFilePath).catch(() => null);
     if (fileInfo?.isFile) {
         const rawKeys = await Deno.readTextFile(authFilePath);
-        const parsedKeys = await AuthFileSchema.parseAsync(YAML.parse(rawKeys));
+        const parsedKeys = AuthFileSchema.parse(YAML.parse(rawKeys));
         authKeys = new AuthKeys(
             parsedKeys.api_key,
             parsedKeys.admin_key,
         );
     } else {
-        const newAuthFile = await AuthFileSchema.parseAsync({
+        const newAuthFile = AuthFileSchema.parse({
             api_key: generateApiToken(),
             admin_key: generateApiToken(),
         });

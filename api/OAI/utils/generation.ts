@@ -7,8 +7,8 @@ import { logger } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { toHttpException } from "@/common/networking.ts";
 
-export async function createUsageStats(chunk: FinishChunk) {
-    const usage = await UsageStats.parseAsync({
+export function createUsageStats(chunk: FinishChunk) {
+    const usage = UsageStats.parse({
         prompt_tokens: chunk.promptTokens,
         completion_tokens: chunk.genTokens,
         total_tokens: chunk.promptTokens + chunk.genTokens,

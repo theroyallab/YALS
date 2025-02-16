@@ -27,19 +27,19 @@ interface TemplateFormatOptions {
     templateVars?: Record<string, unknown>;
 }
 
-async function createResponse(chunk: FinishChunk, modelName: string) {
-    const message = await ChatCompletionMessage.parseAsync({
+function createResponse(chunk: FinishChunk, modelName: string) {
+    const message = ChatCompletionMessage.parse({
         role: "assistant",
         content: chunk.text,
     });
 
-    const choice = await ChatCompletionRespChoice.parseAsync({
+    const choice = ChatCompletionRespChoice.parse({
         message: message,
     });
 
-    const usage = await createUsageStats(chunk);
+    const usage = createUsageStats(chunk);
 
-    const response = await ChatCompletionResponse.parseAsync({
+    const response = ChatCompletionResponse.parse({
         choices: [choice],
         model: modelName,
         usage,
@@ -48,21 +48,21 @@ async function createResponse(chunk: FinishChunk, modelName: string) {
     return response;
 }
 
-async function createStreamChunk(
+function createStreamChunk(
     chunk: GenerationChunk,
     modelName: string,
     cmplId: string,
 ) {
-    const message = await ChatCompletionMessage.parseAsync({
+    const message = ChatCompletionMessage.parse({
         role: "assistant",
         content: chunk.text,
     });
 
-    const choice = await ChatCompletionStreamChoice.parseAsync({
+    const choice = ChatCompletionStreamChoice.parse({
         delta: message,
     });
 
-    const response = await ChatCompletionStreamChunk.parseAsync({
+    const response = ChatCompletionStreamChunk.parse({
         id: cmplId,
         choices: [choice],
         model: modelName,
@@ -71,15 +71,15 @@ async function createStreamChunk(
     return response;
 }
 
-async function createUsageChunk(
+function createUsageChunk(
     chunk: FinishChunk,
     modelName: string,
     cmplId: string,
 ) {
-    const response = ChatCompletionStreamChunk.parseAsync({
+    const response = ChatCompletionStreamChunk.parse({
         id: cmplId,
         model: modelName,
-        usage: await createUsageStats(chunk),
+        usage: createUsageStats(chunk),
     });
 
     return response;
@@ -169,7 +169,7 @@ export async function streamChatCompletion(
                 }
             });
 
-            const streamChunk = await createStreamChunk(
+            const streamChunk = createStreamChunk(
                 chunk,
                 model.path.name,
                 cmplId,
@@ -183,7 +183,7 @@ export async function streamChatCompletion(
             if (
                 params.stream_options?.include_usage && chunk.kind === "finish"
             ) {
-                const usageChunk = await createUsageChunk(
+                const usageChunk = createUsageChunk(
                     chunk,
                     model.path.name,
                     cmplId,
@@ -222,7 +222,7 @@ export async function generateChatCompletion(
     );
 
     const gen = await staticGenerate(req, model, prompt, params);
-    const response = await createResponse(gen, model.path.name);
+    const response = createResponse(gen, model.path.name);
 
     return response;
 }

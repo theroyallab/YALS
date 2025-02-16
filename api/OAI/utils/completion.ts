@@ -15,16 +15,14 @@ import {
 } from "../types/completions.ts";
 import { toGeneratorError } from "@/common/networking.ts";
 
-async function createResponse(chunk: GenerationChunk, modelName: string) {
-    const choice = await CompletionRespChoice.parseAsync({
+function createResponse(chunk: GenerationChunk, modelName: string) {
+    const choice = CompletionRespChoice.parse({
         text: chunk.text,
     });
 
-    const usage = chunk.kind === "finish"
-        ? await createUsageStats(chunk)
-        : undefined;
+    const usage = chunk.kind === "finish" ? createUsageStats(chunk) : undefined;
 
-    const response = await CompletionResponse.parseAsync({
+    const response = CompletionResponse.parse({
         choices: [choice],
         model: modelName,
         usage,
@@ -58,7 +56,7 @@ export async function streamCompletion(
         );
 
         for await (const chunk of generator) {
-            const streamChunk = await createResponse(chunk, model.path.name);
+            const streamChunk = createResponse(chunk, model.path.name);
 
             stream.onAbort(() => {
                 if (!finished) {
@@ -90,7 +88,7 @@ export async function generateCompletion(
     params: CompletionRequest,
 ) {
     const gen = await staticGenerate(req, model, params.prompt, params);
-    const response = await createResponse(gen, model.path.name);
+    const response = createResponse(gen, model.path.name);
 
     return response;
 }
