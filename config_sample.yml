@@ -13,6 +13,14 @@ network:
   # Turn on this option if you are ONLY connecting from localhost.
   disable_auth: false
 
+# Options for logging
+logging:
+  # Enable prompt logging (default: False)
+  log_prompt: false
+
+  # Enable generation parameter logging (default: False)
+  log_generation_params: false
+
 # Options for model overrides and loading
 model:
   # Directory to look for models (default: models).

@@ -1,5 +1,6 @@
 import { SSEStreamingApi } from "hono/streaming";
-import { GenerationChunk, Model } from "@/bindings/bindings.ts";
+import { Model } from "@/bindings/bindings.ts";
+import { GenerationChunk } from "@/bindings/types.ts";
 import { HonoRequest } from "hono";
 import {
     createUsageStats,

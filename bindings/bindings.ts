@@ -2,13 +2,20 @@ import { Mutex } from "@core/asyncutil";
 import { delay } from "@std/async";
 import * as Path from "@std/path";
 import { ModelConfig } from "@/common/configModels.ts";
+import { logGenParams, logger, logPrompt } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
+import { PromptTemplate } from "@/common/templating.ts";
+import { asyncDefer, defer } from "@/common/utils.ts";
 
 import llamaSymbols from "./symbols.ts";
 import { pointerArrayFromStrings } from "./utils.ts";
-import { PromptTemplate } from "@/common/templating.ts";
-import { logger } from "@/common/logging.ts";
-import { asyncDefer, defer } from "@/common/utils.ts";
+import {
+    BindingFinishReason,
+    BindingFinishResponse,
+    BindingStreamResponse,
+    FinishChunk,
+    GenerationChunk,
+} from "./types.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -63,54 +70,6 @@ const lib = (() => {
 
     return Deno.dlopen(libPath, llamaSymbols);
 })();
-
-// Subset for caching
-export enum GGMLType {
-    F32 = 0,
-    F16 = 1,
-    Q4_0 = 2,
-    Q4_1 = 3,
-    // 4 and 5 were removed (Q4_2 and Q4_3)
-    Q5_0 = 6,
-    Q5_1 = 7,
-    Q8_0 = 8,
-    Q8_1 = 9,
-}
-
-enum BindingFinishReason {
-    CtxExceeded = "CtxExceeded",
-    BatchDecode = "BatchDecode",
-    StopToken = "StopToken",
-    MaxNewTokens = "MaxNewTokens",
-    StopString = "StopString",
-}
-
-export type GenerationChunk = StreamChunk | FinishChunk;
-
-interface StreamChunk {
-    kind: "data";
-    text: string;
-    token: number;
-}
-
-type BindingStreamResponse = StreamChunk;
-
-export interface FinishChunk {
-    kind: "finish";
-    text: string;
-    promptTokens: number;
-    genTokens: number;
-    finishReason: string;
-    stopToken: string;
-}
-
-interface BindingFinishResponse extends FinishChunk {
-    promptSec: number;
-    genSec: number;
-    genTokensPerSec: number;
-    promptTokensPerSec: number;
-    finishReason: BindingFinishReason;
-}
 
 export class SamplerBuilder {
     private sampler: Deno.PointerValue;
@@ -642,6 +601,9 @@ export class Model {
     ): AsyncGenerator<GenerationChunk> {
         // Cleanup operations
         using _ = defer(() => {
+            // Log generation params to console
+            logGenParams(params);
+
             this.readbackBuffer.reset();
         });
 
@@ -741,6 +703,14 @@ export class Model {
         // Use the helper function for both arrays
         const rewindPtrArray = pointerArrayFromStrings(params.banned_strings);
         const stopPtrArray = pointerArrayFromStrings(params.stop);
+
+        const promptBosToken = params.add_bos_token
+            ? this.tokenizer.bosToken.piece
+            : "";
+
+        logPrompt(
+            promptBosToken + prompt,
+        );
 
         // Callback to abort the current generation
         const abortCallback: () => boolean = () => {

@@ -4,7 +4,8 @@ import {
     createUsageStats,
     staticGenerate,
 } from "@/api/OAI/utils/generation.ts";
-import { FinishChunk, GenerationChunk, Model } from "@/bindings/bindings.ts";
+import { Model } from "@/bindings/bindings.ts";
+import { FinishChunk, GenerationChunk } from "@/bindings/types.ts";
 import { logger } from "@/common/logging.ts";
 import { toGeneratorError } from "@/common/networking.ts";
 import { PromptTemplate } from "@/common/templating.ts";

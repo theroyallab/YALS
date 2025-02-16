@@ -1,7 +1,8 @@
 import { HonoRequest } from "hono";
 
 import { UsageStats } from "@/api/OAI/types/completions.ts";
-import { FinishChunk, Model } from "@/bindings/bindings.ts";
+import { Model } from "@/bindings/bindings.ts";
+import { FinishChunk } from "@/bindings/types.ts";
 import { logger } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { toHttpException } from "@/common/networking.ts";

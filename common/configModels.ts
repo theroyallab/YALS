@@ -1,5 +1,5 @@
 import * as z from "@/common/myZod.ts";
-import { GGMLType } from "@/bindings/bindings.ts";
+import { GGMLType } from "@/bindings/types.ts";
 
 export const NetworkConfig = z.object({
     host: z.string().nullish().coalesce("127.0.0.1"),
@@ -8,6 +8,13 @@ export const NetworkConfig = z.object({
 });
 
 export type NetworkConfig = z.infer<typeof NetworkConfig>;
+
+export const LoggingConfig = z.object({
+    log_prompt: z.boolean().nullish().coalesce(false),
+    log_generation_params: z.boolean().nullish().coalesce(false),
+});
+
+export type LoggingConfig = z.infer<typeof LoggingConfig>;
 
 export const ModelConfig = z.object({
     model_dir: z.string().nullish().coalesce("models"),
@@ -35,6 +42,7 @@ export type ModelConfig = z.infer<typeof ModelConfig>;
 
 export const ConfigSchema = z.object({
     network: NetworkConfig,
+    logging: LoggingConfig,
     model: ModelConfig,
 });
 

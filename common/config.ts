@@ -1,11 +1,17 @@
 import * as YAML from "@std/yaml";
 
-import { ConfigSchema, ModelConfig, NetworkConfig } from "./configModels.ts";
+import {
+    ConfigSchema,
+    LoggingConfig,
+    ModelConfig,
+    NetworkConfig,
+} from "./configModels.ts";
 import { logger } from "@/common/logging.ts";
 
 // Initialize with an empty config
 export let config: ConfigSchema = ConfigSchema.parse({
     network: NetworkConfig.parse({}),
+    logging: LoggingConfig.parse({}),
     model: ModelConfig.parse({}),
 });
 
