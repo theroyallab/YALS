@@ -28,16 +28,19 @@ export async function loadConfig(args: Record<string, unknown>) {
     const rawConfigStr = new TextDecoder().decode(rawConfig);
 
     const parsedConfig = YAML.parse(rawConfigStr) as Record<string, unknown>;
+    const mergedConfig: Record<string, unknown> = {};
 
-    // Merge args with config
-    for (const groupName of Object.keys(parsedConfig)) {
-        const group = parsedConfig[groupName] as Record<string, unknown>;
-
-        if (args[groupName]) {
-            parsedConfig[groupName] = { ...group, ...args[groupName] };
-        }
+    // Single loop to merge default config, file config, and args
+    for (const key of Object.keys(config) as Array<keyof typeof config>) {
+        mergedConfig[key] = {
+            ...config[key],
+            ...(parsedConfig[key] as Record<string, unknown> || {}),
+            ...(args[key] as Record<string, unknown> || {}),
+        };
     }
 
-    // Parse config
-    config = ConfigSchema.parse(parsedConfig);
+    console.log(mergedConfig);
+
+    // Parse merged config
+    config = ConfigSchema.parse(mergedConfig);
 }
