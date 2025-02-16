@@ -39,8 +39,6 @@ export async function loadConfig(args: Record<string, unknown>) {
         };
     }
 
-    console.log(mergedConfig);
-
     // Parse merged config
     config = ConfigSchema.parse(mergedConfig);
 }
