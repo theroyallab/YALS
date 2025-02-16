@@ -12,6 +12,6 @@ if (Test-Path env:CUDA_PATH) {
 }
 
 cmake . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release $extraCmakeArgs
-cmake --build build --config Release --target deno_cpp_binding\
-Copy-File build/*.dll ../lib
-Copy-File build/bin/*.dll ../lib
+cmake --build build --config Release --target deno_cpp_binding
+Copy-Item build/*.dll ../lib
+Copy-Item build/bin/*.dll ../lib
