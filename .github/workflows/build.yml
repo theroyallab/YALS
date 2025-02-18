@@ -1,0 +1,180 @@
+on:
+  push:
+    branches: [actions]
+
+jobs:
+  unix-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+        device: [cpu, metal, cuda]
+        exclude:
+          - os: macos-15
+            device: cpu
+          - os: macos-15
+            device: cuda
+          - os: ubuntu-24.04
+            device: metal
+  
+    container: ${{ matrix.device == 'cuda' && 'nvidia/cuda:12.8.0-devel-ubuntu24.04' || '' }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.device }}
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install System Dependencies
+        if: ${{ runner.os == 'Linux' && matrix.device == 'cuda' }}
+        run: |
+          apt update
+          apt install -y cmake build-essential zip unzip libgomp1 git
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.7
+      - name: Configure sccache
+        id: sccache
+        run: |
+          export SCCACHE_DIR="$PWD/bindings/.sccache"
+          echo "SCCACHE_DIR=$SCCACHE_DIR" >> $GITHUB_ENV
+      - name: Cache sccache storage
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.sha }}
+          restore-keys: |
+            sccache-${{ runner.os }}-${{ matrix.device }}-
+      - name: Get short SHA
+        id: sha
+        run: |
+          LONG_SHA=${{ github.sha }}
+          echo "sha=${LONG_SHA::7}" >> $GITHUB_OUTPUT
+      - name: Install dependencies
+        run: deno install
+      - name: Build bindings and compile
+        run: |
+          if [ "${{ matrix.device }}" = "cuda" ]; then
+            export GGML_CUDA=1
+          fi
+          deno task bindings
+          deno task compile
+      - name: Set folder name
+        id: folder-name
+        run: echo "name=YALS-${{ runner.os }}-${{ matrix.device }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
+      - name: Move to artifact folder
+        run: |
+          mkdir ${{ steps.folder-name.outputs.name }}
+          mv lib models templates config_sample.yml YALS ${{ steps.folder-name.outputs.name }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.folder-name.outputs.name }}
+          path: ./${{ steps.folder-name.outputs.name }}
+          if-no-files-found: error
+      - name: Zip files
+        run: |
+          cd ${{ steps.folder-name.outputs.name }}
+          zip -r ${{ steps.folder-name.outputs.name }}.zip YALS lib/* models/* templates/* config_sample.yml
+
+  windows-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2022]
+        device: [cpu, cuda]
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.device }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CUDA 12.8
+        if: ${{ matrix.device == 'cuda' }}
+        run: |
+          mkdir -p "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8"
+          choco install unzip -y
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-12.8.57-archive.zip"
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvcc/windows-x86_64/cuda_nvcc-windows-x86_64-12.8.61-archive.zip"
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvrtc/windows-x86_64/cuda_nvrtc-windows-x86_64-12.8.61-archive.zip"
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/libcublas-windows-x86_64-12.8.3.14-archive.zip"
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvtx/windows-x86_64/cuda_nvtx-windows-x86_64-12.8.55-archive.zip"
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/cuda_profiler_api/windows-x86_64/cuda_profiler_api-windows-x86_64-12.8.55-archive.zip"
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/visual_studio_integration/windows-x86_64/visual_studio_integration-windows-x86_64-12.8.55-archive.zip"
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvprof/windows-x86_64/cuda_nvprof-windows-x86_64-12.8.57-archive.zip"
+          curl -O "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cccl/windows-x86_64/cuda_cccl-windows-x86_64-12.8.55-archive.zip"
+          unzip '*.zip' -d "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8"
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\cuda_cudart-windows-x86_64-12.8.57-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\cuda_nvcc-windows-x86_64-12.8.61-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\cuda_nvrtc-windows-x86_64-12.8.61-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\libcublas-windows-x86_64-12.8.3.14-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\cuda_nvtx-windows-x86_64-12.8.55-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\cuda_profiler_api-windows-x86_64-12.8.55-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\visual_studio_integration-windows-x86_64-12.8.55-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\cuda_nvprof-windows-x86_64-12.8.57-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          xcopy "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\cuda_cccl-windows-x86_64-12.8.55-archive\*" "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" /E /I /H /Y
+          echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\libnvvp" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          echo "CUDA_PATH_V12_8=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.7
+      - name: Configure sccache
+        run: |
+          $env:SCCACHE_DIR="$PWD/bindings/.sccache"
+          echo "SCCACHE_DIR=$env:SCCACHE_DIR" >> $env:GITHUB_ENV
+      - name: Cache sccache storage
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.sha }}
+          restore-keys: |
+            sccache-${{ runner.os }}-${{ matrix.device }}-
+      - name: Get short SHA
+        id: sha
+        run: echo "sha=$("${{ github.sha }}".Substring(0,7))" >> $env:GITHUB_OUTPUT
+      - name: Install dependencies
+        run: deno install
+      - name: Build bindings and compile
+        run: |
+          $OldDir = $PWD
+          Import-Module 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+          Enter-VsDevShell -VsInstallPath 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise' -DevCmdArguments '-arch=x64 -host_arch=x64'
+          cd $OldDir
+          if ('${{ matrix.device }}' -eq 'cuda') {
+            $env:GGML_CUDA = 1
+          }
+          deno task bindings-win
+          deno task compile
+      - name: Set folder name
+        id: folder-name
+        run: echo "name=YALS-${{ runner.os }}-${{ matrix.device }}-${{ steps.sha.outputs.sha }}" >> $env:GITHUB_OUTPUT
+      - name: Move to artifact folder
+        run: |
+          mkdir ${{ steps.folder-name.outputs.name }}
+          mv YALS.exe,lib,models,templates,config_sample.yml ${{ steps.folder-name.outputs.name }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.folder-name.outputs.name }}
+          path: ./${{ steps.folder-name.outputs.name }}
+          if-no-files-found: error      
+      - name: Zip files
+        run: |
+          cd ${{ steps.folder-name.outputs.name }}
+          Compress-Archive -Path @('.\YALS.exe', '.\lib', '.\models', '.\templates', '.\config_sample.yml') -DestinationPath ${{ steps.folder-name.outputs.filename }}.zip
