@@ -1,0 +1,116 @@
+on:
+  push:
+    branches: [actions]
+
+jobs:
+  unix-build-cpu:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        #os: [ubuntu-24.04, macos-15]
+        os: [ubuntu-24.04]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.7
+      - name: Configure sccache
+        id: sccache
+        run: |
+          export SCCACHE_DIR="$PWD/bindings/.sccache"
+          echo "SCCACHE_DIR=$SCCACHE_DIR" >> $GITHUB_ENV
+      - name: Cache sccache storage
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.os }}-cpu-${{ github.sha }}
+          restore-keys: |
+            sccache-${{ runner.os }}-cpu-
+      - name: Get short SHA
+        id: sha
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: Install dependencies
+        run: deno install
+      - name: Build bindings and compile
+        run: |
+          deno task bindings
+          deno task compile
+      - name: Set folder name
+        id: folder-name
+        run: echo "name=YALS-${{ runner.os }}-${{runner.os == 'macOS' && 'metal' || 'cpu'}}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
+      - name: Move to artifact folder
+        run: |
+          mkdir ${{ steps.folder-name.outputs.name }}
+          mv lib models templates config_sample.yml YALS ${{ steps.folder-name.outputs.name }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.folder-name.outputs.name }}
+          path: ./${{ steps.folder-name.outputs.name }}
+          if-no-files-found: error
+      - name: Zip files
+        run: |
+          cd ${{ steps.folder-name.outputs.name }}
+          zip -r ${{ steps.folder-name.outputs.name }}.zip YALS lib/* models/* templates/* config_sample.yml
+
+  windows-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2022]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.7
+      - name: Configure sccache
+        run: |
+          $env:SCCACHE_DIR="$PWD/bindings/.sccache"
+          echo "SCCACHE_DIR=$env:SCCACHE_DIR" >> $env:GITHUB_ENV
+      - name: Cache sccache storage
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.os }}-cpu-${{ github.sha }}
+          restore-keys: |
+            sccache-${{ runner.os }}-cpu-
+      - name: Get short SHA
+        id: sha
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $env:GITHUB_OUTPUT
+      - name: Install dependencies
+        run: deno install
+      - name: Build bindings and compile
+        run: |
+          $OldDir = $PWD
+          Import-Module 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+          Enter-VsDevShell -VsInstallPath 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise' -DevCmdArguments '-arch=x64 -host_arch=x64'
+          cd $OldDir
+          deno task bindings-win
+          deno task compile
+      - name: Set folder name
+        id: folder-name
+        run: echo "name=YALS-${{ runner.os }}-cpu-${{ steps.sha.outputs.sha }}" >> $env:GITHUB_OUTPUT
+      - name: Move to artifact folder
+        run: |
+          mkdir ${{ steps.folder-name.outputs.name }}
+          mv YALS.exe,lib,models,templates,config_sample.yml ${{ steps.folder-name.outputs.name }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.folder-name.outputs.name }}
+          path: ./${{ steps.folder-name.outputs.name }}
+          if-no-files-found: error      
+      - name: Zip files
+        run: |
+          cd ${{ steps.folder-name.outputs.name }}
+          Compress-Archive -Path @('.\YALS.exe', '.\lib', '.\models', '.\templates', '.\config_sample.yml') -DestinationPath ${{ steps.folder-name.outputs.filename }}.zip
