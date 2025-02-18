@@ -6,6 +6,7 @@
 /node_modules
 /bindings/home/
 /bindings/gguf
+bindings/.sccache
 
 .env
 *.orig
@@ -24,7 +25,7 @@ bindings/build
 
 # Lib
 lib/*
-!lib/add_libs_here.txt
+!lib/place_libs_here.txt
 
 # build
 build/*
