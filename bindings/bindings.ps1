@@ -5,7 +5,9 @@ if (Get-Command cmake -ErrorAction SilentlyContinue) {
     Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
 }
 
-if (Test-Path env:CUDA_PATH) {
+if ($env:GGML_CUDA -eq 1) {
+    Write-Host "CUDA enabled, including in build"
+
     $extraCmakeArgs += @(
         "-DGGML_CUDA=ON"
     )
