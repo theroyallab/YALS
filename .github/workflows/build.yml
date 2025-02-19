@@ -9,6 +9,10 @@ jobs:
       matrix:
         #os: [ubuntu-24.04, macos-15]
         os: [ubuntu-24.04]
+  
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      cancel-in-progress: true
 
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +66,10 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022]
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      cancel-in-progress: true
 
     steps:
       - uses: actions/checkout@v4
