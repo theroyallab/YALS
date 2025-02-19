@@ -3,13 +3,13 @@ on:
     branches: [actions]
 
 jobs:
-  unix-build-cpu:
+  unix-build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         #os: [ubuntu-24.04, macos-15]
         os: [ubuntu-24.04]
-        device: [cpu, metal]
+        device: [cpu, metal, cuda]
         exclude:
           - os: macos-15
             device: cpu
@@ -23,12 +23,23 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.device }}
       cancel-in-progress: true
 
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - uses: actions/checkout@v4
+      - name: Install System Dependencies
+        if: ${{ runner.os == 'Linux' && matrix.device == 'cuda' }}
+        run: |
+          apt update
+          apt install -y cmake build-essential zip unzip libgomp1 git
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.7
       - name: Configure sccache
@@ -45,11 +56,16 @@ jobs:
             sccache-${{ runner.os }}-${{ matrix.device }}-
       - name: Get short SHA
         id: sha
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: |
+          LONG_SHA=${{ github.sha }}
+          echo "sha=${LONG_SHA::7}" >> $GITHUB_OUTPUT
       - name: Install dependencies
         run: deno install
       - name: Build bindings and compile
         run: |
+          if [ "${{ matrix.device }}" = "cuda" ]; then
+            export GGML_CUDA=1
+          fi
           deno task bindings
           deno task compile
       - name: Set folder name
@@ -132,7 +148,7 @@ jobs:
             sccache-${{ runner.os }}-${{ matrix.device }}-
       - name: Get short SHA
         id: sha
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $env:GITHUB_OUTPUT
+        run: echo "sha=$("${{ github.sha }}".Substring(0,7))" >> $env:GITHUB_OUTPUT
       - name: Install dependencies
         run: deno install
       - name: Build bindings and compile
