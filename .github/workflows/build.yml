@@ -9,9 +9,17 @@ jobs:
       matrix:
         #os: [ubuntu-24.04, macos-15]
         os: [ubuntu-24.04]
+        device: [cpu, cuda, metal]
+        exclude:
+          - os: macos-15
+            device: cpu
+          - os: macos-15
+            device: cuda
+          - os: ubuntu-24.04
+            device: metal
   
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.device }}
       cancel-in-progress: true
 
     steps:
@@ -31,9 +39,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-cpu-${{ github.sha }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.sha }}
           restore-keys: |
-            sccache-${{ runner.os }}-cpu-
+            sccache-${{ runner.os }}-${{ matrix.device }}-
       - name: Get short SHA
         id: sha
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
@@ -45,7 +53,7 @@ jobs:
           deno task compile
       - name: Set folder name
         id: folder-name
-        run: echo "name=YALS-${{ runner.os }}-${{runner.os == 'macOS' && 'metal' || 'cpu'}}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
+        run: echo "name=YALS-${{ runner.os }}-${{ matrix.device }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
       - name: Move to artifact folder
         run: |
           mkdir ${{ steps.folder-name.outputs.name }}
@@ -66,9 +74,10 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022]
+        device: [cpu, cuda]
 
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.device }}
       cancel-in-progress: true
 
     steps:
@@ -89,9 +98,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-cpu-${{ github.sha }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.sha }}
           restore-keys: |
-            sccache-${{ runner.os }}-cpu-
+            sccache-${{ runner.os }}-${{ matrix.device }}-
       - name: Get short SHA
         id: sha
         run: echo "sha=$(git rev-parse --short HEAD)" >> $env:GITHUB_OUTPUT
@@ -107,7 +116,7 @@ jobs:
           deno task compile
       - name: Set folder name
         id: folder-name
-        run: echo "name=YALS-${{ runner.os }}-cpu-${{ steps.sha.outputs.sha }}" >> $env:GITHUB_OUTPUT
+        run: echo "name=YALS-${{ runner.os }}-${{ matrix.device }}-${{ steps.sha.outputs.sha }}" >> $env:GITHUB_OUTPUT
       - name: Move to artifact folder
         run: |
           mkdir ${{ steps.folder-name.outputs.name }}
