@@ -3,7 +3,7 @@
     "dev": "deno run -A --watch main.ts",
     "start": "deno run --allow-read --allow-write=api_tokens.yml --allow-env --allow-sys --allow-net --allow-ffi main.ts",
     "compile": "deno compile --allow-read --allow-write=api_tokens.yml --allow-env --allow-sys --allow-net --allow-ffi main.ts",
-    "bindings": "cd bindings && cmake . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release --target deno_cpp_binding",
+    "bindings": "cd bindings && ./bindings.sh",
     "bindings-win": "cd bindings && powershell -ExecutionPolicy Bypass -File bindings.ps1"
   },
   "imports": {
