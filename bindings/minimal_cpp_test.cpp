@@ -4,7 +4,7 @@
 #include <chrono>
 
 int main() {
-    const std::string modelPath = "/home/blackroot/Desktop/YALS/bindings/gguf/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf";
+    const std::string modelPath = "D:\\koboldcpp\\allura-org_Bigger-Body-8b-Q6_K_L.gguf";
     const auto modelLayers = 999;
     const auto ctxLen = 8192;
     const auto prompt = "This is the test prompt";
@@ -15,21 +15,19 @@ int main() {
     const auto ctx = InitiateCtx(
         model,
         ctxLen,
+        modelLayers,
         512,
         true,
-        false,
-        false,
-        0,
         0,
         false,
-        -1,
-        -1,
-        0,
-        -1,
-        -1,
         1,
         1,
         -1);
+
+    auto eotId = 0;
+    std::cout << eotId << std::endl;
+    auto eotPiece = llama_vocab_get_text(&model->vocab, eotId);
+    std::cout << eotPiece << std::endl;
 
     const auto sampler = MakeSampler();
     GreedySampler(sampler);
