@@ -64,12 +64,12 @@ namespace MatchTrie {
                     return MatchResult::NO;
                 }
                 current = current->children[lowerChar].get();
-            }
 
-            if (current->isEndOfWord) {
-                return (current->matchType == MatchType::REWIND) ?
-                       MatchResult::MATCHED_REWIND :
-                       MatchResult::MATCHED_STOP;
+                if (current->isEndOfWord) {
+                    return (current->matchType == MatchType::REWIND) ?
+                           MatchResult::MATCHED_REWIND :
+                           MatchResult::MATCHED_STOP;
+                }
             }
 
             return MatchResult::MAYBE;

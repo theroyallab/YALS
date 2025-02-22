@@ -631,33 +631,33 @@ const char* InferToReadbackBuffer(
 
         if (!buffer.empty()) {
             MatchTrie::MatchResult matchResult;
+            size_t nonSpacePos = buffer.find_first_not_of(' ');
 
-            //Strip leading spaces which is a common issue that will confuse the trie matching.
-            if (buffer.find_first_not_of(' ') != std::string::npos) {
-                matchResult = matchingTrie.CheckBuffer(buffer.substr(buffer.find_first_not_of(' ')));
+            // Strip leading spaces which is a common issue that will confuse the trie matching.
+            if (nonSpacePos != std::string::npos) {
+                matchResult = matchingTrie.CheckBuffer(buffer.substr(nonSpacePos));
             } else {
                 matchResult = matchingTrie.CheckBuffer(buffer);
             }
 
             if (matchResult == MatchTrie::MatchResult::NO) {
-
                 WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()), newTokenId);
                 response += buffer;
                 buffer = "";
 
-                //Save last known accept point in case we have to rewind back to the last accept.
+                // Save last known accept point in case we have to rewind back to the last accept.
                 rewindPos = llama_get_kv_cache_used_cells(context);
                 rewindTokenId = newTokenId;
                 rewindTokenCount = tokenCount;
-                //If we had a rewind state built, tear it down as we've accepted a sequence.
+
+                // If we had a rewind state built, tear it down as we've accepted a sequence.
                 if (banSampler != nullptr) {
                     llama_sampler_free(banSampler);
                     banSampler = nullptr;
                     biases.clear();
                 }
-
             } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
-                //Matched a stop, break.
+                // Matched a stop, break.
                 finishReason = "StopString";
                 stoppedAt = TokenToPiece(model, newTokenId).value();
                 break;
