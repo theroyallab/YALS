@@ -368,11 +368,11 @@ interface Token {
 }
 
 class Tokenizer {
-    bosToken: Token;
-    eosToken: Token;
-    eotToken: Token;
+    bosToken?: Token;
+    eosToken?: Token;
+    eotToken?: Token;
 
-    private constructor(bosToken: Token, eosToken: Token, eotToken: Token) {
+    private constructor(bosToken?: Token, eosToken?: Token, eotToken?: Token) {
         this.bosToken = bosToken;
         this.eosToken = eosToken;
         this.eotToken = eotToken;
@@ -383,15 +383,20 @@ class Tokenizer {
         const eosTokenId = lib.symbols.EosToken(model);
         const eotTokenId = lib.symbols.EotToken(model);
 
-        const bosTokenPiece = await this.tokenToText(model, bosTokenId);
-        const eosTokenPiece = await this.tokenToText(model, eosTokenId);
-        const eotTokenPiece = await this.tokenToText(model, eotTokenId);
+        const bosToken = await this.createTokenPair(model, bosTokenId);
+        const eosToken = await this.createTokenPair(model, eosTokenId);
+        const eotToken = await this.createTokenPair(model, eotTokenId);
 
-        return new Tokenizer(
-            { id: bosTokenId, piece: bosTokenPiece },
-            { id: eosTokenId, piece: eosTokenPiece },
-            { id: eotTokenId, piece: eotTokenPiece },
-        );
+        return new Tokenizer(bosToken, eosToken, eotToken);
+    }
+
+    static async createTokenPair(model: Deno.PointerValue, tokenId: number) {
+        if (tokenId == -1) {
+            return undefined;
+        }
+
+        const piece = await this.tokenToText(model, tokenId);
+        return { id: tokenId, piece };
     }
 
     static async tokenToText(model: Deno.PointerValue, tokenId: number) {
@@ -646,9 +651,14 @@ export class Model {
 
         if (params.ban_eos_token) {
             const eogLogitBias: LogitBias[] = [
-                { token: this.tokenizer.eosToken.id, bias: -100 },
-                { token: this.tokenizer.eotToken.id, bias: -100 },
-            ];
+                this.tokenizer.eosToken,
+                this.tokenizer.eotToken,
+            ]
+                .filter((token) => token !== undefined)
+                .map((token) => ({
+                    token: token.id,
+                    bias: -100,
+                }));
 
             logitBias.push(...eogLogitBias);
         }
@@ -705,7 +715,7 @@ export class Model {
         const stopPtrArray = pointerArrayFromStrings(params.stop);
 
         const promptBosToken = params.add_bos_token
-            ? this.tokenizer.bosToken.piece
+            ? this.tokenizer.bosToken?.piece
             : "";
 
         logPrompt(
