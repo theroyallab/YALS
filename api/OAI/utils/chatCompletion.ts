@@ -110,8 +110,8 @@ export function applyChatTemplate(
     const prompt = promptTemplate.render({
         ...templateVars,
         messages: messages,
-        bos_token: addBosToken ? model.tokenizer.bosToken.piece : "",
-        eos_token: banEosToken ? "" : model.tokenizer.eosToken.piece,
+        bos_token: addBosToken ? model.tokenizer.bosToken?.piece : "",
+        eos_token: banEosToken ? "" : model.tokenizer.eosToken?.piece,
         add_generation_prompt: addGenerationPrompt,
     });
 
