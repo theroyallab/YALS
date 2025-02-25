@@ -1,16 +1,21 @@
 cmake_minimum_required(VERSION 3.14.0 FATAL_ERROR)
-
 set(CMAKE_CXX_STANDARD 17)
-
 project(DenoCppInterop)
+
+# Set RPath for Apple and Unix systems
+if (APPLE)
+    set(CMAKE_BUILD_RPATH "@loader_path")
+elseif (UNIX)
+    set(CMAKE_BUILD_RPATH "$ORIGIN")
+endif()
 
 # Fetch llama.cpp latest
 # FIXME: Maybe use a vendored llama.cpp build for stability
 include(FetchContent)
 FetchContent_Declare(
-        llama
-        GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-        GIT_TAG af7747c95ae71a5db4184947f837179e82c70b77
+    llama
+    GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
+    GIT_TAG af7747c95ae71a5db4184947f837179e82c70b77
 )
 
 # Required for proper builds
@@ -21,25 +26,21 @@ set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "llama.cpp: build examples" FORCE)
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "llama.cpp: build tests" FORCE)
 set(LLAMA_BUILD_SERVER OFF CACHE BOOL "llama.cpp: build server" FORCE)
 
-# Enable GGML_CUDA by default
-# TODO: Switch this off in production
-#set(GGML_CUDA ON CACHE BOOL "Enable CUDA" FORCE)
-
 FetchContent_MakeAvailable(llama)
 
 # Apple build changes
 # From llama-cpp-python
 if (APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        # Need to disable these llama.cpp flags on Apple x86_64,
-        # otherwise users may encounter invalid instruction errors
-        set(GGML_AVX "Off" CACHE BOOL "ggml: enable AVX" FORCE)
-        set(GGML_AVX2 "Off" CACHE BOOL "ggml: enable AVX2" FORCE)
-        set(GGML_FMA "Off" CACHE BOOL "gml: enable FMA" FORCE)
-        set(GGML_F16C "Off" CACHE BOOL "gml: enable F16C" FORCE)
+    # Need to disable these llama.cpp flags on Apple x86_64,
+    # otherwise users may encounter invalid instruction errors
+    set(GGML_AVX "Off" CACHE BOOL "ggml: enable AVX" FORCE)
+    set(GGML_AVX2 "Off" CACHE BOOL "ggml: enable AVX2" FORCE)
+    set(GGML_FMA "Off" CACHE BOOL "gml: enable FMA" FORCE)
+    set(GGML_F16C "Off" CACHE BOOL "gml: enable F16C" FORCE)
 endif()
 
 if (APPLE)
-        set(GGML_METAL_EMBED_LIBRARY ON CACHE BOOL "llama: embed metal library" FORCE)
+    set(GGML_METAL_EMBED_LIBRARY ON CACHE BOOL "llama: embed metal library" FORCE)
 endif()
 
 add_library(deno_cpp_binding SHARED
@@ -47,9 +48,9 @@ add_library(deno_cpp_binding SHARED
 )
 
 target_include_directories(deno_cpp_binding
-        PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${llama_SOURCE_DIR}
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${llama_SOURCE_DIR}
 )
 
 target_link_libraries(deno_cpp_binding PRIVATE llama)
@@ -61,7 +62,7 @@ set_target_properties(deno_cpp_binding PROPERTIES
 )
 
 add_executable(minimal_cpp_test
-        minimal_cpp_test.cpp
+    minimal_cpp_test.cpp
 )
 
 target_link_libraries(minimal_cpp_test PRIVATE llama)
@@ -69,6 +70,6 @@ target_link_libraries(minimal_cpp_test PRIVATE llama)
 # Windows options
 if(WIN32)
     set_target_properties(deno_cpp_binding PROPERTIES
-            WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+        WINDOWS_EXPORT_ALL_SYMBOLS TRUE
     )
 endif()

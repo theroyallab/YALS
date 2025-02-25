@@ -51,17 +51,9 @@ const lib = (() => {
             libPath += `${libName}.dll`;
             break;
         case "linux":
-            Deno.env.set(
-                "LD_LIBRARY_PATH",
-                `${Deno.env.get("LD_LIBRARY_PATH")}:${libDir}`,
-            );
             libPath += `${libName}.so`;
             break;
         case "darwin":
-            Deno.env.set(
-                "DYLD_LIBRARY_PATH",
-                `${Deno.env.get("DYLD_LIBRARY_PATH")}:${libDir}`,
-            );
             libPath += `${libName}.dylib`;
             break;
         default:
