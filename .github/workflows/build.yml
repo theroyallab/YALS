@@ -72,6 +72,20 @@ jobs:
           fi
           deno task bindings
           deno task compile
+          chmod +x YALS
+      - name: Copy CUDA libraries
+        run: |
+          # Move native CUDA lib files
+          cp /usr/local/cuda/lib64/libcudart.so.12.* lib
+          cp /usr/local/cuda/lib64/libcublas.so.12.* lib
+          cp /usr/local/cuda/lib64/libcublasLt.so.12.* lib
+
+          # Create symlinks
+          cd lib
+          mv libcudart.so* libcudart.so.12
+          mv libcublas.so* libcublas.so.12
+          mv libcublasLt.so* libcublasLt.so.12
+        if: ${{ matrix.device == 'cuda' }}
       - name: Set folder name
         id: folder-name
         run: echo "name=YALS-${{ runner.os }}-${{ matrix.device }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
@@ -166,6 +180,16 @@ jobs:
           }
           deno task bindings-win
           deno task compile
+      - name: Copy vcruntime
+        run: |
+          cp "C:\Windows\System32\vcruntime140.dll" lib
+          cp "C:\Windows\System32\vcruntime140_1.dll" lib
+      - name: Copy CUDA libraries
+        run: |
+          cp "${env:CUDA_PATH}\bin\cudart64_*.dll" lib
+          cp "${env:CUDA_PATH}\bin\cublas64_*.dll" lib
+          cp "${env:CUDA_PATH}\bin\cublasLt64_*.dll" lib
+        if: ${{ matrix.device == 'cuda' }}
       - name: Set folder name
         id: folder-name
         run: echo "name=YALS-${{ runner.os }}-${{ matrix.device }}-${{ steps.sha.outputs.sha }}" >> $env:GITHUB_OUTPUT
@@ -178,7 +202,7 @@ jobs:
         with:
           name: ${{ steps.folder-name.outputs.name }}
           path: ./${{ steps.folder-name.outputs.name }}
-          if-no-files-found: error      
+          if-no-files-found: error
       - name: Zip files
         run: |
           cd ${{ steps.folder-name.outputs.name }}
