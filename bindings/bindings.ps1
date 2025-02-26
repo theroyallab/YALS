@@ -14,6 +14,6 @@ if ($env:GGML_CUDA -eq 1) {
 }
 
 cmake . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release $extraCmakeArgs
-cmake --build build --config Release --target deno_cpp_binding
+cmake --build build --config Release --target deno_cpp_binding -j $env:NUMBER_OF_PROCESSORS
 Copy-Item build/*.dll ../lib
 Copy-Item build/bin/*.dll ../lib

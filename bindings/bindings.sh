@@ -6,7 +6,7 @@ if [ "$GGML_CUDA" = "1" ]; then
 fi
 
 cmake . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release ${EXTRA_CMAKE_ARGS}
-cmake --build build --config Release --target deno_cpp_binding
+cmake --build build --config Release --target deno_cpp_binding -j $(nproc --all)
 
 OS=$(uname -s)
 

@@ -38,7 +38,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.sha }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}
           restore-keys: |
               sccache-${{ runner.os }}-${{ matrix.device }}-
 
@@ -62,6 +62,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.sha }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}
           restore-keys: |
             sccache-${{ runner.os }}-${{ matrix.device }}-
