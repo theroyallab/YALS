@@ -69,6 +69,7 @@ jobs:
         run: |
           if [ "${{ matrix.device }}" = "cuda" ]; then
             export GGML_CUDA=1
+            export CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
           fi
           deno task bindings
           deno task compile
@@ -177,6 +178,7 @@ jobs:
           cd $OldDir
           if ('${{ matrix.device }}' -eq 'cuda') {
             $env:GGML_CUDA = 1
+            $env:CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
           }
           deno task bindings-win
           deno task compile

@@ -48,7 +48,7 @@ if (APPLE)
 endif()
 
 add_library(deno_cpp_binding SHARED
-        binding.cpp
+    binding.cpp
 )
 
 target_include_directories(deno_cpp_binding
