@@ -19,7 +19,7 @@ include(FetchContent)
 FetchContent_Declare(
     llama
     GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-    GIT_TAG af7747c95ae71a5db4184947f837179e82c70b77
+    GIT_TAG a800ae46da2ed7dac236aa6bf2b595da6b6294b5
 )
 
 # Required for proper builds
