@@ -2,7 +2,7 @@ name: Build binaries
 
 on:
   push:
-    branches: [actions]
+    branches: [main]
 
 jobs:
   unix-build:
