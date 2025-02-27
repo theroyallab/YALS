@@ -137,6 +137,10 @@ export default {
         parameters: ["pointer", "f32", "usize"], // void* sampler, float typicalP, size_t minKeep
         result: "pointer" as const, // void*
     },
+    TopNSigmaSampler: {
+        parameters: ["pointer", "f32"], // void* sampler, float nSigma
+        result: "pointer" as const, // void*
+    },
     XtcSampler: {
         parameters: ["pointer", "f32", "f32", "usize", "u32"], // void* sampler, float xtcProbability, float xtcThreshold, size_t minKeep, uint32_t seed
         result: "pointer" as const, // void*

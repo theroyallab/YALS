@@ -255,6 +255,13 @@ export class SamplerBuilder {
         );
     }
 
+    topNSigma(nSigma: number) {
+        this.sampler = lib.symbols.TopNSigmaSampler(
+            this.sampler,
+            nSigma,
+        );
+    }
+
     xtcSampler(
         xtcProbability: number,
         xtcThreshold: number,
@@ -678,6 +685,7 @@ export class Model {
             samplerBuilder.tempSampler(params.temperature);
         }
 
+        samplerBuilder.topNSigma(params.nsigma);
         samplerBuilder.topK(params.top_k);
         samplerBuilder.topP(params.top_p, 1);
         samplerBuilder.minPSampler(params.min_p, 1);

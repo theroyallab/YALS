@@ -64,6 +64,7 @@ const TemperatureSamplerSchema = z.object({
 
 const AlphabetSamplerSchema = z.aliasedObject(
     z.object({
+        nsigma: z.number().gte(0).nullish().coalesce(0),
         top_k: z.number().gte(-1).transform((top_k) => top_k == -1 ? 0 : top_k)
             .nullish().coalesce(0),
         top_p: z.number().gte(0).lte(1).nullish().coalesce(1),

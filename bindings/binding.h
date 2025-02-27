@@ -87,6 +87,7 @@ extern "C" {
     llama_sampler* TopKSampler(llama_sampler* sampler, int topK);
     llama_sampler* TopPSampler(llama_sampler* sampler, float topP, size_t minKeep);
     llama_sampler* TypicalSampler(llama_sampler* sampler, float typicalP, size_t minKeep);
+    llama_sampler* TopNSigmaSampler(llama_sampler* sampler, const float nSigma);
     llama_sampler* XtcSampler(
         llama_sampler* sampler, float xtcProbability, float xtcThreshold, size_t minKeep, uint32_t seed);
     llama_sampler* DrySampler(

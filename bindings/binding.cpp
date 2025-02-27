@@ -374,6 +374,12 @@ llama_sampler* TypicalSampler(llama_sampler* sampler, const float typicalP, cons
     return sampler;
 }
 
+llama_sampler* TopNSigmaSampler(llama_sampler* sampler, const float nSigma)
+{
+    llama_sampler_chain_add(sampler, llama_sampler_init_top_n_sigma(nSigma));
+    return sampler;
+}
+
 // Independent of order
 llama_sampler* XtcSampler(
     llama_sampler* sampler, const float xtcProbability, const float xtcThreshold,
