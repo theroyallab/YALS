@@ -40,6 +40,10 @@ model:
   # Set this to 999 to offload all layers to the GPU
   num_gpu_layers: 0
 
+  # An integer array of GBs of VRAM to split between GPUs (default: []).
+  # Going over the max amount of GPUs will crash when loading the model
+  gpu_split: []
+
   # Prompt template to use for chat completions (default: None)
   prompt_template:
 
@@ -55,7 +59,7 @@ model:
   enable_yarn: false
 
   # K cache quantization type (default: F16)
-  cache_mode_k: "F16"
+  cache_mode_k: F16
 
   # V cache quantization type (default: F16)
-  cache_mode_v: "F16"
+  cache_mode_v: F16
