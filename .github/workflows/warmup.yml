@@ -6,7 +6,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  cleanup-cache:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Cleanup old caches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const retentionDays = 3; // Keep caches for 3 days
+            const caches = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+
+            const now = new Date();
+            for (const cache of caches.data.actions_caches) {
+              if (cache.key.startsWith('sccache-')) {
+                const createdAt = new Date(cache.created_at);
+                const ageInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
+
+                if (ageInDays > retentionDays) {
+                  console.log(`Deleting old cache: ${cache.key}, created ${ageInDays.toFixed(1)} days ago`);
+                  await github.rest.actions.deleteActionsCacheByKey({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    key: cache.key
+                  });
+                } else {
+                  console.log(`Keeping cache: ${cache.key}, created ${ageInDays.toFixed(1)} days ago`);
+                }
+              }
+            }
+
   warmup-unix:
+    needs: cleanup-cache
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -38,11 +73,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
-              sccache-${{ runner.os }}-${{ matrix.device }}-
+            sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}-
+            sccache-${{ runner.os }}-${{ matrix.device }}-
 
   warmup-win:
+    needs: cleanup-cache
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -62,6 +99,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
+            sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}-
             sccache-${{ runner.os }}-${{ matrix.device }}-

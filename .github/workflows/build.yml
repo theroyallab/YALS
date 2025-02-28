@@ -55,8 +55,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
+            sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}-
             sccache-${{ runner.os }}-${{ matrix.device }}-
       - name: Get short SHA
         id: sha
@@ -162,8 +163,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}
+          key: sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
+            sccache-${{ runner.os }}-${{ matrix.device }}-${{ github.ref_name }}-
             sccache-${{ runner.os }}-${{ matrix.device }}-
       - name: Get short SHA
         id: sha
