@@ -655,17 +655,9 @@ const char* InferToReadbackBuffer(
         tokenCount += batch.n_tokens;
 
         if (!buffer.empty()) {
-            MatchTrie::MatchResult matchResult;
-            size_t nonSpacePos = buffer.find_first_not_of(' ');
+            const MatchTrie::MatchInfo matchInfo = matchingTrie.CheckBuffer(buffer);
 
-            // Strip leading spaces which is a common issue that will confuse the trie matching.
-            if (nonSpacePos != std::string::npos) {
-                matchResult = matchingTrie.CheckBuffer(buffer.substr(nonSpacePos));
-            } else {
-                matchResult = matchingTrie.CheckBuffer(buffer);
-            }
-
-            if (matchResult == MatchTrie::MatchResult::NO) {
+            if (matchInfo.result == MatchTrie::MatchResult::NO) {
                 WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()), newTokenId);
                 response += buffer;
                 buffer = "";
@@ -681,12 +673,17 @@ const char* InferToReadbackBuffer(
                     banSampler = nullptr;
                     biases.clear();
                 }
-            } else if (matchResult == MatchTrie::MatchResult::MATCHED_STOP) {
-                // Matched a stop, break.
-                finishReason = "StopString";
+            } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_STOP) {
+                // Matched a stop, return the partial substring and break
+                std::string partialBuffer = buffer.substr(0, matchInfo.matchPos);
+
+                WriteToReadbackBuffer(readbackBufferPtr, strdup(partialBuffer.c_str()), newTokenId);
+                response += buffer;
+
                 stoppedAt = TokenToPiece(model, newTokenId).value();
+                finishReason = "StopString";
                 break;
-            } else if (matchResult == MatchTrie::MatchResult::MATCHED_REWIND) {
+            } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_REWIND) {
                 llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
 
                 const auto tokens = Tokenize(model, context, buffer, false, false);

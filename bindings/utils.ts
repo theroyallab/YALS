@@ -1,4 +1,8 @@
-export function pointerArrayFromStrings(strings: string[]): BigUint64Array {
+export function pointerArrayFromStrings(strings: string[]): {
+    inner: BigUint64Array;
+    // Return the buffer so it stays alive
+    buffer: Uint8Array;
+} {
     const encoder = new TextEncoder();
 
     // Calculate total buffer size needed including null terminators
@@ -26,5 +30,6 @@ export function pointerArrayFromStrings(strings: string[]): BigUint64Array {
         offset += encoded.length;
     });
 
-    return ptrArray;
+    // Return both the pointer array and the buffer
+    return { inner: ptrArray, buffer };
 }

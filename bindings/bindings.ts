@@ -349,14 +349,19 @@ export class ReadbackBuffer {
     }
 
     async *read(): AsyncGenerator<BindingStreamResponse, void, unknown> {
-        while (!this.isDone()) {
+        while (true) {
             const next = await this.readNext();
-            if (next === null) {
-                await delay(10);
+            if (next !== null) {
+                yield next;
                 continue;
             }
 
-            yield next;
+            // Only check the done status when data has been fetched
+            if (this.isDone()) {
+                break;
+            }
+
+            await delay(10);
         }
     }
 }
@@ -738,9 +743,9 @@ export class Model {
             params.add_bos_token,
             !params.skip_special_tokens,
             abortCallbackPointer,
-            rewindPtrArray,
+            rewindPtrArray.inner,
             params.banned_strings.length,
-            stopPtrArray,
+            stopPtrArray.inner,
             params.stop.length,
         );
 
