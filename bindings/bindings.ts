@@ -685,7 +685,6 @@ export class Model {
             samplerBuilder.tempSampler(params.temperature);
         }
 
-        samplerBuilder.topNSigma(params.nsigma);
         samplerBuilder.topK(params.top_k);
         samplerBuilder.topP(params.top_p, 1);
         samplerBuilder.minPSampler(params.min_p, 1);
