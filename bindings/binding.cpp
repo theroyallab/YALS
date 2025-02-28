@@ -9,6 +9,10 @@
 #include <string>
 #include <sstream>
 
+// Static vector to hold previous generation tokens
+// TODO: Remove in continuous batch implementation
+std::vector<llama_token> prevTokens;
+
 void TestPrint(const char* text)
 {
     std::cout << text << std::endl;
@@ -159,11 +163,13 @@ void FreeSampler(llama_sampler* sampler)
 
 void FreeCtx(llama_context* ctx)
 {
+    prevTokens.empty();
     llama_free(ctx);
 }
 
 void ClearContextKVCache(llama_context* ctx)
 {
+    prevTokens.empty();
     llama_kv_cache_clear(ctx);
 }
 
@@ -451,11 +457,9 @@ std::optional<std::vector<llama_token>> Tokenize(
                                        nullptr, 0, addSpecial, parseSpecial);
     std::vector<llama_token> tokenizedPrompt(n_prompt);
 
-    bool add_bos = (llama_get_kv_cache_used_cells(context) == 0) & addSpecial;
-
     if (llama_tokenize(&llamaModel->vocab, prompt.data(), prompt.size(),
         tokenizedPrompt.data(), tokenizedPrompt.size(),
-        add_bos, parseSpecial) < 0) {
+        addSpecial, parseSpecial) < 0) {
         std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
         return std::nullopt;
     }
@@ -516,6 +520,15 @@ std::string MakeJsonOutputString(const llama_context* context, const std::string
     return ss.str();
 }
 
+// From llama.cpp/common/common.cpp
+// Returns the point when prompt prefix starts to diverge
+size_t common_lcp(const std::vector<llama_token> &a, const std::vector<llama_token> &b) {
+    size_t i;
+    for (i = 0; i < a.size() && i < b.size() && a[i] == b[i]; i++) {}
+
+    return i;
+}
+
 const char* InferToReadbackBuffer(
     const llama_model* model,
     llama_sampler* sampler,
@@ -550,7 +563,11 @@ const char* InferToReadbackBuffer(
             return false;
         }
 
-        for (size_t i = 0; i < tokens.size(); i += batchSize) {
+        // Check when tokens diverge and remove everything after the common prefix
+        const size_t prefixEnd = common_lcp(tokens, prevTokens);
+        llama_kv_cache_seq_rm(context, 0, prefixEnd, -1);
+
+        for (size_t i = prefixEnd; i < tokens.size(); i += batchSize) {
             const size_t remaining = tokens.size() - i;
             const size_t currentBatchSize = std::min(remaining, static_cast<size_t>(batchSize));
 
@@ -564,6 +581,8 @@ const char* InferToReadbackBuffer(
                 return false;
             }
         }
+
+        prevTokens = tokens;
         return true;
     };
 

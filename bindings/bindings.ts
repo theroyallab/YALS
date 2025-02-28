@@ -619,9 +619,6 @@ export class Model {
         // Acquire the mutex
         using _lock = await this.generationLock.acquire();
 
-        // Clear generation cache
-        this.resetKVCache();
-
         const samplerBuilder = new SamplerBuilder(this.model);
         const seed = params.seed && params.seed > 0
             ? params.seed
