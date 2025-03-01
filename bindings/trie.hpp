@@ -40,6 +40,7 @@ namespace MatchTrie {
 
     class MatchTrie {
         std::unique_ptr<TrieNode> root;
+        std::string cachedPrefix;
 
         // Helper function to convert char to lowercase
         static char ToLower(char c) {
@@ -56,6 +57,14 @@ namespace MatchTrie {
             
             for (const auto& pair : node->children) {
                 PrintWordsHelper(pair.second.get(), prefix + pair.first);
+            }
+        }
+
+        void updateCachedPrefix(MatchInfo info, const std::string_view& buffer) {
+            if (info.matchPos != std::string::npos) {
+                cachedPrefix = buffer.substr(0, info.matchPos);
+            } else {
+                cachedPrefix.clear();
             }
         }
 
@@ -85,11 +94,12 @@ namespace MatchTrie {
             }
         }
 
-        [[nodiscard]] MatchInfo CheckBuffer(const std::string_view& buffer) const {
+        [[nodiscard]] MatchInfo CheckBuffer(const std::string_view& buffer) {
             MatchInfo info;
-            
+            const auto initialPos = buffer.rfind(cachedPrefix, 0) == 0 ? cachedPrefix.length() : 0;
+
             // Look for substring matches
-            for (size_t startPos = 0; startPos < buffer.length(); ++startPos) {
+            for (size_t startPos = initialPos; startPos < buffer.length(); ++startPos) {
                 TrieNode* current = root.get();
                 bool potentialMatch = false;
                 size_t matchLength = 0;
@@ -113,16 +123,19 @@ namespace MatchTrie {
                                MatchResult::MATCHED_REWIND :
                                MatchResult::MATCHED_STOP;
 
-                        return MatchInfo(endResult, startPos, matchLength);
+                        info = MatchInfo(endResult, startPos, matchLength);
+                        cachedPrefix = buffer;
+                        return info;
                     }
                 }
-                
+
                 // If there is a possible match, but there's no end of word, mark as maybe
                 if (potentialMatch && info.result == MatchResult::NO) {
                     info = MatchInfo(MatchResult::MAYBE, startPos, matchLength);
                 }
             }
 
+            cachedPrefix = buffer;
             return info;
         }
     };
