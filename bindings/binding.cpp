@@ -541,6 +541,7 @@ const char* InferToReadbackBuffer(
     const bool addSpecial,
     const bool decodeSpecial,
     ggml_abort_callback abortCallback,
+    const unsigned seed,
     const char** rewindStrings,
     const unsigned numRewindStrings,
     const char** stoppingStrings,
@@ -698,12 +699,12 @@ const char* InferToReadbackBuffer(
                 if (banSampler == nullptr) {
                     banSampler = MakeSampler();
                     LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
-                    DistSampler(banSampler, 1337);
+                    DistSampler(banSampler, seed);
                 } else {
                     llama_sampler_chain_remove(banSampler, 1);
                     llama_sampler_chain_remove(banSampler, 0);
                     LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
-                    DistSampler(banSampler, 1337);
+                    DistSampler(banSampler, seed);
                 }
 
                 buffer = "";

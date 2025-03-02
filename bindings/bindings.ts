@@ -749,6 +749,7 @@ export class Model {
             params.add_bos_token,
             !params.skip_special_tokens,
             abortCallbackPointer,
+            seed,
             rewindPtrArray.inner,
             params.banned_strings.length,
             stopPtrArray.inner,

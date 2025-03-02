@@ -106,6 +106,7 @@ extern "C" {
         bool addSpecial,
         bool decodeSpecial,
         ggml_abort_callback abortCallback,
+        unsigned seed,
         const char** rewindStrings,
         unsigned numRewindStrings,
         const char** stoppingStrings,

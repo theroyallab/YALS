@@ -191,6 +191,7 @@ export default {
             "bool", // const bool addSpecial
             "bool", // const bool decodeSpecial
             "pointer", // ggml_abort_callback abortCallback
+            "u32", // const unsigned seed
             "buffer", // const char** rewindStrings
             "u32", // count of rewind strings
             "buffer", // const char** stoppingStrings
