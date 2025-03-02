@@ -687,6 +687,12 @@ export class Model {
             samplerBuilder.tempSampler(params.temperature);
         }
 
+        // TODO: Actively being changed
+        // Use Aphrodite's sampler position
+        if (params.nsigma > 0) {
+            samplerBuilder.topNSigma(params.nsigma);
+        }
+
         samplerBuilder.topK(params.top_k);
         samplerBuilder.topP(params.top_p, 1);
         samplerBuilder.minPSampler(params.min_p, 1);

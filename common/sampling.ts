@@ -69,6 +69,7 @@ const AlphabetSamplerSchema = z.aliasedObject(
         top_p: z.number().gte(0).lte(1).nullish().coalesce(1),
         min_p: z.number().gte(0).lte(1).nullish().coalesce(0),
         typical: z.number().gt(0).lte(1).nullish().coalesce(1),
+        nsigma: z.number().gte(0).nullish().coalesce(0),
     }),
     [{ field: "typical", aliases: ["typical_p"] }],
 )
