@@ -56,7 +56,7 @@ extern "C" {
 
     char* EndpointDetokenize(
         const llama_model* llamaModel,
-        int32_t* tokens,
+        const int32_t* tokens,
         size_t numTokens,
         size_t maxTextSize,
         bool addSpecial,

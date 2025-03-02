@@ -78,7 +78,7 @@ float GetModelFreqBase(const llama_model* model) {
     }
 }
 
-llama_context *InitiateCtx(
+llama_context* InitiateCtx(
     llama_model* model,
     const unsigned contextLength, // 0 = Use from model config
     const int32_t numberGpuLayers,
@@ -89,8 +89,7 @@ llama_context *InitiateCtx(
     const int kCacheQuantType,
     const int vCacheQuantType,
     const float kvDefragThreshold // -1 to disable
-    )
-{
+) {
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = contextLength;
     ctx_params.n_batch = numBatches;
@@ -163,13 +162,13 @@ void FreeSampler(llama_sampler* sampler)
 
 void FreeCtx(llama_context* ctx)
 {
-    prevTokens.empty();
+    prevTokens.clear();
     llama_free(ctx);
 }
 
 void ClearContextKVCache(llama_context* ctx)
 {
-    prevTokens.empty();
+    prevTokens.clear();
     llama_kv_cache_clear(ctx);
 }
 
@@ -436,7 +435,7 @@ int32_t* EndpointTokenize(
     const int32_t promptLength = strlen(prompt);
     const int n_prompt = -llama_tokenize(&llamaModel->vocab, prompt, promptLength,
                                    nullptr, 0, addSpecial, parseSpecial);
-    auto tokenArray = new int32_t[n_prompt + 1];
+    const auto tokenArray = new int32_t[n_prompt + 1];
     tokenArray[0] = n_prompt;
 
     if (llama_tokenize(&llamaModel->vocab, prompt, promptLength,
@@ -455,12 +454,12 @@ void EndpointFreeTokens(const int32_t* tokens) {
 
 char* EndpointDetokenize(
     const llama_model* llamaModel,
-    int32_t* tokens,
-    size_t numTokens,
-    size_t maxTextSize,
+    const int32_t* tokens,
+    const size_t numTokens,
+    const size_t maxTextSize,
     const bool addSpecial,
     const bool parseSpecial) {
-    auto outText = new char[maxTextSize];
+    const auto outText = new char[maxTextSize];
     llama_detokenize(&llamaModel->vocab, tokens, numTokens, outText, maxTextSize, addSpecial, parseSpecial);
     return outText;
 }
@@ -494,7 +493,8 @@ std::string EscapeString(const std::string& input) {
     return ss.str();
 }
 
-std::string MakeJsonOutputString(const llama_context* context, const std::string &finishReason, const std::string &stopToken) {
+std::string MakeJsonOutputString(const llama_context* context, const std::string &finishReason,
+                                 const std::string &stopToken) {
     const auto [t_start_ms, t_load_ms, t_p_eval_ms, t_eval_ms, n_p_eval, n_eval] = llama_perf_context(context);
 
     const double t_p_eval_s = t_p_eval_ms / 1000.0;
