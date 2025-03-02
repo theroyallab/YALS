@@ -189,7 +189,7 @@ export default {
             "buffer", // const char* prompt
             "u32", // const unsigned numberTokensToPredict
             "bool", // const bool addSpecial
-            "bool", // const bool parseSpecial
+            "bool", // const bool decodeSpecial
             "pointer", // ggml_abort_callback abortCallback
             "buffer", // const char** rewindStrings
             "u32", // count of rewind strings

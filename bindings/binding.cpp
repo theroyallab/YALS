@@ -395,10 +395,10 @@ llama_sampler* XtcSampler(
     return sampler;
 }
 
-std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const llama_token id)
+std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const llama_token id, const bool decodeSpecial)
 {
     char buf[128];
-    const int n = llama_token_to_piece(&llamaModel->vocab, id, buf, sizeof(buf), 0, true);
+    const int n = llama_token_to_piece(&llamaModel->vocab, id, buf, sizeof(buf), 0, decodeSpecial);
     if (n < 0) {
         std::cerr << "error: failed to convert token to piece in TokenToPiece()" << std::endl;
         return std::nullopt;
@@ -407,6 +407,26 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
     return std::string{buf, static_cast<size_t>(n)};
 }
 
+// C++ internal API for tokenization
+std::optional<std::vector<llama_token>> Tokenize(
+    const llama_model* llamaModel, const std::string_view& prompt,
+    const bool addSpecial, const bool parseSpecial) {
+
+    const int n_prompt = -llama_tokenize(&llamaModel->vocab, prompt.data(), prompt.size(),
+                                       nullptr, 0, addSpecial, parseSpecial);
+    std::vector<llama_token> tokenizedPrompt(n_prompt);
+
+    if (llama_tokenize(&llamaModel->vocab, prompt.data(), prompt.size(),
+        tokenizedPrompt.data(), tokenizedPrompt.size(),
+        addSpecial, parseSpecial) < 0) {
+        std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
+        return std::nullopt;
+    }
+
+    return tokenizedPrompt;
+}
+
+// C-style API for tokenization
 int32_t* EndpointTokenize(
     const llama_model* llamaModel,
     const char* prompt,
@@ -447,24 +467,6 @@ char* EndpointDetokenize(
 
 void EndpointFreeString(const char* str) {
     delete[] str;
-}
-
-std::optional<std::vector<llama_token>> Tokenize(
-    const llama_model* llamaModel, const llama_context* context, const std::string_view& prompt,
-    const bool addSpecial, const bool parseSpecial) {
-
-    const int n_prompt = -llama_tokenize(&llamaModel->vocab, prompt.data(), prompt.size(),
-                                       nullptr, 0, addSpecial, parseSpecial);
-    std::vector<llama_token> tokenizedPrompt(n_prompt);
-
-    if (llama_tokenize(&llamaModel->vocab, prompt.data(), prompt.size(),
-        tokenizedPrompt.data(), tokenizedPrompt.size(),
-        addSpecial, parseSpecial) < 0) {
-        std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
-        return std::nullopt;
-    }
-
-    return tokenizedPrompt;
 }
 
 // Escapes a string's special characters
@@ -537,7 +539,7 @@ const char* InferToReadbackBuffer(
     const char* prompt,
     const unsigned numberTokensToPredict,
     const bool addSpecial,
-    const bool parseSpecial,
+    const bool decodeSpecial,
     ggml_abort_callback abortCallback,
     const char** rewindStrings,
     const unsigned numRewindStrings,
@@ -587,7 +589,9 @@ const char* InferToReadbackBuffer(
     };
 
     // Tokenize and determine the amount of tokens to generate
-    auto promptTokens = Tokenize(model, context, prompt, addSpecial, parseSpecial).value();
+    // addSpecial - Special tokens in this case are BOS tokens
+    // parseSpecial is always true since special tokens should be parsed
+    auto promptTokens = Tokenize(model, prompt, addSpecial, true).value();
 
     // Process the prompt in chunked batches
     if (!processPromptBatches(promptTokens)) {
@@ -638,18 +642,18 @@ const char* InferToReadbackBuffer(
         // Abort if callback is fired
         if (isEnd) {
             finishReason = "StopToken";
-            stoppedAt = TokenToPiece(model, newTokenId).value();
+            stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value();
             break;
         }
 
         // End on length if max tokens is exceeded
         if (tokenCount + batch.n_tokens > numberTokensToPredict) {
             finishReason = "MaxNewTokens";
-            stoppedAt = TokenToPiece(model, newTokenId).value();
+            stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value();
             break;
         }
 
-        const auto piece = TokenToPiece(model, newTokenId).value();
+        const std::string piece = TokenToPiece(model, newTokenId, decodeSpecial).value();
 
         buffer += piece;
         tokenCount += batch.n_tokens;
@@ -680,13 +684,13 @@ const char* InferToReadbackBuffer(
                 WriteToReadbackBuffer(readbackBufferPtr, strdup(partialBuffer.c_str()), newTokenId);
                 response += buffer;
 
-                stoppedAt = TokenToPiece(model, newTokenId).value();
+                stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value();
                 finishReason = "StopString";
                 break;
             } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_REWIND) {
                 llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
 
-                const auto tokens = Tokenize(model, context, buffer, false, false);
+                const auto tokens = Tokenize(model, buffer, false, false);
                 for (const llama_token token : tokens.value()) {
                     biases.push_back({token, -50000.0f});
                 }

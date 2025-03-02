@@ -104,7 +104,7 @@ extern "C" {
         const char* prompt,
         unsigned numberTokensToPredict,
         bool addSpecial,
-        bool parseSpecial,
+        bool decodeSpecial,
         ggml_abort_callback abortCallback,
         const char** rewindStrings,
         unsigned numRewindStrings,
