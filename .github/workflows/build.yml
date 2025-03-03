@@ -66,6 +66,8 @@ jobs:
           echo "sha=${LONG_SHA::7}" >> $GITHUB_OUTPUT
       - name: Install dependencies
         run: deno install
+      - name: Save SHA to textfile
+        run: echo ${{ steps.sha.outputs.sha }} > gitSha.txt
       - name: Build bindings and compile
         run: |
           if [ "${{ matrix.device }}" = "cuda" ]; then
@@ -73,7 +75,7 @@ jobs:
             export CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
           fi
           deno task bindings
-          deno task build
+          deno task compile
           chmod +x YALS
       - name: Copy CUDA libraries
         run: |
@@ -172,6 +174,8 @@ jobs:
         run: echo "sha=$("${{ github.sha }}".Substring(0,7))" >> $env:GITHUB_OUTPUT
       - name: Install dependencies
         run: deno install
+      - name: Save SHA to textfile
+        run: Set-Content -Path "gitSha.txt" -Value "${{ steps.sha.outputs.sha }}"
       - name: Build bindings and compile
         run: |
           $OldDir = $PWD
@@ -183,7 +187,7 @@ jobs:
             $env:CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
           }
           deno task bindings-win
-          deno task build
+          deno task compile
       - name: Copy vcruntime
         run: |
           cp "C:\Windows\System32\vcruntime140.dll" lib
