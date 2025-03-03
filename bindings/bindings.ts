@@ -763,19 +763,23 @@ export class Model {
 
         const finishResponse = await this.readbackBuffer.readJsonStatus();
         if (finishResponse) {
-            if (
-                finishResponse.finishReason == BindingFinishReason.CtxExceeded
-            ) {
-                throw new Error(
-                    `Prompt exceeds max context length of ${this.maxSeqLen}`,
-                );
-            } else if (
-                finishResponse.finishReason == BindingFinishReason.BatchDecode
-            ) {
-                throw new Error(
-                    "Internal generation state is broken due to llama_decode error. " +
-                        "Please restart the server.",
-                );
+            switch (finishResponse.finishReason) {
+                case BindingFinishReason.CtxExceeded:
+                    throw new Error(
+                        `Prompt exceeds max context length of ${this.maxSeqLen}`,
+                    );
+
+                case BindingFinishReason.BatchDecode:
+                    throw new Error(
+                        "Internal generation state is broken due to llama_decode error. " +
+                            "Please restart the server.",
+                    );
+
+                case BindingFinishReason.TokenEncode:
+                    throw new Error(
+                        "Could not tokenize the provided prompt. " +
+                            "Please make sure your prompt is formatted correctly.",
+                    );
             }
 
             const totalTime = finishResponse.promptSec + finishResponse.genSec;

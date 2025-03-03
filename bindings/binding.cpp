@@ -592,7 +592,15 @@ const char* InferToReadbackBuffer(
     // Tokenize and determine the amount of tokens to generate
     // addSpecial - Special tokens in this case are BOS tokens
     // parseSpecial is always true since special tokens should be parsed
-    auto promptTokens = Tokenize(model, prompt, addSpecial, true).value();
+    auto promptTokenResult = Tokenize(model, prompt, addSpecial, true);
+    if (!promptTokenResult) {
+        finishReason = "TokenEncode";
+        readbackBufferPtr->jsonOutputBuffer = strdup(MakeJsonOutputString(context, finishReason, stoppedAt).c_str());
+        readbackBufferPtr->done = true;
+        return nullptr;
+    }
+
+    auto promptTokens = promptTokenResult.value();
 
     // Process the prompt in chunked batches
     if (!processPromptBatches(promptTokens)) {
@@ -602,8 +610,14 @@ const char* InferToReadbackBuffer(
     }
 
     MatchTrie::MatchTrie matchingTrie;
-    matchingTrie.AddMatchableWords(rewindStrings, numRewindStrings, MatchTrie::MatchType::REWIND);
-    matchingTrie.AddMatchableWords(stoppingStrings, numStoppingStrings, MatchTrie::MatchType::STOP);
+
+    if (rewindStrings != nullptr && numRewindStrings > 0) {
+        matchingTrie.AddMatchableWords(rewindStrings, numRewindStrings, MatchTrie::MatchType::REWIND);
+    }
+
+    if (stoppingStrings != nullptr && numStoppingStrings > 0) {
+        matchingTrie.AddMatchableWords(stoppingStrings, numStoppingStrings, MatchTrie::MatchType::STOP);
+    }
 
     std::string response;
     std::string buffer;
@@ -643,18 +657,18 @@ const char* InferToReadbackBuffer(
         // Abort if callback is fired
         if (isEnd) {
             finishReason = "StopToken";
-            stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value();
+            stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
             break;
         }
 
         // End on length if max tokens is exceeded
         if (tokenCount + batch.n_tokens > numberTokensToPredict) {
             finishReason = "MaxNewTokens";
-            stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value();
+            stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
             break;
         }
 
-        const std::string piece = TokenToPiece(model, newTokenId, decodeSpecial).value();
+        auto piece = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
 
         buffer += piece;
         tokenCount += batch.n_tokens;
@@ -685,15 +699,17 @@ const char* InferToReadbackBuffer(
                 WriteToReadbackBuffer(readbackBufferPtr, strdup(partialBuffer.c_str()), newTokenId);
                 response += buffer;
 
-                stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value();
+                stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
                 finishReason = "StopString";
                 break;
             } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_REWIND) {
                 llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
 
                 const auto tokens = Tokenize(model, buffer, false, false);
-                for (const llama_token token : tokens.value()) {
-                    biases.push_back({token, -50000.0f});
+                if (tokens) {
+                    for (const llama_token token : tokens.value()) {
+                        biases.push_back({token, -50000.0f});
+                    }
                 }
 
                 if (banSampler == nullptr) {
