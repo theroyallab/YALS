@@ -73,7 +73,7 @@ jobs:
             export CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
           fi
           deno task bindings
-          deno task compile
+          deno task build
           chmod +x YALS
       - name: Copy CUDA libraries
         run: |
@@ -183,7 +183,7 @@ jobs:
             $env:CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
           }
           deno task bindings-win
-          deno task compile
+          deno task build
       - name: Copy vcruntime
         run: |
           cp "C:\Windows\System32\vcruntime140.dll" lib

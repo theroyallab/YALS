@@ -45,3 +45,11 @@ templates/*
 !templates/place_your_templates_here.txt
 !templates/alpaca.jinja
 !templates/chatml.jinja
+
+# Compiled binaries and embedded assets
+gitSha.txt
+YALS.exe
+YALS
+
+# Markdown
+.obsidian/
