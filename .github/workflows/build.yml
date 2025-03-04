@@ -97,16 +97,33 @@ jobs:
         run: |
           mkdir ${{ steps.folder-name.outputs.name }}
           mv lib models templates config_sample.yml YALS ${{ steps.folder-name.outputs.name }}
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.folder-name.outputs.name }}
-          path: ./${{ steps.folder-name.outputs.name }}
-          if-no-files-found: error
+      # - name: Upload artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ${{ steps.folder-name.outputs.name }}
+      #     path: ./${{ steps.folder-name.outputs.name }}
+      #     if-no-files-found: error
       - name: Zip files
         run: |
           cd ${{ steps.folder-name.outputs.name }}
           zip -r ${{ steps.folder-name.outputs.name }}.zip YALS lib/* models/* templates/* config_sample.yml
+          mv ${{ steps.folder-name.outputs.name }}.zip ../
+      - name: Upload release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: ${{ steps.folder-name.outputs.name }}.zip
+          tag: ${{ steps.sha.outputs.sha }}
+          overwrite: true
+          release_name: YALS-${{ steps.sha.outputs.sha }}
+          body: |
+            CI Builds of YALS commit [${{ steps.sha.outputs.sha }}](https://github.com/${{ github.repository }}/commit/${{ steps.sha.outputs.sha }})
+
+            For more details, please refer to the commit history.
+
+            Builds:
+            - **CPU**: Compiled with AVX1 and AVX2 support.
+            - **CUDA** - Built for CUDA 12, optimized for Turing and newer consumer GPUs.
+            - **Metal** - Includes both Metal and CPU support for macOS.
 
   windows-build:
     runs-on: ${{ matrix.os }}
@@ -205,13 +222,30 @@ jobs:
         run: |
           mkdir ${{ steps.folder-name.outputs.name }}
           mv YALS.exe,lib,models,templates,config_sample.yml ${{ steps.folder-name.outputs.name }}
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.folder-name.outputs.name }}
-          path: ./${{ steps.folder-name.outputs.name }}
-          if-no-files-found: error
+      # - name: Upload artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ${{ steps.folder-name.outputs.name }}
+      #     path: ./${{ steps.folder-name.outputs.name }}
+      #     if-no-files-found: error
       - name: Zip files
         run: |
           cd ${{ steps.folder-name.outputs.name }}
-          Compress-Archive -Path @('.\YALS.exe', '.\lib', '.\models', '.\templates', '.\config_sample.yml') -DestinationPath ${{ steps.folder-name.outputs.filename }}.zip
+          Compress-Archive -Path @('.\YALS.exe', '.\lib', '.\models', '.\templates', '.\config_sample.yml') -DestinationPath ${{ steps.folder-name.outputs.name }}.zip
+          mv ${{ steps.folder-name.outputs.name }}.zip ../
+      - name: Upload release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: ${{ steps.folder-name.outputs.name }}.zip
+          tag: ${{ steps.sha.outputs.sha }}
+          overwrite: true
+          release_name: YALS-${{ steps.sha.outputs.sha }}
+          body: |
+            CI Builds of YALS commit [${{ steps.sha.outputs.sha }}](https://github.com/${{ github.repository }}/commit/${{ steps.sha.outputs.sha }})
+
+            For more details, please refer to the commit history.
+
+            Builds:
+            - **CPU**: Compiled with AVX1 and AVX2 support.
+            - **CUDA** - Built for CUDA 12, optimized for Turing and newer consumer GPUs.
+            - **Metal** - Includes both Metal and CPU support for macOS.
