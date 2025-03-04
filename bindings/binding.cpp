@@ -190,6 +190,172 @@ void PrintPerformanceInfo(const llama_context* context) {
               << "Text Generation: " << gen_tok_per_sec << " tok/s" << "\n" << std::endl;
 }
 
+size_t validate_utf8(std::string_view str) {
+    const auto* bytes = reinterpret_cast<const uint8_t*>(str.data());
+    const size_t len = str.size();
+    size_t i = 0;
+
+    while (i < len) {
+        if (bytes[i] <= 0x7F) {
+            // Single byte character (0xxxxxxx)
+            i++;
+        } else if ((bytes[i] & 0xE0) == 0xC0) {
+            // Two byte character (110xxxxx 10xxxxxx)
+            if (i + 1 >= len || (bytes[i+1] & 0xC0) != 0x80) {
+                return i; // Incomplete sequence
+            }
+            i += 2;
+        } else if ((bytes[i] & 0xF0) == 0xE0) {
+            // Three byte character (1110xxxx 10xxxxxx 10xxxxxx)
+            if (i + 2 >= len || (bytes[i+1] & 0xC0) != 0x80 || (bytes[i+2] & 0xC0) != 0x80) {
+                return i; // Incomplete sequence
+            }
+            i += 3;
+        } else if ((bytes[i] & 0xF8) == 0xF0) {
+            // Four byte character (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
+            if (i + 3 >= len || (bytes[i+1] & 0xC0) != 0x80 || (bytes[i+2] & 0xC0) != 0x80 || (bytes[i+3] & 0xC0) != 0x80) {
+                return i; // Incomplete sequence
+            }
+            i += 4;
+        } else {
+            //invalid.
+            return i;
+        }
+    }
+
+    return len;
+}
+
+std::optional<std::string> token_to_piece(const llama_context* ctx, llama_token token, bool special = false) {
+    if (!ctx) {
+        return std::nullopt;
+    }
+
+    const auto* model = llama_get_model(ctx);
+    const auto* vocab = llama_model_get_vocab(model);
+
+    std::string piece(64, '\0');
+
+    int n_chars = llama_token_to_piece(vocab, token, piece.data(), piece.size(), 0, special);
+
+    if (n_chars < 0) {
+        piece.resize(-n_chars);
+        n_chars = llama_token_to_piece(vocab, token, piece.data(), piece.size(), 0, special);
+        if (n_chars < 0) {
+            return std::nullopt;
+        }
+    }
+
+    piece.resize(n_chars);
+
+    return piece;
+}
+
+std::optional<std::string> detokenize(const llama_context* ctx, const std::vector<llama_token>& tokens, bool special = false) {
+    if (!ctx) {
+        return std::nullopt;
+    }
+
+    const auto* model = llama_get_model(ctx);
+    const auto* vocab = llama_model_get_vocab(model);
+
+    if (tokens.empty()) {
+        return std::string{};
+    }
+
+    std::string text(tokens.size() * 4, '\0');
+
+    int n_chars = llama_detokenize(vocab, tokens.data(), tokens.size(), text.data(), text.size(), false, special);
+
+    if (n_chars < 0) {
+        text.resize(-n_chars);
+        n_chars = llama_detokenize(vocab, tokens.data(), tokens.size(), text.data(), text.size(), false, special);
+        if (n_chars < 0) {
+            return std::nullopt;
+        }
+    }
+
+    text.resize(n_chars);
+
+    return text;
+}
+
+class TokenStreamDetokenizer {
+    std::string buffer_;
+    const llama_context* ctx_;
+    bool special_;
+
+public:
+    explicit TokenStreamDetokenizer(const llama_context* context, bool special_tokens = false)
+        : ctx_(context), special_(special_tokens) {
+    }
+
+    std::optional<std::string> process_token(llama_token token) {
+        auto piece = token_to_piece(ctx_, token, special_);
+        if (!piece) {
+            return std::nullopt;
+        }
+
+        buffer_ += *piece;
+
+        const size_t valid_bytes = validate_utf8(buffer_);
+
+        if (valid_bytes > 0) {
+            if (valid_bytes == buffer_.size()) {
+                std::string result = std::move(buffer_);
+                buffer_ = {};
+                return result;
+            } else {
+                std::string result = buffer_.substr(0, valid_bytes);
+                buffer_.erase(0, valid_bytes);
+                return result;
+            }
+        }
+
+        return std::optional<std::string>{};
+    }
+
+    std::optional<std::string> process_tokens(const std::vector<llama_token>& tokens) {
+        for (const auto token : tokens) {
+            auto piece = token_to_piece(ctx_, token, special_);
+            if (!piece) {
+                return std::nullopt;
+            }
+            buffer_ += *piece;
+        }
+
+        const size_t valid_bytes = validate_utf8(buffer_);
+
+        if (valid_bytes > 0) {
+            if (valid_bytes == buffer_.size()) {
+                std::string result = std::move(buffer_);
+                buffer_ = {};
+                return result;
+            } else {
+                std::string result = buffer_.substr(0, valid_bytes);
+                buffer_.erase(0, valid_bytes);
+                return result;
+            }
+        }
+
+        return std::optional<std::string>{};
+    }
+
+    std::string flush() {
+        std::string result = std::move(buffer_);
+        buffer_ = {};
+        return result;
+    }
+
+    [[nodiscard]] bool has_incomplete() const {
+        return !buffer_.empty();
+    }
+    
+    void reset() {
+        buffer_.clear();
+    }
+};
+
 struct ReadbackBuffer
 {
     unsigned lastReadbackIndex {0};
@@ -198,6 +364,9 @@ struct ReadbackBuffer
 
     std::vector<char*>* data = new std::vector<char*>();
     std::vector<llama_token>* ids = new std::vector<llama_token>();
+
+    // Add a TokenStreamDetokenizer instance without changing the constructor
+    TokenStreamDetokenizer* detokenizer = nullptr;
 };
 
 void ResetReadbackBuffer(ReadbackBuffer* buffer) {
@@ -208,6 +377,11 @@ void ResetReadbackBuffer(ReadbackBuffer* buffer) {
 
     delete[] buffer->jsonOutputBuffer;
     buffer->jsonOutputBuffer = nullptr;
+
+    // Reset the detokenizer if it exists
+    if (buffer->detokenizer) {
+        buffer->detokenizer->reset();
+    }
 }
 
 bool IsReadbackBufferDone(const ReadbackBuffer* buffer)
@@ -396,14 +570,31 @@ llama_sampler* XtcSampler(
 
 std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const llama_token id, const bool decodeSpecial)
 {
-    char buf[128];
-    const int n = llama_token_to_piece(&llamaModel->vocab, id, buf, sizeof(buf), 0, decodeSpecial);
-    if (n < 0) {
-        std::cerr << "error: failed to convert token to piece in TokenToPiece()" << std::endl;
+    if (!llamaModel) {
         return std::nullopt;
     }
 
-    return std::string{buf, static_cast<size_t>(n)};
+    // Initialize with a reasonable capacity
+    std::string piece(64, '\0');
+
+    // Call the llama function to convert token to piece
+    int n_chars = llama_token_to_piece(&llamaModel->vocab, id, piece.data(), piece.size(), 0, decodeSpecial);
+
+    // If buffer was too small, resize and try again
+    if (n_chars < 0) {
+        piece.resize(-n_chars);
+        n_chars = llama_token_to_piece(&llamaModel->vocab, id, piece.data(), piece.size(), 0, decodeSpecial);
+        if (n_chars < 0) {
+            // This should never happen if we sized correctly
+            std::cerr << "error: failed to convert token to piece in TokenToPiece()" << std::endl;
+            return std::nullopt;
+        }
+    }
+
+    // Resize string to actual length
+    piece.resize(n_chars);
+
+    return piece;
 }
 
 // C++ internal API for tokenization
@@ -551,6 +742,15 @@ const char* InferToReadbackBuffer(
         llama_set_abort_callback(context, abortCallback, nullptr);
     }
 
+    // Initialize or reset the detokenizer for this context
+    if (!readbackBufferPtr->detokenizer) {
+        readbackBufferPtr->detokenizer = new TokenStreamDetokenizer(context, decodeSpecial);
+    } else {
+        // Update existing detokenizer with the new context if needed
+        delete readbackBufferPtr->detokenizer;
+        readbackBufferPtr->detokenizer = new TokenStreamDetokenizer(context, decodeSpecial);
+    }
+
     llama_perf_context_reset(context);
 
     std::string finishReason = "Unspecified";
@@ -653,6 +853,12 @@ const char* InferToReadbackBuffer(
     std::vector<llama_logit_bias> biases;
     llama_sampler* banSampler = nullptr;
     llama_batch batch = firstBatch;
+
+    // Reset the detokenizer before generating
+    if (readbackBufferPtr->detokenizer) {
+        readbackBufferPtr->detokenizer->reset();
+    }
+
     while (true) {
         // Abort if callback is fired
         if (isEnd) {
@@ -668,9 +874,19 @@ const char* InferToReadbackBuffer(
             break;
         }
 
-        auto piece = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
+        // Process token through detokenizer if available, otherwise use TokenToPiece
+        if (readbackBufferPtr->detokenizer) {
+            auto pieceOpt = readbackBufferPtr->detokenizer->process_token(newTokenId);
+            // If we have a valid UTF-8 sequence
+            if (pieceOpt && !pieceOpt->empty()) {
+                buffer += *pieceOpt;
+            }
+        } else {
+            // Fall back to old method if detokenizer not initialized
+            auto piece = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
+            buffer += piece;
+        }
 
-        buffer += piece;
         tokenCount += batch.n_tokens;
 
         if (!buffer.empty()) {
@@ -697,13 +913,18 @@ const char* InferToReadbackBuffer(
                 std::string partialBuffer = buffer.substr(0, matchInfo.matchPos);
 
                 WriteToReadbackBuffer(readbackBufferPtr, strdup(partialBuffer.c_str()), newTokenId);
-                response += buffer;
+                response += partialBuffer;
 
                 stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
                 finishReason = "StopString";
                 break;
             } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_REWIND) {
                 llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
+
+                // Reset the detokenizer too when rewinding
+                if (readbackBufferPtr->detokenizer) {
+                    readbackBufferPtr->detokenizer->reset();
+                }
 
                 const auto tokens = Tokenize(model, buffer, false, false);
                 if (tokens) {
@@ -735,6 +956,15 @@ const char* InferToReadbackBuffer(
 
         batch = llama_batch_get_one(&newTokenId, 1);
         std::tie(newTokenId, isEnd) = gen(batch, sampler);
+    }
+
+    // Flush any remaining content from the detokenizer
+    if (readbackBufferPtr->detokenizer && readbackBufferPtr->detokenizer->has_incomplete()) {
+        std::string remaining = readbackBufferPtr->detokenizer->flush();
+        if (!remaining.empty()) {
+            WriteToReadbackBuffer(readbackBufferPtr, strdup(remaining.c_str()), 0);
+            response += remaining;
+        }
     }
 
     if (banSampler != nullptr) {
