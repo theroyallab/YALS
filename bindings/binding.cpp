@@ -586,7 +586,7 @@ std::optional<std::string> TokenToPiece(const llama_model* llamaModel, const lla
         n_chars = llama_token_to_piece(&llamaModel->vocab, id, piece.data(), piece.size(), 0, decodeSpecial);
         if (n_chars < 0) {
             // This should never happen if we sized correctly
-            std::cerr << "error: failed to convert token to piece in TokenToPiece()" << std::endl;
+            std::cerr << "error: failed to convert token " << id << " to piece in TokenToPiece()" << std::endl;
             return std::nullopt;
         }
     }

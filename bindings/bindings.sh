@@ -1,8 +1,12 @@
 #!/bin/bash
 
+OS=$(uname -s)
+
 # Set number of jobs for parallel build
 if [ -n "$MAX_JOBS" ]; then
     JOBS=$MAX_JOBS
+elif [ "$OS" = "Darwin" ]; then
+    JOBS=$(sysctl -n hw.physicalcpu)
 else
     JOBS=$(nproc --all)
 fi
@@ -26,8 +30,6 @@ CMAKE_ARGS="${EXTRA_CMAKE_ARGS[*]}"
 
 cmake . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release ${CMAKE_ARGS}
 cmake --build build --config Release --target deno_cpp_binding -j ${JOBS}
-
-OS=$(uname -s)
 
 if [ "$OS" = "Darwin" ]; then
     echo "Copying .dylib files"
