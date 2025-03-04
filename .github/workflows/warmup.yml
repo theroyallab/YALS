@@ -15,15 +15,36 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const retentionDays = 3; // Keep caches for 3 days
+            const retentionDays = 2; // Keep caches for 2 days
             const caches = await github.rest.actions.getActionsCacheList({
               owner: context.repo.owner,
               repo: context.repo.repo
             });
 
-            const now = new Date();
+            // Group caches by their prefix pattern (e.g., sccache-Windows-cuda-main)
+            const cacheGroups = {};
             for (const cache of caches.data.actions_caches) {
               if (cache.key.startsWith('sccache-')) {
+                // Extract the prefix pattern (everything before the last hyphen + timestamp)
+                const prefixPattern = cache.key.replace(/-\d+$/, '');
+                
+                if (!cacheGroups[prefixPattern]) {
+                  cacheGroups[prefixPattern] = [];
+                }
+                cacheGroups[prefixPattern].push(cache);
+              }
+            }
+
+            const now = new Date();
+            // Process each group of caches
+            for (const prefix in cacheGroups) {
+              // Sort caches by creation date (newest first)
+              const sortedCaches = cacheGroups[prefix].sort((a, b) => 
+                new Date(b.created_at) - new Date(a.created_at));
+              
+              // Skip the most recent cache
+              for (let i = 1; i < sortedCaches.length; i++) {
+                const cache = sortedCaches[i];
                 const createdAt = new Date(cache.created_at);
                 const ageInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
 
@@ -37,6 +58,14 @@ jobs:
                 } else {
                   console.log(`Keeping cache: ${cache.key}, created ${ageInDays.toFixed(1)} days ago`);
                 }
+              }
+              
+              // Always log the kept most recent cache
+              if (sortedCaches.length > 0) {
+                const newestCache = sortedCaches[0];
+                const createdAt = new Date(newestCache.created_at);
+                const ageInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
+                console.log(`Keeping most recent cache: ${newestCache.key}, created ${ageInDays.toFixed(1)} days ago`);
               }
             }
 
