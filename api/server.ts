@@ -15,12 +15,12 @@ export function createApi() {
     const app = new Hono();
 
     // TODO: Use a custom middleware instead of overriding Hono's logger
-    const printToLogtape = (message: string, ...rest: string[]) => {
+    const printToLogger = (message: string, ...rest: string[]) => {
         logger.info(message, { rest });
     };
 
     // Middleware
-    app.use(loggerMiddleware(printToLogtape));
+    app.use(loggerMiddleware(printToLogger));
     app.use("*", cors());
 
     // Add routers
