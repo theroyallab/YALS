@@ -48,13 +48,17 @@ Here are the reasons why I decided to create a separate project instead of integ
 4. **New technologies**: Since C++ (via C bindings) is universally compatible via an FFI interface, I wanted to try something new instead of struggling with Python. The main reason for using Deno is because it augments an easy to learn language (TypeScript) with inbuilt tooling and a robust FFI system.
 ## Getting Started
 
-To get started, download the zip file from [releases]() that corresponds to your setup.
+To get started, download the latest zip from [releases](https://github.com/theroyallab/YALS/releases/latest) that corresponds to your setup.
 
 The currently supported builds via CI are:
 
 - **macOS**: Metal 
 - **Windows/Linux**: CPU 
 - **Windows/Linux**: CUDA (built for Turing architectures and newer)
+
+> [!NOTE]
+> 
+>  If your specific setup is not available via CI, you can build locally via the [building guide](https://github.com/theroyallab/YALS/blob/main/BUILDING.md), or request a certain architecture in issues.
 
 Then follow these steps:
 
