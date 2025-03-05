@@ -106,8 +106,8 @@ If you have a Pull Request:
 
 Creators/Developers:
 
-- [kingbri](https://github.com/bdashore3) - TypeScript, Deno, and some C++
-- [CoffeeVampire](https://github.com/https://github.com/CoffeeVampir3) - Main C++ developer
+- [kingbri](https://github.com/kingbri1) - TypeScript, Deno, and some C++
+- [CoffeeVampire](https://github.com/CoffeeVampir3) - Main C++ developer
 
 ## Acknowledgements
 
