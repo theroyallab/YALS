@@ -3,10 +3,12 @@
     "dev": "deno run -A --watch main.ts",
     "start": "deno run --allow-read --allow-write=api_tokens.yml --allow-env --allow-sys --allow-net --allow-ffi --allow-run main.ts",
     "bindings": "cd bindings && ./bindings.sh",
-    "bindings-win": "cd bindings && powershell -ExecutionPolicy Bypass -File bindings.ps1",
     "generate-sha": "deno run --allow-run --allow-write=gitSha.txt generateGitSha.ts",
     "compile": "deno compile --allow-read --allow-write=api_tokens.yml --allow-env --allow-sys --allow-net --allow-ffi --allow-run --include=gitSha.txt main.ts",
-    "build": "deno task generate-sha && deno task compile"
+    "build": "deno task generate-sha && deno task compile",
+    "bindings-win": "cd bindings && powershell -ExecutionPolicy Bypass -File bindings.ps1",
+    "compile-win": "deno compile --allow-read --allow-write=api_tokens.yml --allow-env --allow-sys --allow-net --allow-ffi --allow-run --include=gitSha.txt --icon assets/icon.ico main.ts",
+    "build-win": "deno task generate-sha && deno task compile-win"
   },
   "imports": {
     "@/": "./",

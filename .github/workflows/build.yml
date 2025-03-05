@@ -204,7 +204,7 @@ jobs:
             $env:CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
           }
           deno task bindings-win
-          deno task compile
+          deno task compile-win
       - name: Copy vcruntime
         run: |
           cp "C:\Windows\System32\vcruntime140.dll" lib

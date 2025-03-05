@@ -1,3 +1,7 @@
+<div align="center">
+    <img src="https://github.com/theroyallab/YALS/blob/main/assets/icon.png?raw=true" />
+</div>
+
 # YALS
 
 <p align="left">
