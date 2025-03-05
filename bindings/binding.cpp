@@ -41,7 +41,20 @@ char* GetModelChatTemplate(const llama_model* model) {
     static const char* tokenizerTemplateKey = "tokenizer.chat_template";
     const int32_t bufSize = llama_model_meta_val_str(model, tokenizerTemplateKey, nullptr, 0) + 1;
 
+    // Return null if template doesn't exist
+    if (bufSize <= 1) {
+        return nullptr;
+    }
+
     const auto buffer = new char[bufSize];
+    llama_model_meta_val_str(model, tokenizerTemplateKey, buffer, bufSize);
+
+    // Additional check to see if the buffer has data
+    if (buffer[0] == '\0') {
+        delete[] buffer;
+        return nullptr;
+    }
+
     return buffer;
 }
 

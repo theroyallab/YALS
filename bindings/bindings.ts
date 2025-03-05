@@ -526,9 +526,8 @@ export class Model {
                 }
             } catch (error) {
                 if (error instanceof Error) {
-                    logger.warn(
-                        `${error.stack} \nAttempting next template method.`,
-                    );
+                    logger.error(error.stack);
+                    logger.warn("Attempting next template method.");
                 }
             }
         }
@@ -539,7 +538,8 @@ export class Model {
             );
         } else {
             logger.warn(
-                "Could not create a prompt template because of the above errors\n " +
+                "Could not create a prompt template because of the above errors.\n" +
+                    "Chat completions are disabled.\n" +
                     "YALS will continue loading without the prompt template.\n" +
                     "Please proofread the template and make sure it's compatible " +
                     "with huggingface's jinja subset.",
@@ -892,7 +892,7 @@ export class Model {
         });
 
         if (templatePtr === null) {
-            throw new Error("Failed to get model chat template from model");
+            throw new Error("No chat template found in model");
         }
 
         // Copy to owned string
