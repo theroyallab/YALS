@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 0 */3 * *'
   workflow_dispatch:
+    inputs:
+      force_warmup:
+        description: 'Force cache warmup regardless of age'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   cleanup-cache:
@@ -15,11 +21,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const retentionDays = 2; // Keep caches for 2 days
+            const retentionCount = 2; // Keep the 2 most recent caches per prefix
+            const forceWarmupDays = 5; // Force warmup if newest cache is older than this
             const caches = await github.rest.actions.getActionsCacheList({
               owner: context.repo.owner,
               repo: context.repo.repo
             });
+            
+            // Track if any cache needs warming up
+            let needsWarmup = false;
 
             // Group caches by their prefix pattern (e.g., sccache-Windows-cuda-main)
             const cacheGroups = {};
@@ -42,35 +52,50 @@ jobs:
               const sortedCaches = cacheGroups[prefix].sort((a, b) => 
                 new Date(b.created_at) - new Date(a.created_at));
               
-              // Skip the most recent cache
-              for (let i = 1; i < sortedCaches.length; i++) {
-                const cache = sortedCaches[i];
-                const createdAt = new Date(cache.created_at);
-                const ageInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
-
-                if (ageInDays > retentionDays) {
-                  console.log(`Deleting old cache: ${cache.key}, created ${ageInDays.toFixed(1)} days ago`);
-                  await github.rest.actions.deleteActionsCacheByKey({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    key: cache.key
-                  });
-                } else {
-                  console.log(`Keeping cache: ${cache.key}, created ${ageInDays.toFixed(1)} days ago`);
-                }
-              }
-              
-              // Always log the kept most recent cache
+              // Check if most recent cache is older than forceWarmupDays
               if (sortedCaches.length > 0) {
                 const newestCache = sortedCaches[0];
                 const createdAt = new Date(newestCache.created_at);
                 const ageInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
+                
+                if (ageInDays > forceWarmupDays) {
+                  console.log(`Cache ${prefix} is stale (${ageInDays.toFixed(1)} days old). Will force warmup.`);
+                  needsWarmup = true;
+                }
+                
+                // Log the kept most recent cache
                 console.log(`Keeping most recent cache: ${newestCache.key}, created ${ageInDays.toFixed(1)} days ago`);
+                
+                // Keep second most recent cache if it exists
+                if (sortedCaches.length > 1) {
+                  const secondCache = sortedCaches[1];
+                  const secondCreatedAt = new Date(secondCache.created_at);
+                  const secondAgeInDays = (now - secondCreatedAt) / (1000 * 60 * 60 * 24);
+                  console.log(`Keeping second most recent cache: ${secondCache.key}, created ${secondAgeInDays.toFixed(1)} days ago`);
+                }
+              }
+              
+              // Delete all caches beyond the retention count
+              for (let i = retentionCount; i < sortedCaches.length; i++) {
+                const cache = sortedCaches[i];
+                const createdAt = new Date(cache.created_at);
+                const ageInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
+
+                console.log(`Deleting old cache: ${cache.key}, created ${ageInDays.toFixed(1)} days ago`);
+                await github.rest.actions.deleteActionsCacheByKey({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  key: cache.key
+                });
               }
             }
+            
+            // Set output to control whether to run warmup jobs
+            core.setOutput('needs_warmup', needsWarmup.toString());
 
   warmup-unix:
     needs: cleanup-cache
+    if: ${{ needs.cleanup-cache.outputs.needs_warmup == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_warmup == 'true') }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -109,6 +134,7 @@ jobs:
 
   warmup-win:
     needs: cleanup-cache
+    if: ${{ needs.cleanup-cache.outputs.needs_warmup == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_warmup == 'true') }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
