@@ -72,6 +72,7 @@ Then follow these steps:
 5. Start YALS:
 	1. Windows: Double click `YALS.exe` or run `.\YALS.exe` from the terminal (recommended)
 	2. macOS/Linux: Open a terminal and run `./YALS`
+6. Navigate to `http://<your URL>/docs` (ex. `http://localhost:5000/docs`) to view the YALS Scalar API documentation.
 ## Features
 
 - OpenAI compatible API

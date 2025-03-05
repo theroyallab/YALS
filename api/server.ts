@@ -42,7 +42,7 @@ export function createApi() {
     );
 
     app.get(
-        "/reference",
+        "/docs",
         apiReference({
             spec: {
                 url: "/openapi.json",
