@@ -16,9 +16,6 @@ jobs:
             device: cpu
           - os: macos-15
             device: cuda
-          # TODO: Remove on release
-          - os: macos-15
-            device: metal
           - os: ubuntu-22.04
             device: metal
   
