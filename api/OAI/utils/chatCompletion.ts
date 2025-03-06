@@ -107,15 +107,33 @@ export function applyChatTemplate(
         }
     });
 
-    const prompt = promptTemplate.render({
+    const bosToken = model.tokenizer.bosToken;
+    let prompt = promptTemplate.render({
         ...templateVars,
         messages: messages,
-        bos_token: addBosToken ? model.tokenizer.bosToken?.piece : "",
+        bos_token: addBosToken ? bosToken?.piece : "",
         eos_token: banEosToken ? "" : model.tokenizer.eosToken?.piece,
         add_generation_prompt: addGenerationPrompt,
     });
 
+    // Remove extra BOS token at start of prompt if present
+    // Better to do this since a template can add BOS anywhere
+    if (bosToken && prompt.startsWith(bosToken.piece)) {
+        prompt = prompt.slice(bosToken.piece.length);
+    }
+
     return prompt;
+}
+
+function addTemplateMetadata(
+    promptTemplate: PromptTemplate,
+    params: ChatCompletionRequest,
+) {
+    const metadata = promptTemplate.metadata;
+
+    if (metadata.stop_strings) {
+        params.stop.push(...metadata.stop_strings);
+    }
 }
 
 // TODO: Possibly rewrite this to unify with completions
@@ -149,6 +167,8 @@ export async function streamChatCompletion(
             templateVars: params.template_vars,
         },
     );
+
+    addTemplateMetadata(promptTemplate, params);
 
     try {
         const generator = model.generateGen(
@@ -220,6 +240,8 @@ export async function generateChatCompletion(
             templateVars: params.template_vars,
         },
     );
+
+    addTemplateMetadata(promptTemplate, params);
 
     const gen = await staticGenerate(req, model, prompt, params);
     const response = createResponse(gen, model.path.name);

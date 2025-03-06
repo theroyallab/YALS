@@ -533,7 +533,7 @@ export class Model {
         }
 
         if (promptTemplate) {
-            logger.info(promptTemplate.rawTemplate);
+            logger.info(`Prompt template: \n${promptTemplate.rawTemplate}`);
             logger.info(
                 `Using template "${promptTemplate.name}" for chat completions`,
             );
