@@ -44,8 +44,10 @@ export const logger = winston.createLogger({
 
 export function logPrompt(prompt: string) {
     // Log prompt to console
+    // Prompts can be very large, so make the newline log a console.log instead
     if (config.logging.log_prompt) {
-        logger.info(`Prompt: \n${prompt}`);
+        logger.info(`Prompt:`);
+        console.log(prompt);
     }
 }
 
