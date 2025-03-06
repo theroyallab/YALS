@@ -3,6 +3,7 @@ name: Build binaries
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   unix-build:
@@ -94,12 +95,13 @@ jobs:
         run: |
           mkdir ${{ steps.folder-name.outputs.name }}
           mv lib models templates config_sample.yml YALS ${{ steps.folder-name.outputs.name }}
-      # - name: Upload artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ steps.folder-name.outputs.name }}
-      #     path: ./${{ steps.folder-name.outputs.name }}
-      #     if-no-files-found: error
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        with:
+          name: ${{ steps.folder-name.outputs.name }}
+          path: ./${{ steps.folder-name.outputs.name }}
+          if-no-files-found: error
       - name: Zip files
         run: |
           cd ${{ steps.folder-name.outputs.name }}
@@ -107,6 +109,7 @@ jobs:
           mv ${{ steps.folder-name.outputs.name }}.zip ../
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         with:
           file: ${{ steps.folder-name.outputs.name }}.zip
           tag: ${{ steps.sha.outputs.sha }}
@@ -219,12 +222,13 @@ jobs:
         run: |
           mkdir ${{ steps.folder-name.outputs.name }}
           mv YALS.exe,lib,models,templates,config_sample.yml ${{ steps.folder-name.outputs.name }}
-      # - name: Upload artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ steps.folder-name.outputs.name }}
-      #     path: ./${{ steps.folder-name.outputs.name }}
-      #     if-no-files-found: error
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        with:
+          name: ${{ steps.folder-name.outputs.name }}
+          path: ./${{ steps.folder-name.outputs.name }}
+          if-no-files-found: error
       - name: Zip files
         run: |
           cd ${{ steps.folder-name.outputs.name }}
@@ -232,6 +236,7 @@ jobs:
           mv ${{ steps.folder-name.outputs.name }}.zip ../
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         with:
           file: ${{ steps.folder-name.outputs.name }}.zip
           tag: ${{ steps.sha.outputs.sha }}
