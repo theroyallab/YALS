@@ -792,8 +792,9 @@ const char* InferToReadbackBuffer(
                 currentBatchSize
             );
 
-            if (llama_decode(context, batch)) {
-                finishReason = "BatchDecode";
+            int decodeResult = llama_decode(context, batch);
+            if (decodeResult) {
+                finishReason = decodeResult == 2 ? "Aborted" : "BatchDecode";
                 return false;
             }
         }
@@ -841,8 +842,9 @@ const char* InferToReadbackBuffer(
 
     // Continue generation
     auto gen = [&](const llama_batch& batch, llama_sampler* smpl) -> std::pair<llama_token, bool> {
-        if (llama_decode(context, batch)) {
-            finishReason = "BatchDecode";
+        int decodeResult = llama_decode(context, batch);
+        if (decodeResult) {
+            finishReason = decodeResult == 2 ? "Aborted" : "BatchDecode";
             return {0, true};
         }
 

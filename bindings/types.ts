@@ -18,6 +18,7 @@ export enum BindingFinishReason {
     MaxNewTokens = "MaxNewTokens",
     StopString = "StopString",
     TokenEncode = "TokenEncode",
+    Aborted = "Aborted",
 }
 
 export type GenerationChunk = StreamChunk | FinishChunk;
