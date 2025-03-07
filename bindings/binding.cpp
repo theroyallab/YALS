@@ -787,10 +787,19 @@ const char* InferToReadbackBuffer(
             const size_t remaining = tokens.size() - i;
             const size_t currentBatchSize = std::min(remaining, static_cast<size_t>(batchSize));
 
-            const llama_batch batch = llama_batch_get_one(
-                tokens.data() + i,
-                currentBatchSize
-            );
+            // Create the batch
+            llama_batch batch = llama_batch_init(currentBatchSize, 0, 1);
+
+            // Fill the batch with tokens and keep the position updated
+            for (size_t j = 0; j < currentBatchSize; j++) {
+                batch.token[j] = tokens[i + j];
+                batch.pos[j] = i + j;
+                batch.n_seq_id[j] = 1;  // One sequence ID per token until cont. batching
+                batch.seq_id[j][0] = 0; // Seq ID will always be 0 until cont. batching
+                batch.logits[j] = (j == currentBatchSize - 1); // Logits for last token in batch
+            }
+
+            batch.n_tokens = currentBatchSize;
 
             int decodeResult = llama_decode(context, batch);
             if (decodeResult) {
