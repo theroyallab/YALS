@@ -943,7 +943,7 @@ const char* InferToReadbackBuffer(
                 finishReason = "StopString";
                 break;
             } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_REWIND) {
-                llama_kv_cache_seq_rm(context, 0, rewindState.position + 1, -1);
+                llama_kv_cache_seq_rm(context, 0, rewindPos + 1, -1);
 
                 // Reset the detokenizer too when rewinding
                 if (readbackBufferPtr->detokenizer) {
