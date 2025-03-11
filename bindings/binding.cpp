@@ -922,7 +922,7 @@ const char* InferToReadbackBuffer(
                 buffer = "";
 
                 // Save last known accept point in case we have to rewind back to the last accept.
-                rewindPos = llama_get_kv_cache_used_cells(context);
+                rewindPos = llama_kv_cache_seq_pos_max(context, 0);
                 rewindTokenId = newTokenId;
                 rewindTokenCount = tokenCount;
 
@@ -943,13 +943,14 @@ const char* InferToReadbackBuffer(
                 finishReason = "StopString";
                 break;
             } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_REWIND) {
-                llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
+                llama_kv_cache_seq_rm(context, 0, rewindState.position + 1, -1);
 
                 // Reset the detokenizer too when rewinding
                 if (readbackBufferPtr->detokenizer) {
                     readbackBufferPtr->detokenizer->reset();
                 }
 
+                biases.clear();
                 const auto tokens = Tokenize(model, buffer, false, false);
                 if (tokens) {
                     for (const llama_token token : tokens.value()) {
@@ -957,16 +958,12 @@ const char* InferToReadbackBuffer(
                     }
                 }
 
-                if (banSampler == nullptr) {
-                    banSampler = MakeSampler();
-                    LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
-                    DistSampler(banSampler, seed);
-                } else {
-                    llama_sampler_chain_remove(banSampler, 1);
-                    llama_sampler_chain_remove(banSampler, 0);
-                    LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
-                    DistSampler(banSampler, seed);
+                if (banSampler != nullptr) {
+                    llama_sampler_free(banSampler);
                 }
+                banSampler = MakeSampler();
+                LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
+                DistSampler(banSampler, seed);
 
                 buffer = "";
                 newTokenId = rewindTokenId;
