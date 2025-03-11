@@ -719,9 +719,18 @@ export class Model {
 
         const promptPtr = new TextEncoder().encode(prompt + "\0");
 
+        // These are numbers and strings, TS doesn't understand for some reason
+        const stopTokens = params.stop.filter((e) =>
+            typeof e === "number"
+        ) as number[];
+        const stopStrings = params.stop.filter((e) =>
+            typeof e === "string"
+        ) as string[];
+
         // Use the helper function for both arrays
         const rewindPtrArray = pointerArrayFromStrings(params.banned_strings);
-        const stopPtrArray = pointerArrayFromStrings(params.stop);
+        const stopTokensPtr = new Uint32Array(stopTokens);
+        const stopStringsPtr = pointerArrayFromStrings(stopStrings);
 
         const promptBosToken = params.add_bos_token
             ? this.tokenizer.bosToken?.piece
@@ -754,8 +763,10 @@ export class Model {
             seed,
             rewindPtrArray.inner,
             params.banned_strings.length,
-            stopPtrArray.inner,
-            params.stop.length,
+            stopStringsPtr.inner,
+            stopStrings.length,
+            stopTokensPtr,
+            stopTokens.length,
         );
 
         // Read from the read buffer

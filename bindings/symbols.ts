@@ -196,6 +196,8 @@ export default {
             "u32", // count of rewind strings
             "buffer", // const char** stoppingStrings
             "u32", // count of stop strings
+            "buffer", // const unsigned* stoppingTokens
+            "u32", // count of stop tokens
         ],
         result: "pointer" as const,
         nonblocking: true,

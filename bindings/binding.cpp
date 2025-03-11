@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <unordered_set>
 
 // Static vector to hold previous generation tokens
 // TODO: Remove in continuous batch implementation
@@ -749,7 +750,9 @@ const char* InferToReadbackBuffer(
     const char** rewindStrings,
     const unsigned numRewindStrings,
     const char** stoppingStrings,
-    const unsigned numStoppingStrings)
+    const unsigned numStoppingStrings,
+    const unsigned* stoppingTokens,
+    const unsigned numStoppingTokens)
 {
     if (abortCallback != nullptr) {
         llama_set_abort_callback(context, abortCallback, nullptr);
@@ -832,6 +835,13 @@ const char* InferToReadbackBuffer(
         return nullptr;
     }
 
+    // Create stop token set
+    std::unordered_set<unsigned> stopTokenSet;
+    if (stoppingTokens != nullptr && numStoppingTokens > 0) {
+        stopTokenSet.insert(stoppingTokens, stoppingTokens + numStoppingTokens);
+    }
+
+    // Populate string ban trie
     MatchTrie::MatchTrie matchingTrie;
 
     if (rewindStrings != nullptr && numRewindStrings > 0) {
@@ -885,7 +895,7 @@ const char* InferToReadbackBuffer(
 
     while (true) {
         // Abort if callback is fired
-        if (isEnd) {
+        if (isEnd || (!stopTokenSet.empty() && stopTokenSet.find(newTokenId) != stopTokenSet.end())) {
             finishReason = "StopToken";
             stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
             break;

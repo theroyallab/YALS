@@ -110,7 +110,9 @@ extern "C" {
         const char** rewindStrings,
         unsigned numRewindStrings,
         const char** stoppingStrings,
-        unsigned numStoppingStrings);
+        unsigned numStoppingStrings,
+        const unsigned* stoppingTokens,
+        unsigned numStoppingTokens);
 
 #ifdef __cplusplus
 }

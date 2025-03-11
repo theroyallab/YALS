@@ -8,7 +8,7 @@ const GenerationOptionsSchema = z.aliasedObject(
             }),
         stop: z.union([
             z.string().transform((str) => [str]),
-            z.array(z.string()),
+            z.array(z.union([z.string(), z.number()])),
         ])
             .nullish().coalesce([])
             .openapi({
