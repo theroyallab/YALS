@@ -6,7 +6,17 @@ on:
   workflow_dispatch:
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      timestamp: ${{ steps.timestamp.outputs.timestamp }}
+    steps:
+      - name: Get timestamp
+        id: timestamp
+        run: echo "timestamp=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
+
   unix-build:
+    needs: setup
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -62,9 +72,6 @@ jobs:
         run: |
           LONG_SHA=${{ github.sha }}
           echo "sha=${LONG_SHA::7}" >> $GITHUB_OUTPUT
-      - name: Get timestamp
-        id: timestamp
-        run: echo "timestamp=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
       - name: Install dependencies
         run: deno install
       - name: Save SHA to textfile
@@ -115,7 +122,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' }}
         with:
           file: ${{ steps.folder-name.outputs.name }}.zip
-          tag: ${{ steps.timestamp.outputs.timestamp }}-${{ steps.sha.outputs.sha }}
+          tag: ${{ needs.setup.outputs.timestamp }}-${{ steps.sha.outputs.sha }}
           overwrite: true
           release_name: YALS-${{ steps.sha.outputs.sha }}
           body: |
@@ -129,6 +136,7 @@ jobs:
             - **Metal** - Includes both Metal and CPU support for macOS.
 
   windows-build:
+    needs: setup
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -192,9 +200,6 @@ jobs:
       - name: Get short SHA
         id: sha
         run: echo "sha=$("${{ github.sha }}".Substring(0,7))" >> $env:GITHUB_OUTPUT
-      - name: Get timestamp
-        id: timestamp
-        run: echo "timestamp=$(Get-Date -Format 'yyyy.MM.dd.HHmm')" >> $env:GITHUB_OUTPUT
       - name: Install dependencies
         run: deno install
       - name: Save SHA to textfile
@@ -245,7 +250,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' }}
         with:
           file: ${{ steps.folder-name.outputs.name }}.zip
-          tag: ${{ steps.timestamp.outputs.timestamp }}-${{ steps.sha.outputs.sha }}
+          tag: ${{ needs.setup.outputs.timestamp }}-${{ steps.sha.outputs.sha }}
           overwrite: true
           release_name: YALS-${{ steps.sha.outputs.sha }}
           body: |
