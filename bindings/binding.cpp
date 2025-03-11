@@ -880,7 +880,7 @@ const char* InferToReadbackBuffer(
     auto [newTokenId, isEnd] = gen(firstBatch, sampler);
 
     // Extra samplers - Banned strings
-    int rewindPos = 0;
+    int rewindPos = llama_get_kv_cache_used_cells(context);
     int rewindTokenId = 0;
     int tokenCount = 0;
     int rewindTokenCount = 0;
