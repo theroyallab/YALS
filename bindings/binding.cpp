@@ -926,65 +926,75 @@ const char* InferToReadbackBuffer(
         if (!buffer.empty()) {
             const MatchTrie::MatchInfo matchInfo = matchingTrie.CheckBuffer(buffer);
 
-            if (matchInfo.result == MatchTrie::MatchResult::NO) {
-                WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()), newTokenId);
-                response += buffer;
-                buffer = "";
-
-                // Save last known accept point in case we have to rewind back to the last accept.
-                rewindPos = llama_get_kv_cache_used_cells(context);
-                rewindTokenId = newTokenId;
-                rewindTokenCount = tokenCount;
-
-                // If we had a rewind state built, tear it down as we've accepted a sequence.
-                if (banSampler != nullptr) {
-                    llama_sampler_free(banSampler);
-                    banSampler = nullptr;
-                    biases.clear();
-                }
-            } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_STOP) {
-                // Matched a stop, return the partial substring and break
-                std::string partialBuffer = buffer.substr(0, matchInfo.matchPos);
-
-                WriteToReadbackBuffer(readbackBufferPtr, strdup(partialBuffer.c_str()), newTokenId);
-                response += partialBuffer;
-
-                stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
-                finishReason = "StopString";
-                break;
-            } else if (matchInfo.result == MatchTrie::MatchResult::MATCHED_REWIND) {
-                llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
-
-                // Reset the detokenizer too when rewinding
-                if (readbackBufferPtr->detokenizer) {
-                    readbackBufferPtr->detokenizer->reset();
-                }
-
-                const auto tokens = Tokenize(model, buffer, false, false);
-                if (tokens) {
-                    for (const llama_token token : tokens.value()) {
-                        biases.push_back({token, -50000.0f});
+            switch (matchInfo.result) {
+                case MatchTrie::MatchResult::NO: {
+                    WriteToReadbackBuffer(readbackBufferPtr, strdup(buffer.c_str()), newTokenId);
+                    response += buffer;
+                    buffer = "";
+    
+                    // Save last known accept point in case we have to rewind back to the last accept.
+                    rewindPos = llama_get_kv_cache_used_cells(context);
+                    rewindTokenId = newTokenId;
+                    rewindTokenCount = tokenCount;
+    
+                    // If we had a rewind state built, tear it down as we've accepted a sequence.
+                    if (banSampler != nullptr) {
+                        llama_sampler_free(banSampler);
+                        banSampler = nullptr;
+                        biases.clear();
                     }
+                    break;
                 }
+                case MatchTrie::MatchResult::MATCHED_STOP: {
+                    // Matched a stop, return the partial substring and break
+                    std::string partialBuffer = buffer.substr(0, matchInfo.matchPos);
 
-                if (banSampler == nullptr) {
-                    banSampler = MakeSampler();
-                    LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
-                    DistSampler(banSampler, seed);
-                } else {
-                    llama_sampler_chain_remove(banSampler, 1);
-                    llama_sampler_chain_remove(banSampler, 0);
-                    LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
-                    DistSampler(banSampler, seed);
+                    WriteToReadbackBuffer(readbackBufferPtr, strdup(partialBuffer.c_str()), newTokenId);
+                    response += partialBuffer;
+
+                    stoppedAt = TokenToPiece(model, newTokenId, decodeSpecial).value_or("");
+                    finishReason = "StopString";
+
+                    // Signals a break
+                    isEnd = true;
+                    continue;
                 }
+                case MatchTrie::MatchResult::MATCHED_REWIND: {
+                    llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
 
-                buffer = "";
-                newTokenId = rewindTokenId;
-
-                batch = llama_batch_get_one(&newTokenId, 1);
-                std::tie(newTokenId, isEnd) = gen(batch, banSampler);
-                tokenCount = rewindTokenCount;
-                continue;
+                    // Reset the detokenizer too when rewinding
+                    if (readbackBufferPtr->detokenizer) {
+                        readbackBufferPtr->detokenizer->reset();
+                    }
+    
+                    const auto tokens = Tokenize(model, buffer, false, false);
+                    if (tokens) {
+                        for (const llama_token token : tokens.value()) {
+                            biases.push_back({token, -50000.0f});
+                        }
+                    }
+    
+                    if (banSampler == nullptr) {
+                        banSampler = MakeSampler();
+                        LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
+                        DistSampler(banSampler, seed);
+                    } else {
+                        llama_sampler_chain_remove(banSampler, 1);
+                        llama_sampler_chain_remove(banSampler, 0);
+                        LogitBiasSampler(banSampler, model, static_cast<int32_t>(biases.size()), biases.data());
+                        DistSampler(banSampler, seed);
+                    }
+    
+                    buffer = "";
+                    newTokenId = rewindTokenId;
+    
+                    batch = llama_batch_get_one(&newTokenId, 1);
+                    std::tie(newTokenId, isEnd) = gen(batch, banSampler);
+                    tokenCount = rewindTokenCount;
+                    continue;
+                }
+                case MatchTrie::MatchResult::MAYBE:
+                    break;
             }
         }
 
