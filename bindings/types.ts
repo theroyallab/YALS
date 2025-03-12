@@ -1,14 +1,13 @@
 // Subset for caching
 export enum GGMLType {
-    F32 = 0,
-    F16 = 1,
-    Q4_0 = 2,
-    Q4_1 = 3,
+    f32 = 0,
+    f16 = 1,
+    q4_0 = 2,
+    q4_1 = 3,
     // 4 and 5 were removed (Q4_2 and Q4_3)
-    Q5_0 = 6,
-    Q5_1 = 7,
-    Q8_0 = 8,
-    Q8_1 = 9,
+    q5_0 = 6,
+    q5_1 = 7,
+    q8_0 = 8,
 }
 
 export enum BindingFinishReason {

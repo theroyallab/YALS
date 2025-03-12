@@ -27,15 +27,19 @@ export const ModelConfig = z.object({
     rope_freq_base: z.number().nullish().coalesce(0),
     enable_yarn: z.boolean().nullish().coalesce(false),
     cache_mode_k: z.union([
-        z.string().transform((str) => GGMLType[str as keyof typeof GGMLType]),
+        z.string().transform((str) =>
+            GGMLType[str.toLowerCase() as keyof typeof GGMLType]
+        ),
         z.number(),
     ])
-        .nullish().coalesce(GGMLType.F16),
+        .nullish().coalesce(GGMLType.f16),
     cache_mode_v: z.union([
-        z.string().transform((str) => GGMLType[str as keyof typeof GGMLType]),
+        z.string().transform((str) =>
+            GGMLType[str.toLowerCase() as keyof typeof GGMLType]
+        ),
         z.number(),
     ])
-        .nullish().coalesce(GGMLType.F16),
+        .nullish().coalesce(GGMLType.f16),
 });
 
 export type ModelConfig = z.infer<typeof ModelConfig>;

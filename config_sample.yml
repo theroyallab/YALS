@@ -59,7 +59,9 @@ model:
   enable_yarn: false
 
   # K cache quantization type (default: F16)
-  cache_mode_k: F16
+  # Possible values - f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0
+  cache_mode_k: f16
 
   # V cache quantization type (default: F16)
-  cache_mode_v: F16
+  # Possible values - f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0
+  cache_mode_v: f16
