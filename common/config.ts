@@ -17,17 +17,19 @@ export let config: ConfigSchema = ConfigSchema.parse({
 
 export async function loadConfig(args: Record<string, unknown>) {
     const configPath = "config.yml";
+    let parsedConfig: Record<string, unknown> = {};
 
+    // Warn if the file doesn't exist
     const fileInfo = await Deno.stat(configPath).catch(() => null);
-    if (!fileInfo?.isFile) {
+    if (fileInfo?.isFile) {
+        const rawConfig = await Deno.readFile(configPath);
+        const rawConfigStr = new TextDecoder().decode(rawConfig);
+
+        parsedConfig = YAML.parse(rawConfigStr) as Record<string, unknown>;
+    } else {
         logger.warn("Could not find a config file. Starting anyway.");
-        return;
     }
 
-    const rawConfig = await Deno.readFile(configPath);
-    const rawConfigStr = new TextDecoder().decode(rawConfig);
-
-    const parsedConfig = YAML.parse(rawConfigStr) as Record<string, unknown>;
     const mergedConfig: Record<string, unknown> = {};
 
     // Single loop to merge default config, file config, and args
