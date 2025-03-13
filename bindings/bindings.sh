@@ -25,18 +25,18 @@ if [ "$GGML_CUDA" = "1" ]; then
     fi
 fi
 
-if [ "$DGGML_VULKAN" = "1" ]; then
-    EXTRA_CMAKE_ARGS+=("-DGGML_VULKAN=ON")
+if [ "$GGML_VULKAN" = "1" ]; then
+    EXTRA_CMAKE_ARGS+=("-GGML_VULKAN=ON")
     echo "Vulkan enabled, including in build"
 fi
 
-if [ "$DGGML_HIP" = "1" ]; then
-    EXTRA_CMAKE_ARGS+=("-DGGML_HIP=ON")
+if [ "$GGML_HIP" = "1" ]; then
+    EXTRA_CMAKE_ARGS+=("-GGML_HIP=ON")
     echo "HIP enabled, including in build"
 
-    if [ -n "$DAMDGPU_TARGETS" ]; then
+    if [ -n "$AMDGPU_TARGETS" ]; then
         EXTRA_CMAKE_ARGS+=(
-            "-DDAMDGPU_TARGETS=$DAMDGPU_TARGETS"
+            "-DAMDGPU_TARGETS=$AMDGPU_TARGETS"
         )
     fi
 fi

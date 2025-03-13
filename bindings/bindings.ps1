@@ -26,10 +26,10 @@ if ($env:GGML_CUDA -eq 1) {
     }
 }
 
-if ($env:DGGML_VULKAN -eq 1) {
+if ($env:GGML_VULKAN -eq 1) {
     Write-Host "Vulkan enabled, including in build"
 
-    $extraCmakeArgs += "-DGGML_VULKAN=ON"
+    $extraCmakeArgs += "-GGML_VULKAN=ON"
 }
 
 cmake . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release $extraCmakeArgs
