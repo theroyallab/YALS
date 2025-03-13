@@ -36,7 +36,7 @@ if [ "$GGML_HIP" = "1" ]; then
 
     if [ -n "$AMDGPU_TARGETS" ]; then
         EXTRA_CMAKE_ARGS+=(
-            "-DDAMDGPU_TARGETS=$AMDGPU_TARGETS"
+            "-DAMDGPU_TARGETS=$AMDGPU_TARGETS"
         )
     fi
 fi
