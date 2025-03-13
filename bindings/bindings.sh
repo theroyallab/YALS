@@ -25,6 +25,22 @@ if [ "$GGML_CUDA" = "1" ]; then
     fi
 fi
 
+if [ "$DGGML_VULKAN" = "1" ]; then
+    EXTRA_CMAKE_ARGS+=("-DGGML_VULKAN=ON")
+    echo "Vulkan enabled, including in build"
+fi
+
+if [ "$DGGML_HIP" = "1" ]; then
+    EXTRA_CMAKE_ARGS+=("-DGGML_HIP=ON")
+    echo "HIP enabled, including in build"
+
+    if [ -n "$DAMDGPU_TARGETS" ]; then
+        EXTRA_CMAKE_ARGS+=(
+            "-DDAMDGPU_TARGETS=$DAMDGPU_TARGETS"
+        )
+    fi
+fi
+
 # Join array elements with spaces
 CMAKE_ARGS="${EXTRA_CMAKE_ARGS[*]}"
 
