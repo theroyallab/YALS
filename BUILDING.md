@@ -46,7 +46,7 @@ Optionally, environment variables can be set for certain architectures when buil
 - `GGML_CUDA=1`: Enables CUDA support
 - `CMAKE_CUDA_ARCHITECTURES`: Specifies CUDA compute capabilities (defaults to `native` if using CMake > 3.24)
 - `DGGML_VULKAN=1`: Enables Vulkan Support
-- `DGGML_HIP=1`: Enables HIP ROCM Support (Requires specifying DAMDGPU_TARGETS
+- `DGGML_HIP=1`: Enables HIP ROCM Support (Requires specifying DAMDGPU_TARGETS)
 - `DAMDGPU_TARGETS`: Specify ROCM target (example: `gfx1030`)
 
 ## Running
