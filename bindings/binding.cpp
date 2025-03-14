@@ -924,7 +924,11 @@ const char* InferToReadbackBuffer(
         tokenCount += batch.n_tokens;
 
         if (!buffer.empty()) {
-            const MatchTrie::MatchInfo matchInfo = matchingTrie.CheckBuffer(buffer);
+            std::string stripped = buffer;
+            if (std::isspace(static_cast<unsigned char>(stripped.front()))) {
+                stripped.erase(0, 1);
+            }
+            const MatchTrie::MatchInfo matchInfo = matchingTrie.CheckBuffer(stripped);
 
             switch (matchInfo.result) {
                 case MatchTrie::MatchResult::NO: {
