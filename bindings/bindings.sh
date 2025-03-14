@@ -20,9 +20,9 @@ if [ -n "$LLAMACPP_REPO" ]; then
     echo "Using custom llama.cpp repo: ${LLAMACPP_REPO}"
 fi
 
-if [ -n "$LLAMACPP_TAG" ]; then
-    EXTRA_CMAKE_ARGS+=("-DLLAMACPP_TAG=$LLAMACPP_TAG")
-    echo "Using custom llama.cpp tag: ${LLAMACPP_TAG}"
+if [ -n "$LLAMACPP_COMMIT" ]; then
+    EXTRA_CMAKE_ARGS+=("-DLLAMACPP_COMMIT=$LLAMACPP_COMMIT")
+    echo "Using custom llama.cpp commit: ${LLAMACPP_COMMIT}"
 fi
 
 if [ "$GGML_CUDA" = "1" ]; then

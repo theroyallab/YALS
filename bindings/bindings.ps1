@@ -19,9 +19,9 @@ if ($env:LLAMACPP_REPO) {
     Write-Host "Using custom llama.cpp repo: $env:LLAMACPP_REPO"
 }
 
-if ($env:LLAMACPP_TAG) {
-    $extraCmakeArgs += "-DLLAMACPP_REPO=$env:LLAMACPP_TAG"
-    Write-Host "Using custom llama.cpp tag: $env:LLAMACPP_TAG"
+if ($env:LLAMACPP_COMMIT) {
+    $extraCmakeArgs += "-DLLAMACPP_COMMIT=$env:LLAMACPP_COMMIT"
+    Write-Host "Using custom llama.cpp commit: $env:LLAMACPP_COMMIT"
 }
 
 if ($env:GGML_CUDA -eq 1) {

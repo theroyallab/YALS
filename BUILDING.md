@@ -43,6 +43,8 @@ This will invoke CMake to build the bindings and copy the resulting shared libra
 
 Optionally, environment variables can be set for certain architectures when building (ex. CUDA):
 - `MAX_JOBS`: Number of parallel jobs (defaults to the number of CPU cores)
+- `LLAMACPP_REPO`: Point to a custom repository for llama.cpp (Here be dragons!)
+- `LLAMACPP_TAG`: Set a specific tag for llama.cpp (Here be dragons!)
 - `GGML_CUDA=1`: Enables CUDA support
 - `CMAKE_CUDA_ARCHITECTURES`: Specifies CUDA compute capabilities (defaults to `native` if using CMake > 3.24)
 - `GGML_VULKAN=1`: Enables Vulkan Support
