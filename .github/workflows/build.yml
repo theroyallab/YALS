@@ -80,7 +80,7 @@ jobs:
         run: |
           if [ "${{ matrix.device }}" = "cuda" ]; then
             export GGML_CUDA=1
-            export CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
+            export CMAKE_CUDA_ARCHITECTURES="60;61;75;86;89;120"
           fi
           deno task bindings
           deno task compile
