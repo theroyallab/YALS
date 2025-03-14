@@ -13,6 +13,17 @@ $jobs = if ($env:MAX_JOBS) {
 
 $extraCmakeArgs = @()
 
+# llama.cpp dev options
+if ($env:LLAMACPP_REPO) {
+    $extraCmakeArgs += "-DLLAMACPP_REPO=$env:LLAMACPP_REPO"
+    Write-Host "Using custom llama.cpp repo: $env:LLAMACPP_REPO"
+}
+
+if ($env:LLAMACPP_TAG) {
+    $extraCmakeArgs += "-DLLAMACPP_REPO=$env:LLAMACPP_TAG"
+    Write-Host "Using custom llama.cpp tag: $env:LLAMACPP_TAG"
+}
+
 if ($env:GGML_CUDA -eq 1) {
     Write-Host "CUDA enabled, including in build"
 

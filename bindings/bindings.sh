@@ -14,6 +14,17 @@ fi
 # Initialize as empty array
 EXTRA_CMAKE_ARGS=()
 
+# llama.cpp dev options
+if [ -n "$LLAMACPP_REPO" ]; then
+    EXTRA_CMAKE_ARGS+=("-DLLAMACPP_REPO=$LLAMACPP_REPO")
+    echo "Using custom llama.cpp repo: ${LLAMACPP_REPO}"
+fi
+
+if [ -n "$LLAMACPP_TAG" ]; then
+    EXTRA_CMAKE_ARGS+=("-DLLAMACPP_TAG=$LLAMACPP_TAG")
+    echo "Using custom llama.cpp tag: ${LLAMACPP_TAG}"
+fi
+
 if [ "$GGML_CUDA" = "1" ]; then
     EXTRA_CMAKE_ARGS+=("-DGGML_CUDA=ON")
     echo "CUDA enabled, including in build"

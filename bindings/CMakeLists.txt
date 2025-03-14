@@ -13,13 +13,22 @@ elseif (UNIX)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 endif()
 
+# Stable llama.cpp commit for bindings
+set(LLAMACPP_COMMIT "84d547554123a62e9ac77107cb20e4f6cc503af4")
+
+set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git" CACHE STRING "llama.cpp repository URL")
+message(STATUS "Using llama.cpp repo ${LLAMACPP_REPO}")
+
+set(LLAMACPP_TAG ${LLAMACPP_COMMIT} CACHE STRING "llama.cpp repository tag")
+message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
+
 # Fetch llama.cpp latest
 # FIXME: Maybe use a vendored llama.cpp build for stability
 include(FetchContent)
 FetchContent_Declare(
     llama
-    GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-    GIT_TAG 80a02aa8588ef167d616f76f1781b104c245ace0
+    GIT_REPOSITORY ${LLAMACPP_REPO}
+    GIT_TAG ${LLAMACPP_TAG}
 )
 
 # Required for proper builds
