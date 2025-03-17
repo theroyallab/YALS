@@ -44,14 +44,17 @@ export const ModelConfig = z.object({
 
 export type ModelConfig = z.infer<typeof ModelConfig>;
 
+export const SamplingConfig = z.object({
+    override_preset: z.string().nullish(),
+});
+
+export type SamplingConfig = z.infer<typeof SamplingConfig>;
+
 export const ConfigSchema = z.object({
     network: NetworkConfig,
     logging: LoggingConfig,
     model: ModelConfig,
+    sampling: SamplingConfig,
 });
 
 export type ConfigSchema = z.infer<typeof ConfigSchema>;
-
-export const testSchema = z.object({
-    firstValue: z.string().nullish().coalesce("Models"),
-});

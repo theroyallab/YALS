@@ -1,0 +1,112 @@
+# Sample YAML file for override presets.
+# Each block corresponds to a sampler fallback override. Remove ones that you don't need.
+# "force" always overrides the sampler to the specified value.
+# For example, a top-p override of 1.5 with force = true will make every API request have a top_p value of 1.5
+
+# You can use https://www.yamllint.com/ if you want to check your YAML formatting.
+
+# TODO: Improve documentation for each field
+
+# MARK: Misc generation parameters
+max_tokens:
+  override: 150
+  force: false
+stop:
+  override: []
+  force: false
+  additive: false
+banned_strings:
+  override: []
+  force: false
+  additive: false
+
+# MARK: Temperature
+temperature:
+  override: 1.0
+  force: false
+temperature_last:
+  override: false
+  force: false
+min_temp:
+  override: 1.0
+  force: false
+max_temp:
+  override: 1.0
+  force: false
+temp_exponent:
+  override: 1.0
+  force: false
+
+# MARK: Alphabet soup
+top_k:
+  override: 0
+  force: false
+top_p:
+  override: 1.0
+  force: false
+top_a:
+  override: 0.0
+  force: false
+min_p:
+  override: 0.0
+  force: false
+typical:
+  override: 1.0
+  force: false
+xtc_probability:
+  override: 0.0
+  force: false
+xtc_threshold:
+  override: 0.1
+  force: false
+
+# MARK: Penalty settings
+frequency_penalty:
+  override: 0.0
+  force: false
+presence_penalty:
+  override: 0.0
+  force: false
+repetition_penalty:
+  override: 1.0
+  force: false
+penalty_range:
+  override: -1
+  force: false
+
+# MARK: DRY
+dry_multiplier:
+  override: 0.0
+  force: false
+dry_base:
+  override: 0.0
+  force: false
+dry_allowed_length:
+  override: 0
+  force: false
+dry_range:
+  override: 0
+  force: false
+dry_sequence_breakers:
+  override: []
+  force: false
+  additive: false
+
+# MARK: Token options
+add_bos_token:
+  override: true
+  force: false
+ban_eos_token:
+  override: false
+  force: false
+skip_special_tokens:
+  override: true
+  force: false
+logit_bias:
+  override:
+  force: false
+  additive: false
+banned_tokens:
+  override: []
+  force: false
+  additive: false

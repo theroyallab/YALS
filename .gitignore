@@ -46,6 +46,10 @@ templates/*
 !templates/alpaca.jinja
 !templates/chatml.jinja
 
+# Sampler overrides folder
+sampler_overrides/*
+!sampler_overrides/sample_preset.yml
+
 # Compiled binaries and embedded assets
 gitSha.txt
 YALS.exe

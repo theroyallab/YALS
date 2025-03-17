@@ -5,6 +5,7 @@ import {
     LoggingConfig,
     ModelConfig,
     NetworkConfig,
+    SamplingConfig,
 } from "./configModels.ts";
 import { logger } from "@/common/logging.ts";
 
@@ -13,6 +14,7 @@ export let config: ConfigSchema = ConfigSchema.parse({
     network: NetworkConfig.parse({}),
     logging: LoggingConfig.parse({}),
     model: ModelConfig.parse({}),
+    sampling: SamplingConfig.parse({}),
 });
 
 export async function loadConfig(args: Record<string, unknown>) {
@@ -22,10 +24,8 @@ export async function loadConfig(args: Record<string, unknown>) {
     // Warn if the file doesn't exist
     const fileInfo = await Deno.stat(configPath).catch(() => null);
     if (fileInfo?.isFile) {
-        const rawConfig = await Deno.readFile(configPath);
-        const rawConfigStr = new TextDecoder().decode(rawConfig);
-
-        parsedConfig = YAML.parse(rawConfigStr) as Record<string, unknown>;
+        const rawConfig = await Deno.readTextFile(configPath);
+        parsedConfig = YAML.parse(rawConfig) as Record<string, unknown>;
     } else {
         logger.warn("Could not find a config file. Starting anyway.");
     }
