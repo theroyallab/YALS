@@ -15,6 +15,9 @@ stop:
   override: []
   force: false
   additive: false
+seed:
+  override:
+  force: false
 banned_strings:
   override: []
   force: false
@@ -52,6 +55,9 @@ min_p:
   force: false
 typical:
   override: 1.0
+  force: false
+nsigma:
+  override: 0
   force: false
 xtc_probability:
   override: 0.0

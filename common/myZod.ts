@@ -1,24 +1,36 @@
 import * as z from "zod";
 import "zod-openapi/extend";
-export * from "zod";
 
 // Extend ZodType
+
+// Coalesce to handle nullish values
+// If the default is a function, call it and return
 z.ZodType.prototype.coalesce = function (defaultValue) {
-    return this.transform((value) => value ?? defaultValue);
+    return this.transform((value) => {
+        if (value != null) {
+            return value;
+        } else if (typeof defaultValue === "function") {
+            return defaultValue();
+        } else {
+            return defaultValue;
+        }
+    });
 };
 
-// Export type as part of the package
-declare module "zod" {
-    interface ZodType<
-        Output,
-        Def extends z.ZodTypeDef = z.ZodTypeDef,
-        Input = Output,
-    > {
-        coalesce(
-            defaultValue: NonNullable<Output>,
-        ): z.ZodEffects<this, NonNullable<Output>>;
-    }
+// Sampler overrides
+
+// Store the sampler override default function to prevent circular import
+let samplerOverrideResolver = <T>(_key: string, fallback?: T) => fallback as T;
+
+export function registerSamplerOverrideResolver(
+    resolver: <T>(key: string, fallback?: T) => T,
+) {
+    samplerOverrideResolver = resolver;
 }
+
+z.ZodType.prototype.samplerOverride = function <T>(key: string, fallback?: T) {
+    return this.coalesce(() => samplerOverrideResolver(key, fallback));
+};
 
 // Alias support
 interface AliasChoice {
@@ -57,4 +69,24 @@ export function aliasedObject<
 
         return obj.data;
     }, schema);
+}
+
+export * from "zod";
+
+// Export type as part of the package
+declare module "zod" {
+    interface ZodType<
+        Output,
+        Def extends z.ZodTypeDef = z.ZodTypeDef,
+        Input = Output,
+    > {
+        coalesce(
+            defaultValue: NonNullable<Output> | (() => NonNullable<Output>),
+        ): z.ZodEffects<this, NonNullable<Output>>;
+
+        samplerOverride<T>(
+            key: string,
+            fallback?: T,
+        ): z.ZodEffects<this, NonNullable<Output>>;
+    }
 }

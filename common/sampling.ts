@@ -1,11 +1,10 @@
-import * as YAML from "@std/yaml";
 import * as z from "@/common/myZod.ts";
-import { logger } from "@/common/logging.ts";
 
 // Sampling schemas
 const GenerationOptionsSchema = z.aliasedObject(
     z.object({
         max_tokens: z.number().gte(0).nullish()
+            .samplerOverride("max_tokens")
             .openapi({
                 description: "Aliases: max_length",
             }),
@@ -13,19 +12,26 @@ const GenerationOptionsSchema = z.aliasedObject(
             z.string().transform((str) => [str]),
             z.array(z.union([z.string(), z.number()])),
         ])
-            .nullish().coalesce([])
+            .nullish()
+            .samplerOverride("stop", [])
             .openapi({
                 description: "Aliases: stop_sequence",
             }),
-        add_bos_token: z.boolean().nullish().coalesce(true),
-        ban_eos_token: z.boolean().nullish().coalesce(false)
+        add_bos_token: z.boolean().nullish()
+            .samplerOverride("add_bos_token", true),
+        ban_eos_token: z.boolean().nullish()
+            .samplerOverride("ban_eos_token", false)
             .openapi({
                 description: "Aliases: ignore_eos",
             }),
-        skip_special_tokens: z.boolean().nullish().coalesce(false),
-        seed: z.number().nullish(),
-        logit_bias: z.record(z.string(), z.number()).nullish().coalesce({}),
-        grammar_string: z.string().nullish(),
+        skip_special_tokens: z.boolean().nullish()
+            .samplerOverride("skip_special_tokens", false),
+        seed: z.number().nullish()
+            .samplerOverride("seed"),
+        logit_bias: z.record(z.string(), z.number()).nullish()
+            .samplerOverride("logit_bias", {}),
+        grammar_string: z.string().nullish()
+            .samplerOverride("grammar_string"),
         banned_tokens: z.union([
             z.array(z.number()),
             z.string()
@@ -36,7 +42,8 @@ const GenerationOptionsSchema = z.aliasedObject(
                         .map((x) => parseInt(x))
                 ),
         ])
-            .nullish().coalesce([])
+            .nullish()
+            .samplerOverride("banned_tokens", [])
             .openapi({
                 description: "Aliases: custom_token_bans",
             }),
@@ -44,7 +51,8 @@ const GenerationOptionsSchema = z.aliasedObject(
             z.string().transform((str) => [str]),
             z.array(z.string()),
         ])
-            .nullish().coalesce([]),
+            .nullish()
+            .samplerOverride("banned_strings", []),
     }),
     [
         { field: "max_tokens", aliases: ["max_length"] },
@@ -58,8 +66,10 @@ const GenerationOptionsSchema = z.aliasedObject(
     });
 
 const TemperatureSamplerSchema = z.object({
-    temperature: z.number().gte(0).nullish().coalesce(1),
-    temperature_last: z.boolean().nullish().coalesce(false),
+    temperature: z.number().gte(0).nullish()
+        .samplerOverride("temperature", 1),
+    temperature_last: z.boolean().nullish()
+        .samplerOverride("temperature_last", false),
 })
     .openapi({
         description: "Temperature options",
@@ -68,11 +78,16 @@ const TemperatureSamplerSchema = z.object({
 const AlphabetSamplerSchema = z.aliasedObject(
     z.object({
         top_k: z.number().gte(-1).transform((top_k) => top_k == -1 ? 0 : top_k)
-            .nullish().coalesce(0),
-        top_p: z.number().gte(0).lte(1).nullish().coalesce(1),
-        min_p: z.number().gte(0).lte(1).nullish().coalesce(0),
-        typical: z.number().gt(0).lte(1).nullish().coalesce(1),
-        nsigma: z.number().gte(0).nullish().coalesce(0),
+            .nullish()
+            .samplerOverride("top_k", 0),
+        top_p: z.number().gte(0).lte(1).nullish()
+            .samplerOverride("top_p", 1),
+        min_p: z.number().gte(0).lte(1).nullish()
+            .samplerOverride("min_p", 0),
+        typical: z.number().gt(0).lte(1).nullish()
+            .samplerOverride("typical", 1),
+        nsigma: z.number().gte(0).nullish()
+            .samplerOverride("nsigma", 0),
     }),
     [{ field: "typical", aliases: ["typical_p"] }],
 )
@@ -82,13 +97,17 @@ const AlphabetSamplerSchema = z.aliasedObject(
 
 const PenaltySamplerSchema = z.aliasedObject(
     z.object({
-        frequency_penalty: z.number().gte(0).nullish().coalesce(0),
-        presence_penalty: z.number().gte(0).nullish().coalesce(0),
-        repetition_penalty: z.number().gt(0).nullish().coalesce(1)
+        frequency_penalty: z.number().gte(0).nullish()
+            .samplerOverride("frequency_penalty", 0),
+        presence_penalty: z.number().gte(0).nullish()
+            .samplerOverride("presence_penalty", 0),
+        repetition_penalty: z.number().gt(0).nullish()
+            .samplerOverride("repetition_penalty", 1)
             .openapi({
                 description: "Aliases: rep_pen",
             }),
-        penalty_range: z.number().nullish().coalesce(-1)
+        penalty_range: z.number().nullish()
+            .samplerOverride("penalty_range", -1)
             .openapi({
                 description:
                     "Aliases: repetition_range, repetition_penalty_range, rep_pen_range",
@@ -112,9 +131,12 @@ const PenaltySamplerSchema = z.aliasedObject(
 
 const DrySchema = z.aliasedObject(
     z.object({
-        dry_multiplier: z.number().nullish().coalesce(0),
-        dry_base: z.number().nullish().coalesce(0),
-        dry_allowed_length: z.number().nullish().coalesce(0),
+        dry_multiplier: z.number().nullish()
+            .samplerOverride("dry_multiplier", 0),
+        dry_base: z.number().nullish()
+            .samplerOverride("dry_base", 0),
+        dry_allowed_length: z.number().nullish()
+            .samplerOverride("dry_allowed_length", 0),
         dry_sequence_breakers: z.union([
             z.string()
                 .transform((str) => {
@@ -131,8 +153,10 @@ const DrySchema = z.aliasedObject(
                 }),
             z.array(z.string()),
         ])
-            .nullish().coalesce([]),
-        dry_range: z.number().nullish().coalesce(0)
+            .nullish()
+            .samplerOverride("dry_sequence_breakers", []),
+        dry_range: z.number().nullish()
+            .samplerOverride("dry_range", 0)
             .openapi({
                 description: "Aliases: dry_penalty_last_n",
             }),
@@ -144,8 +168,10 @@ const DrySchema = z.aliasedObject(
     });
 
 const XtcSchema = z.object({
-    xtc_probability: z.number().nullish().coalesce(0),
-    xtc_threshold: z.number().nullish().coalesce(0.1),
+    xtc_probability: z.number().nullish()
+        .samplerOverride("xtc_probability", 0),
+    xtc_threshold: z.number().nullish()
+        .samplerOverride("xtc_threshold", 0.1),
 })
     .openapi({
         description: "XTC options",
@@ -153,15 +179,18 @@ const XtcSchema = z.object({
 
 const DynatempSchema = z.aliasedObject(
     z.object({
-        max_temp: z.number().gte(0).nullish().coalesce(1)
+        max_temp: z.number().gte(0).nullish()
+            .samplerOverride("max_temp", 1)
             .openapi({
                 description: "Aliases: dynatemp_high",
             }),
-        min_temp: z.number().gte(0).nullish().coalesce(1)
+        min_temp: z.number().gte(0).nullish()
+            .samplerOverride("min_temp", 1)
             .openapi({
                 description: "Aliases: dynatemp_low",
             }),
-        temp_exponent: z.number().gte(0).nullish().coalesce(1)
+        temp_exponent: z.number().gte(0).nullish()
+            .samplerOverride("temp_exponent", 1)
             .openapi({
                 description: "Aliases: dynatemp_exponent",
             }),
@@ -177,9 +206,12 @@ const DynatempSchema = z.aliasedObject(
     });
 
 const MirostatSchema = z.object({
-    mirostat_mode: z.number().nullish().coalesce(0),
-    mirostat_tau: z.number().nullish().coalesce(1),
-    mirostat_eta: z.number().nullish().coalesce(0),
+    mirostat_mode: z.number().nullish()
+        .samplerOverride("mirostat_mode", 0),
+    mirostat_tau: z.number().nullish()
+        .samplerOverride("mirostat_tau", 1),
+    mirostat_eta: z.number().nullish()
+        .samplerOverride("mirostat_eta", 0),
 })
     .openapi({
         description: "Mirostat options",
@@ -196,70 +228,3 @@ export const BaseSamplerRequest = GenerationOptionsSchema
     .and(MirostatSchema);
 
 export type BaseSamplerRequest = z.infer<typeof BaseSamplerRequest>;
-
-export const SamplerOverride = z.object({
-    override: z.unknown().refine((val) => val !== undefined && val !== null, {
-        message: "Override value cannot be undefined or null",
-    }),
-    force: z.boolean().optional().default(false),
-    additive: z.boolean().optional().default(false),
-});
-
-// Sampler overrides
-export type SamplerOverride = z.infer<typeof SamplerOverride>;
-
-class SamplerOverridesContainer {
-    selectedPreset?: string;
-    overrides: Record<string, SamplerOverride> = {};
-}
-
-export const overridesContainer = new SamplerOverridesContainer();
-
-export function overridesFromDict(newOverrides: Record<string, unknown>) {
-    const parsedOverrides: Record<string, SamplerOverride> = {};
-
-    // Validate each entry as a SamplerOverride type
-    for (const [key, value] of Object.entries(newOverrides)) {
-        try {
-            parsedOverrides[key] = SamplerOverride.parse(value);
-        } catch (error) {
-            if (error instanceof Error) {
-                logger.error(error.stack);
-                logger.warn(
-                    `Skipped override with key "${key}"` +
-                        "due to the above error.",
-                );
-            }
-        }
-    }
-
-    overridesContainer.overrides = parsedOverrides;
-}
-
-export async function overridesFromFile(presetName: string) {
-    const presetPath = `sampler_overrides/${presetName}.yml`;
-    overridesContainer.selectedPreset = presetName;
-
-    // Read from override preset file
-    const fileInfo = await Deno.stat(presetPath).catch(() => null);
-    if (fileInfo?.isFile) {
-        const rawPreset = await Deno.readTextFile(presetPath);
-        const presetsYaml = YAML.parse(rawPreset) as Record<string, unknown>;
-
-        overridesFromDict(presetsYaml);
-
-        logger.info(`Applied sampler overrides from preset ${presetName}`);
-    } else {
-        throw new Error(
-            `Sampler override file named ${presetName} was not found. ` +
-                "Make sure it's located in the sampler_overrides folder.",
-        );
-    }
-}
-
-function getDefaultValue<T>(key: string, fallback: T): T {
-    const defaultValue = overridesContainer.overrides[key]?.override ??
-        fallback;
-
-    return defaultValue as T;
-}
