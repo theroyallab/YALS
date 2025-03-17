@@ -19,6 +19,20 @@ void TestPrint(const char* text)
     std::cout << text << std::endl;
 }
 
+// Custom logger to remove some llamacpp messages
+void log_callback(enum ggml_log_level level, const char* text, void* user_data) {
+
+    // Swallow all logs that refer to the abort calback
+    if (strstr(text, "set_abort_callback") != nullptr) {
+        return;
+    }
+
+    // Forward other messages to stderr
+    if (level <= GGML_LOG_LEVEL_INFO) {
+        fprintf(stderr, "%s", text);
+    }
+}
+
 //typedef bool (*llama_progress_callback)(float progress, void * user_data);
 llama_model* LoadModel(
     const char* modelPath,
@@ -26,6 +40,7 @@ llama_model* LoadModel(
     const float* tensorSplit,
     const llama_progress_callback callback)
 {
+    llama_log_set(log_callback, nullptr);
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = numberGpuLayers;
     model_params.progress_callback = callback;
