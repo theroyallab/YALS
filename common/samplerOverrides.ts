@@ -1,6 +1,7 @@
 import * as YAML from "@std/yaml";
 import * as z from "@/common/myZod.ts";
 import { logger } from "@/common/logging.ts";
+import { BaseSamplerRequest } from "@/common/sampling.ts";
 
 export const SamplerOverride = z.object({
     override: z.unknown().refine((val) => val !== undefined && val !== null, {
@@ -16,17 +17,28 @@ export type SamplerOverride = z.infer<typeof SamplerOverride>;
 class SamplerOverridesContainer {
     selectedPreset?: string;
     overrides: Record<string, SamplerOverride> = {};
+    forcedOverrides: Record<string, SamplerOverride> = {};
 }
 
-export const overridesContainer = new SamplerOverridesContainer();
+// No need to export this, the functions work properly
+const overridesContainer = new SamplerOverridesContainer();
 
 export function overridesFromDict(newOverrides: Record<string, unknown>) {
     const parsedOverrides: Record<string, SamplerOverride> = {};
 
+    // Forced also includes additive
+    const forcedOverrides: Record<string, SamplerOverride> = {};
+
     // Validate each entry as a SamplerOverride type
     for (const [key, value] of Object.entries(newOverrides)) {
         try {
-            parsedOverrides[key] = SamplerOverride.parse(value);
+            const parsedOverride = SamplerOverride.parse(value);
+            parsedOverrides[key] = parsedOverride;
+
+            // Add to forced object for faster lookup
+            if (parsedOverride.force || parsedOverride.additive) {
+                forcedOverrides[key] = parsedOverride;
+            }
         } catch (error) {
             if (error instanceof Error) {
                 logger.error(error.stack);
@@ -39,6 +51,7 @@ export function overridesFromDict(newOverrides: Record<string, unknown>) {
     }
 
     overridesContainer.overrides = parsedOverrides;
+    overridesContainer.forcedOverrides = forcedOverrides;
 }
 
 export async function overridesFromFile(presetName: string) {
@@ -60,6 +73,27 @@ export async function overridesFromFile(presetName: string) {
                 "Make sure it's located in the sampler_overrides folder.",
         );
     }
+}
+
+export function forcedSamplerOverrides(params: BaseSamplerRequest) {
+    const castParams = params as Record<string, unknown>;
+
+    for (
+        const [key, value] of Object.entries(overridesContainer.forcedOverrides)
+    ) {
+        if (value.force) {
+            castParams[key] = value.override;
+        } else if (
+            value.additive && Array.isArray(value.override) &&
+            Array.isArray(castParams[key])
+        ) {
+            castParams[key] = Array.from(
+                new Set([...castParams[key], ...value.override]),
+            );
+        }
+    }
+
+    return params;
 }
 
 export function getSamplerDefault<T>(key: string, fallback?: T): T {

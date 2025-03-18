@@ -1,4 +1,5 @@
 import * as z from "@/common/myZod.ts";
+import { forcedSamplerOverrides } from "@/common/samplerOverrides.ts";
 
 // Sampling schemas
 const GenerationOptionsSchema = z.aliasedObject(
@@ -217,8 +218,8 @@ const MirostatSchema = z.object({
         description: "Mirostat options",
     });
 
-// Construct from aliased sampler requests
-export const BaseSamplerRequest = GenerationOptionsSchema
+// Define the schema
+const BaseSamplerRequestSchema = GenerationOptionsSchema
     .and(TemperatureSamplerSchema)
     .and(AlphabetSamplerSchema)
     .and(PenaltySamplerSchema)
@@ -227,4 +228,11 @@ export const BaseSamplerRequest = GenerationOptionsSchema
     .and(DynatempSchema)
     .and(MirostatSchema);
 
-export type BaseSamplerRequest = z.infer<typeof BaseSamplerRequest>;
+// Define the type from the schema
+export type BaseSamplerRequest = z.infer<typeof BaseSamplerRequestSchema>;
+
+// Apply transforms and expose the type
+export const BaseSamplerRequest = BaseSamplerRequestSchema
+    .transform((obj) => {
+        return forcedSamplerOverrides(obj);
+    });
