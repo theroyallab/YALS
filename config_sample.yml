@@ -65,3 +65,10 @@ model:
   # V cache quantization type (default: F16)
   # Possible values - f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0
   cache_mode_v: f16
+
+# Options for Sampling
+sampling:
+  # Select a sampler override preset (default: None).
+  # Find this in the sampler_overrides folder.
+  # This overrides default fallbacks for sampler values that are passed to the API.
+  override_preset:
