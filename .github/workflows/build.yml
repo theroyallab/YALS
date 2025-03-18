@@ -104,7 +104,7 @@ jobs:
       - name: Move to artifact folder
         run: |
           mkdir ${{ steps.folder-name.outputs.name }}
-          mv lib models templates config_sample.yml YALS ${{ steps.folder-name.outputs.name }}
+          mv lib models templates sampler_overrides config_sample.yml YALS ${{ steps.folder-name.outputs.name }}
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -232,7 +232,7 @@ jobs:
       - name: Move to artifact folder
         run: |
           mkdir ${{ steps.folder-name.outputs.name }}
-          mv YALS.exe,lib,models,templates,config_sample.yml ${{ steps.folder-name.outputs.name }}
+          mv YALS.exe,lib,models,templates,sampler_overrides,config_sample.yml ${{ steps.folder-name.outputs.name }}
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         if: ${{ github.event_name == 'workflow_dispatch' }}
