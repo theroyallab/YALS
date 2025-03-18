@@ -198,7 +198,7 @@ void FreeCtx(llama_context* ctx)
 void ClearContextKVCache(llama_context* ctx)
 {
     prevTokens.clear();
-    llama_kv_cache_clear(ctx);
+    llama_kv_self_clear(ctx);
 }
 
 void FreeModel(llama_model* model)
@@ -799,7 +799,7 @@ const char* InferToReadbackBuffer(
 
         // Check when tokens diverge and remove everything after the common prefix
         const size_t prefixEnd = common_lcp(tokens, prevTokens);
-        llama_kv_cache_seq_rm(context, 0, prefixEnd, -1);
+        llama_kv_self_seq_rm(context, 0, prefixEnd, -1);
 
         for (size_t i = prefixEnd; i < tokens.size(); i += batchSize) {
             const size_t remaining = tokens.size() - i;
@@ -895,7 +895,7 @@ const char* InferToReadbackBuffer(
     auto [newTokenId, isEnd] = gen(firstBatch, sampler);
 
     // Extra samplers - Banned strings
-    int rewindPos = llama_get_kv_cache_used_cells(context);
+    int rewindPos = llama_kv_self_used_cells(context);
     int rewindTokenId = 0;
     int tokenCount = 0;
     int rewindTokenCount = 0;
@@ -952,7 +952,7 @@ const char* InferToReadbackBuffer(
                     buffer = "";
     
                     // Save last known accept point in case we have to rewind back to the last accept.
-                    rewindPos = llama_get_kv_cache_used_cells(context);
+                    rewindPos = llama_kv_self_used_cells(context);
                     rewindTokenId = newTokenId;
                     rewindTokenCount = tokenCount;
     
@@ -979,7 +979,7 @@ const char* InferToReadbackBuffer(
                     continue;
                 }
                 case MatchTrie::MatchResult::MATCHED_REWIND: {
-                    llama_kv_cache_seq_rm(context, 0, rewindPos, -1);
+                    llama_kv_self_seq_rm(context, 0, rewindPos, -1);
 
                     // Reset the detokenizer too when rewinding
                     if (readbackBufferPtr->detokenizer) {
