@@ -3,7 +3,7 @@ export default {
         parameters: [
             "buffer", // const char *modelPath
             "i32", // int32_t numberGpuLayers
-            "pointer", // const float* tensorSplit
+            "buffer", // const float* tensorSplit
             "pointer", // llama_progress_callback callback
         ],
         result: "pointer" as const, // void*

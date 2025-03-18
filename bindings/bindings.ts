@@ -472,10 +472,11 @@ export class Model {
             callback?.close();
         });
 
+        const tensorSplitPtr = new Float32Array(params.gpu_split);
         const model = await lib.symbols.LoadModel(
             modelPathPtr,
             params.num_gpu_layers,
-            Deno.UnsafePointer.of(new Float32Array(params.gpu_split)),
+            tensorSplitPtr,
             callback?.pointer ?? null,
         );
 
