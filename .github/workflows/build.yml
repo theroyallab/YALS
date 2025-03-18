@@ -115,7 +115,7 @@ jobs:
       - name: Zip files
         run: |
           cd ${{ steps.folder-name.outputs.name }}
-          zip -r ${{ steps.folder-name.outputs.name }}.zip YALS lib/* models/* templates/* config_sample.yml
+          zip -r ${{ steps.folder-name.outputs.name }}.zip YALS lib/* models/* templates/* sampler_overrides/* config_sample.yml
           mv ${{ steps.folder-name.outputs.name }}.zip ../
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
@@ -243,7 +243,7 @@ jobs:
       - name: Zip files
         run: |
           cd ${{ steps.folder-name.outputs.name }}
-          Compress-Archive -Path @('.\YALS.exe', '.\lib', '.\models', '.\templates', '.\config_sample.yml') -DestinationPath ${{ steps.folder-name.outputs.name }}.zip
+          Compress-Archive -Path @('.\YALS.exe', '.\lib', '.\models', '.\templates', '.\sampler_overrides', '.\config_sample.yml') -DestinationPath ${{ steps.folder-name.outputs.name }}.zip
           mv ${{ steps.folder-name.outputs.name }}.zip ../
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
