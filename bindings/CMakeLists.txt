@@ -21,7 +21,7 @@ set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git" CACHE STRING "lla
 message(STATUS "Using llama.cpp repo ${LLAMACPP_REPO}")
 
 # Stable llama.cpp commit for bindings
-set(LLAMACPP_COMMIT "84d547554123a62e9ac77107cb20e4f6cc503af4" CACHE STRING "llama.cpp repository commit")
+set(LLAMACPP_COMMIT "29fff308c704c1c752cdb5153361e545e2bac09d" CACHE STRING "llama.cpp repository commit")
 message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
 
 # Fetch llama.cpp latest
