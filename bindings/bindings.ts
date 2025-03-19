@@ -38,8 +38,10 @@ const AbortCallback = {
     result: "bool",
 } as const;
 
-// Automatically setup the lib
-const lib = (() => {
+let lib: Deno.DynamicLibrary<typeof llamaSymbols>;
+
+// Function to setup the lib
+export function loadBindingLibrary() {
     const libName = "deno_cpp_binding";
 
     const libDir = `${Deno.cwd()}/lib/`;
@@ -60,8 +62,9 @@ const lib = (() => {
             throw new Error(`Unsupported operating system: ${Deno.build.os}`);
     }
 
-    return Deno.dlopen(libPath, llamaSymbols);
-})();
+    // Update the lib var
+    lib = Deno.dlopen(libPath, llamaSymbols);
+}
 
 export class SamplerBuilder {
     private sampler: Deno.PointerValue;
