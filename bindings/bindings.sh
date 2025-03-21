@@ -56,7 +56,7 @@ fi
 CMAKE_ARGS="${EXTRA_CMAKE_ARGS[*]}"
 
 cmake . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release ${CMAKE_ARGS}
-cmake --build build --config Release --target deno_cpp_binding -j ${JOBS}
+cmake --build build --config Release --target c_library -j ${JOBS}
 
 if [ "$OS" = "Darwin" ]; then
     echo "Copying .dylib files"

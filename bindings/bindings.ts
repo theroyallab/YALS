@@ -1,5 +1,4 @@
 import { Mutex } from "@core/asyncutil";
-import { delay } from "@std/async";
 import * as Path from "@std/path";
 import { ModelConfig } from "@/common/configModels.ts";
 import { logGenParams, logger, logPrompt } from "@/common/logging.ts";
@@ -7,7 +6,11 @@ import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 import { asyncDefer, defer } from "@/common/utils.ts";
 
-import llamaSymbols from "./symbols.ts";
+import { lib } from "./lib.ts";
+import { SamplerBuilder } from "./samplers.ts";
+import { Job } from "./job.ts";
+import { ReadbackBuffer } from "./readbackBuffer.ts";
+
 import { pointerArrayFromStrings } from "./utils.ts";
 import {
     BindingFinishReason,
@@ -31,344 +34,6 @@ const ModelLoadCallback = {
     result: "bool",
 } as const;
 
-const AbortCallback = {
-    parameters: [
-        "pointer",
-    ], // float and void*
-    result: "bool",
-} as const;
-
-let lib: Deno.DynamicLibrary<typeof llamaSymbols>;
-
-// Function to setup the lib
-export function loadBindingLibrary() {
-    const libName = "deno_cpp_binding";
-
-    const libDir = `${Deno.cwd()}/lib/`;
-    let libPath = libDir;
-
-    switch (Deno.build.os) {
-        case "windows":
-            Deno.env.set("PATH", `${Deno.env.get("PATH")};${libDir}`);
-            libPath += `${libName}.dll`;
-            break;
-        case "linux":
-            libPath += `${libName}.so`;
-            break;
-        case "darwin":
-            libPath += `${libName}.dylib`;
-            break;
-        default:
-            throw new Error(`Unsupported operating system: ${Deno.build.os}`);
-    }
-
-    // Update the lib var
-    lib = Deno.dlopen(libPath, llamaSymbols);
-}
-
-export class SamplerBuilder {
-    private sampler: Deno.PointerValue;
-    private readonly model: Deno.PointerValue;
-
-    constructor(
-        model: Deno.PointerValue,
-    ) {
-        this.sampler = lib.symbols.MakeSampler();
-        this.model = model;
-    }
-
-    distSampler(seed: number) {
-        this.sampler = lib.symbols.DistSampler(this.sampler, seed);
-    }
-
-    grammarSampler(
-        model: Deno.PointerValue,
-        grammar: string,
-        root: string,
-    ) {
-        const grammarPtr = new TextEncoder().encode(grammar + "\0");
-        const rootPtr = new TextEncoder().encode(root + "\0");
-        this.sampler = lib.symbols.GrammarSampler(
-            this.sampler,
-            model,
-            grammarPtr,
-            rootPtr,
-        );
-    }
-
-    greedy() {
-        this.sampler = lib.symbols.GreedySampler(this.sampler);
-    }
-
-    infillSampler(model: Deno.PointerValue) {
-        this.sampler = lib.symbols.InfillSampler(this.sampler, model);
-    }
-
-    logitBiasSampler(logitBias: LogitBias[]) {
-        const nBias = logitBias.length;
-
-        // Create a buffer to hold the llama_logit_bias structures
-        const bufferSize = nBias * 8; // 4 bytes for token (int32) + 4 bytes for bias (float)
-        const buffer = new ArrayBuffer(bufferSize);
-        const view = new DataView(buffer);
-
-        // Fill the buffer with the logit bias data
-        // only works for little endian rn
-        logitBias.forEach((bias, index) => {
-            view.setInt32(index * 8, bias.token, true);
-            view.setFloat32(index * 8 + 4, bias.bias, true);
-        });
-
-        // Get a pointer to the buffer
-        const ptr = Deno.UnsafePointer.of(buffer);
-
-        this.sampler = lib.symbols.LogitBiasSampler(
-            this.sampler,
-            this.model,
-            nBias,
-            ptr,
-        );
-    }
-
-    drySampler(
-        multiplier: number,
-        base: number,
-        allowedLength: number,
-        penaltyLastN: number,
-        sequenceBreakers: string[] = [],
-    ) {
-        //cstring
-        const nullTerminatedBreakers = sequenceBreakers.map((str) =>
-            str + "\0"
-        );
-
-        //breakers
-        const encodedBreakers = nullTerminatedBreakers.map((str) =>
-            new TextEncoder().encode(str)
-        );
-
-        //make a pointer for each breakers e.g. char*
-        const breakerPtrs = encodedBreakers.map((encoded) =>
-            Deno.UnsafePointer.of(encoded)
-        );
-
-        // make a char[]* buffer
-        const ptrArrayBuffer = new ArrayBuffer(breakerPtrs.length * 8);
-        const ptrArray = new BigUint64Array(ptrArrayBuffer);
-
-        // Put each pointer into an array, e.g: char[]*
-        breakerPtrs.forEach((ptr, index) => {
-            ptrArray[index] = BigInt(Deno.UnsafePointer.value(ptr));
-        });
-
-        this.sampler = lib.symbols.DrySampler(
-            this.sampler,
-            this.model,
-            multiplier,
-            base,
-            allowedLength,
-            penaltyLastN,
-            ptrArrayBuffer,
-            BigInt(sequenceBreakers.length),
-        );
-    }
-
-    minPSampler(minP: number, minKeep: number) {
-        this.sampler = lib.symbols.MinPSampler(
-            this.sampler,
-            minP,
-            BigInt(minKeep),
-        );
-    }
-
-    mirostatSampler(
-        seed: number,
-        tau: number,
-        eta: number,
-        m: number,
-    ) {
-        this.sampler = lib.symbols.MirostatSampler(
-            this.sampler,
-            this.model,
-            seed,
-            tau,
-            eta,
-            m,
-        );
-    }
-
-    mirostatV2Sampler(seed: number, tau: number, eta: number) {
-        this.sampler = lib.symbols.MirostatV2Sampler(
-            this.sampler,
-            seed,
-            tau,
-            eta,
-        );
-    }
-
-    penaltiesSampler(
-        penaltyLastN: number,
-        penaltyRepeat: number,
-        penaltyFreq: number,
-        penaltyPresent: number,
-    ) {
-        this.sampler = lib.symbols.PenaltiesSampler(
-            this.sampler,
-            penaltyLastN,
-            penaltyRepeat,
-            penaltyFreq,
-            penaltyPresent,
-        );
-    }
-
-    tempSampler(temp: number) {
-        this.sampler = lib.symbols.TempSampler(this.sampler, temp);
-    }
-
-    tempExtSampler(
-        temp: number,
-        dynatempRange: number,
-        dynatempExponent: number,
-    ) {
-        this.sampler = lib.symbols.TempExtSampler(
-            this.sampler,
-            temp,
-            dynatempRange,
-            dynatempExponent,
-        );
-    }
-
-    topK(num: number) {
-        this.sampler = lib.symbols.TopKSampler(this.sampler, num);
-    }
-
-    topP(p: number, minKeep: number) {
-        this.sampler = lib.symbols.TopPSampler(
-            this.sampler,
-            p,
-            BigInt(minKeep),
-        );
-    }
-
-    typicalSampler(typicalP: number, minKeep: number) {
-        this.sampler = lib.symbols.TypicalSampler(
-            this.sampler,
-            typicalP,
-            BigInt(minKeep),
-        );
-    }
-
-    topNSigma(nSigma: number) {
-        this.sampler = lib.symbols.TopNSigmaSampler(
-            this.sampler,
-            nSigma,
-        );
-    }
-
-    xtcSampler(
-        xtcProbability: number,
-        xtcThreshold: number,
-        minKeep: number,
-        seed: number,
-    ) {
-        this.sampler = lib.symbols.XtcSampler(
-            this.sampler,
-            xtcProbability,
-            xtcThreshold,
-            BigInt(minKeep),
-            seed,
-        );
-    }
-
-    build(): Deno.PointerValue {
-        return this.sampler;
-    }
-}
-
-export class ReadbackBuffer {
-    public bufferPtr: Deno.PointerValue;
-
-    constructor() {
-        this.bufferPtr = lib.symbols.CreateReadbackBuffer();
-    }
-
-    private async readNext(): Promise<BindingStreamResponse | null> {
-        // Create a buffer for the char pointer and token
-        const outCharPtr = new Uint8Array(8);
-        const outTokenPtr = new Int32Array(1);
-
-        const success = await lib.symbols.ReadbackNext(
-            this.bufferPtr,
-            Deno.UnsafePointer.of(outCharPtr),
-            Deno.UnsafePointer.of(outTokenPtr),
-        );
-
-        if (!success) return null;
-
-        // Read the pointer value from outCharPtr
-        let char = "";
-        const charPtr = new BigUint64Array(outCharPtr.buffer)[0];
-
-        // Convert to owned
-        const ownedCharPtr = Deno.UnsafePointer.create(charPtr);
-        if (ownedCharPtr) {
-            char = new Deno.UnsafePointerView(ownedCharPtr).getCString();
-        }
-
-        return {
-            kind: "data",
-            text: char,
-            token: outTokenPtr[0],
-        };
-    }
-
-    public async readJsonStatus(): Promise<BindingFinishResponse | null> {
-        const stringPtr = await lib.symbols.ReadbackJsonStatus(this.bufferPtr);
-        if (stringPtr === null) {
-            return null;
-        }
-
-        const cString = new Deno.UnsafePointerView(stringPtr);
-        const jsonString = cString.getCString();
-
-        try {
-            return {
-                ...JSON.parse(jsonString),
-                text: "",
-                kind: "finish",
-            };
-        } catch (e) {
-            console.error("Failed to parse JSON:", e);
-            return null;
-        }
-    }
-
-    isDone(): boolean {
-        return lib.symbols.IsReadbackBufferDone(this.bufferPtr);
-    }
-
-    reset() {
-        lib.symbols.ResetReadbackBuffer(this.bufferPtr);
-    }
-
-    async *read(): AsyncGenerator<BindingStreamResponse, void, unknown> {
-        while (true) {
-            const next = await this.readNext();
-            if (next !== null) {
-                yield next;
-                continue;
-            }
-
-            // Only check the done status when data has been fetched
-            if (this.isDone()) {
-                break;
-            }
-
-            await delay(10);
-        }
-    }
-}
-
 interface Token {
     id: number;
     piece: string;
@@ -386,9 +51,9 @@ class Tokenizer {
     }
 
     static async init(model: Deno.PointerValue) {
-        const bosTokenId = lib.symbols.BosToken(model);
-        const eosTokenId = lib.symbols.EosToken(model);
-        const eotTokenId = lib.symbols.EotToken(model);
+        const bosTokenId = lib.symbols.model_vocab_bos(model);
+        const eosTokenId = lib.symbols.model_vocab_eos(model);
+        const eotTokenId = lib.symbols.model_vocab_eot(model);
 
         const bosToken = await this.createTokenPair(model, bosTokenId);
         const eosToken = await this.createTokenPair(model, eosTokenId);
@@ -407,7 +72,10 @@ class Tokenizer {
     }
 
     static async tokenToText(model: Deno.PointerValue, tokenId: number) {
-        const stringPtr = await lib.symbols.TokenToString(model, tokenId);
+        const stringPtr = await lib.symbols.model_vocab_token_to_string(
+            model,
+            tokenId,
+        );
 
         // Empty piece
         if (stringPtr === null) {
@@ -422,6 +90,7 @@ class Tokenizer {
 export class Model {
     model: Deno.PointerValue;
     context: Deno.PointerValue;
+    processor: Deno.PointerValue;
     path: Path.ParsedPath;
     tokenizer: Tokenizer;
     readbackBuffer: ReadbackBuffer;
@@ -437,6 +106,7 @@ export class Model {
     private constructor(
         model: Deno.PointerValue,
         context: Deno.PointerValue,
+        processor: Deno.PointerValue,
         path: Path.ParsedPath,
         tokenizer: Tokenizer,
         maxSeqLen: number,
@@ -444,6 +114,7 @@ export class Model {
     ) {
         this.model = model;
         this.context = context;
+        this.processor = processor;
         this.path = path;
         this.tokenizer = tokenizer;
         this.promptTemplate = promptTemplate;
@@ -476,7 +147,7 @@ export class Model {
         });
 
         const tensorSplitPtr = new Float32Array(params.gpu_split);
-        const model = await lib.symbols.LoadModel(
+        const model = await lib.symbols.model_load(
             modelPathPtr,
             params.num_gpu_layers,
             tensorSplitPtr,
@@ -489,7 +160,7 @@ export class Model {
         }
 
         // Use 2048 for chunk size for now, need more info on what to actually use
-        const context = await lib.symbols.InitiateCtx(
+        const context = await lib.symbols.ctx_make(
             model,
             params.max_seq_len ?? 4096,
             params.num_gpu_layers,
@@ -502,13 +173,17 @@ export class Model {
             -1.0, //kvDefrag thresehold
         );
 
-        if (context === null) {
+        if (!context) {
             throw new Error(
                 "Model context not initialized. Read above logs for errors.",
             );
         }
 
-        const maxSeqLen = lib.symbols.MaxSeqLen(context);
+        // Only create a processor with 1 slot for now
+        // TODO: Make slots configurable for cont. batching
+        const processor = await lib.symbols.processor_make(model, context, 1);
+
+        const maxSeqLen = lib.symbols.ctx_max_seq_len(context);
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = await Tokenizer.init(model);
@@ -555,6 +230,7 @@ export class Model {
         return new Model(
             model,
             context,
+            processor,
             parsedModelPath,
             tokenizer,
             maxSeqLen,
@@ -563,7 +239,24 @@ export class Model {
     }
 
     resetKVCache() {
-        lib.symbols.ClearContextKVCache(this.context);
+        lib.symbols.ctx_clear_kv(this.context);
+    }
+
+    async cancelJob(job: Job) {
+        if (job.isComplete) {
+            return;
+        }
+
+        const cancelled = lib.symbols.processor_cancel_work(
+            this.processor,
+            job.getId(),
+        );
+        if (cancelled && this.readbackBuffer.isFinished()) {
+            await this.readbackBuffer.readStatus();
+        }
+
+        this.readbackBuffer.reset();
+        job.isComplete = true;
     }
 
     async unload(skipQueue: boolean = false) {
@@ -575,8 +268,8 @@ export class Model {
         // Wait for jobs to complete
         using _lock = await this.generationLock.acquire();
 
-        await lib.symbols.FreeModel(this.model);
-        await lib.symbols.FreeCtx(this.context);
+        await lib.symbols.model_free(this.model);
+        await lib.symbols.ctx_free(this.context);
     }
 
     async generate(
@@ -670,9 +363,9 @@ export class Model {
             logitBias.push(...eogLogitBias);
         }
 
-        samplerBuilder.logitBiasSampler(logitBias);
+        samplerBuilder.logitBias(logitBias);
 
-        samplerBuilder.penaltiesSampler(
+        samplerBuilder.penalties(
             params.penalty_range,
             params.repetition_penalty,
             params.frequency_penalty,
@@ -680,7 +373,7 @@ export class Model {
         );
 
         if (params.dry_multiplier > 0) {
-            samplerBuilder.drySampler(
+            samplerBuilder.dry(
                 params.dry_multiplier,
                 params.dry_base,
                 params.dry_allowed_length,
@@ -690,7 +383,7 @@ export class Model {
         }
 
         if (!params.temperature_last) {
-            samplerBuilder.tempSampler(params.temperature);
+            samplerBuilder.temp(params.temperature);
         }
 
         // TODO: Actively being changed
@@ -700,24 +393,24 @@ export class Model {
         }
 
         samplerBuilder.topK(params.top_k);
-        samplerBuilder.topP(params.top_p, 1);
-        samplerBuilder.minPSampler(params.min_p, 1);
-        samplerBuilder.typicalSampler(params.typical, 1);
+        samplerBuilder.topP(params.top_p, 1n);
+        samplerBuilder.minP(params.min_p, 1n);
+        samplerBuilder.typical(params.typical, 1n);
 
         if (params.xtc_probability > 0) {
-            samplerBuilder.xtcSampler(
+            samplerBuilder.xtc(
                 params.xtc_probability,
                 params.xtc_threshold,
-                1,
+                1n,
                 seed,
             );
         }
 
         if (params.temperature_last) {
-            samplerBuilder.tempSampler(params.temperature);
+            samplerBuilder.temp(params.temperature);
         }
 
-        samplerBuilder.distSampler(seed);
+        samplerBuilder.dist(seed);
 
         const sampler = samplerBuilder.build();
 
@@ -733,7 +426,7 @@ export class Model {
 
         // Use the helper function for both arrays
         const rewindPtrArray = pointerArrayFromStrings(params.banned_strings);
-        const stopTokensPtr = new Uint32Array(stopTokens);
+        const stopTokensPtr = new Int32Array(stopTokens);
         const stopStringsPtr = pointerArrayFromStrings(stopStrings);
 
         const promptBosToken = params.add_bos_token
@@ -744,26 +437,13 @@ export class Model {
             promptBosToken + prompt,
         );
 
-        // Callback to abort the current generation
-        const abortCallback: () => boolean = () => {
-            return abortSignal.aborted || this.shutdown;
-        };
-
-        const abortCallbackPointer = new Deno.UnsafeCallback(
-            AbortCallback,
-            abortCallback,
-        ).pointer;
-
-        lib.symbols.InferToReadbackBuffer(
-            this.model,
-            sampler,
-            this.context,
-            this.readbackBuffer.bufferPtr,
+        const jobId = await lib.symbols.processor_submit_work(
+            this.processor,
             promptPtr,
+            sampler,
+            this.readbackBuffer.rawPointer(),
             params.max_tokens ?? 150,
-            params.add_bos_token,
-            !params.skip_special_tokens,
-            abortCallbackPointer,
+            0, // min_tokens
             seed,
             rewindPtrArray.inner,
             params.banned_strings.length,
@@ -773,55 +453,76 @@ export class Model {
             stopTokens.length,
         );
 
+        const job = new Job(jobId, this.readbackBuffer);
+
         // Read from the read buffer
-        for await (const chunk of this.readbackBuffer.read()) {
-            yield chunk;
-        }
-
-        const finishResponse = await this.readbackBuffer.readJsonStatus();
-        if (finishResponse) {
-            switch (finishResponse.finishReason) {
-                case BindingFinishReason.CtxExceeded:
-                    throw new Error(
-                        `Prompt exceeds max context length of ${this.maxSeqLen}`,
-                    );
-
-                case BindingFinishReason.BatchDecode:
-                    throw new Error(
-                        "Internal generation state is broken due to llama_decode error. " +
-                            "Please restart the server.",
-                    );
-
-                case BindingFinishReason.TokenEncode:
-                    throw new Error(
-                        "Could not tokenize the provided prompt. " +
-                            "Please make sure your prompt is formatted correctly.",
-                    );
+        for await (const chunk of job.stream()) {
+            if (abortSignal.aborted) {
+                await this.cancelJob(job);
+                break;
             }
 
-            const totalTime = finishResponse.promptSec + finishResponse.genSec;
-            logger.info(
-                `Metrics: ` +
-                    `${finishResponse.genTokens} tokens ` +
-                    `generated in ${totalTime.toFixed(2)} seconds ` +
-                    `(Prompt: ${finishResponse.promptTokens} tokens in ` +
-                    `${finishResponse.promptTokensPerSec.toFixed(2)} T/s, ` +
-                    `Generate: ${
-                        finishResponse.genTokensPerSec.toFixed(2)
-                    } T/s, ` +
-                    `Context: ${finishResponse.promptTokens} tokens)`,
-            );
-
-            const finishReason =
-                finishResponse.finishReason == BindingFinishReason.MaxNewTokens
-                    ? "length"
-                    : "stop";
-
-            yield {
-                ...finishResponse,
-                finishReason,
-            };
+            switch (chunk.kind) {
+                case "data":
+                    yield chunk;
+                    break;
+                case "finish":
+                    yield {
+                        kind: "finish",
+                        finishReason: BindingFinishReason.MaxNewTokens,
+                        text: "",
+                        promptTokens: 0,
+                        genTokens: 0,
+                        stopToken: "a",
+                    };
+            }
         }
+
+        // TODO: Proper finish handling
+        // const finishResponse = await this.readbackBuffer.readJsonStatus();
+        // if (finishResponse) {
+        //     switch (finishResponse.finishReason) {
+        //         case BindingFinishReason.CtxExceeded:
+        //             throw new Error(
+        //                 `Prompt exceeds max context length of ${this.maxSeqLen}`,
+        //             );
+
+        //         case BindingFinishReason.BatchDecode:
+        //             throw new Error(
+        //                 "Internal generation state is broken due to llama_decode error. " +
+        //                     "Please restart the server.",
+        //             );
+
+        //         case BindingFinishReason.TokenEncode:
+        //             throw new Error(
+        //                 "Could not tokenize the provided prompt. " +
+        //                     "Please make sure your prompt is formatted correctly.",
+        //             );
+        //     }
+
+        //     const totalTime = finishResponse.promptSec + finishResponse.genSec;
+        //     logger.info(
+        //         `Metrics: ` +
+        //             `${finishResponse.genTokens} tokens ` +
+        //             `generated in ${totalTime.toFixed(2)} seconds ` +
+        //             `(Prompt: ${finishResponse.promptTokens} tokens in ` +
+        //             `${finishResponse.promptTokensPerSec.toFixed(2)} T/s, ` +
+        //             `Generate: ${
+        //                 finishResponse.genTokensPerSec.toFixed(2)
+        //             } T/s, ` +
+        //             `Context: ${finishResponse.promptTokens} tokens)`,
+        //     );
+
+        //     const finishReason =
+        //         finishResponse.finishReason == BindingFinishReason.MaxNewTokens
+        //             ? "length"
+        //             : "stop";
+
+        //     yield {
+        //         ...finishResponse,
+        //         finishReason,
+        //     };
+        // }
     }
 
     async tokenize(
@@ -831,7 +532,7 @@ export class Model {
     ) {
         const textPtr = new TextEncoder().encode(text + "\0");
 
-        const tokensPtr = await lib.symbols.EndpointTokenize(
+        const tokensPtr = await lib.symbols.endpoint_tokenize(
             this.model,
             textPtr,
             addSpecial,
@@ -840,7 +541,7 @@ export class Model {
 
         // Always free the original pointer
         await using _ = asyncDefer(async () => {
-            await lib.symbols.EndpointFreeTokens(tokensPtr);
+            await lib.symbols.endpoint_free_tokens(tokensPtr);
         });
 
         if (tokensPtr === null) {
@@ -876,18 +577,18 @@ export class Model {
         const tokensPtr = Deno.UnsafePointer.of(tokensArray.buffer);
 
         // Get raw pointer from C++
-        const textPtr = await lib.symbols.EndpointDetokenize(
+        const textPtr = await lib.symbols.endpoint_detokenize(
             this.model,
             tokensPtr,
-            BigInt(tokens.length),
-            BigInt(maxTextSize),
+            tokens.length,
+            maxTextSize,
             addSpecial,
             parseSpecial,
         );
 
         // Always free the original pointer
         await using _ = asyncDefer(async () => {
-            await lib.symbols.EndpointFreeString(textPtr);
+            await lib.symbols.endpoint_free_string(textPtr);
         });
 
         if (textPtr === null) {
@@ -902,10 +603,10 @@ export class Model {
     }
 
     static async getChatTemplate(model: Deno.PointerValue) {
-        const templatePtr = await lib.symbols.GetModelChatTemplate(model);
+        const templatePtr = lib.symbols.model_chat_template(model);
 
         await using _ = asyncDefer(async () => {
-            await lib.symbols.EndpointFreeString(templatePtr);
+            await lib.symbols.endpoint_free_string(templatePtr);
         });
 
         if (templatePtr === null) {

@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.14.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14.0)
+project(LlamaMultiUserInference)
 set(CMAKE_CXX_STANDARD 17)
-project(DenoCppInterop)
 
 # Set RPath for Apple and Unix systems
 if (APPLE)
@@ -21,8 +21,27 @@ set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git" CACHE STRING "lla
 message(STATUS "Using llama.cpp repo ${LLAMACPP_REPO}")
 
 # Stable llama.cpp commit for bindings
-set(LLAMACPP_COMMIT "29fff308c704c1c752cdb5153361e545e2bac09d" CACHE STRING "llama.cpp repository commit")
+set(LLAMACPP_COMMIT "568013d0cd3d5add37c376b3d5e959809b711fc7" CACHE STRING "llama.cpp repository commit")
 message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
+
+# Optional: You can also enable mixed FP16/FP32 computation for faster processing
+# set(LLAMA_CUDA_F16 ON CACHE BOOL "llama.cpp: use float16 for GPU operations" FORCE)
+
+# Disable unused components to speed up build
+set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "llama.cpp: build examples" FORCE)
+set(LLAMA_BUILD_TESTS OFF CACHE BOOL "llama.cpp: build tests" FORCE)
+set(LLAMA_BUILD_SERVER OFF CACHE BOOL "llama.cpp: build server" FORCE)
+
+# Enable common
+set(LLAMA_BUILD_COMMON ON CACHE BOOL "llama.cpp: build common utils library" FORCE)
+
+## OPTIONAL DEP REQUIRES RUST
+#set(LLAMA_LLGUIDANCE ON CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
+#find_program(CARGO cargo)
+#if(NOT CARGO)
+#    message(WARNING "LLGuidance needs rust. GO GET RUST. WTF R U DOING https://rustup.rs/")
+#    set(LLAMA_LLGUIDANCE OFF CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
+#endif()
 
 # Fetch llama.cpp latest
 # FIXME: Maybe use a vendored llama.cpp build for stability
@@ -33,14 +52,13 @@ FetchContent_Declare(
     GIT_TAG ${LLAMACPP_COMMIT}
 )
 
-# Required for proper builds
-set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+# Set build type to Release for performance
+set(CMAKE_BUILD_TYPE Release)
 
-# Disable unused components
-set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "llama.cpp: build examples" FORCE)
-set(LLAMA_BUILD_TESTS OFF CACHE BOOL "llama.cpp: build tests" FORCE)
-set(LLAMA_BUILD_SERVER OFF CACHE BOOL "llama.cpp: build server" FORCE)
+# Build all libs to bin
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# Make llama.cpp available
 FetchContent_MakeAvailable(llama)
 
 # Apple build changes
@@ -58,29 +76,39 @@ if (APPLE)
     set(GGML_METAL_EMBED_LIBRARY ON CACHE BOOL "llama: embed metal library" FORCE)
 endif()
 
-add_library(deno_cpp_binding SHARED
-    binding.cpp
+# Create a library from c_library.cpp
+add_library(c_library SHARED
+    server/c_library.cpp
 )
 
-target_include_directories(deno_cpp_binding
-    PRIVATE
+# Set include directories for the library
+target_include_directories(c_library PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${llama_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/server
 )
 
-target_link_libraries(deno_cpp_binding PRIVATE llama)
+# Link llama libraries to our c_library
+target_link_libraries(c_library PUBLIC llama common)
 
-set_target_properties(deno_cpp_binding PROPERTIES
-    OUTPUT_NAME "deno_cpp_binding"
-    PREFIX ""
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../lib"
+# Create our main executable
+add_executable(multi_user_inference
+    server/server_basic_example.cpp
 )
 
-add_executable(minimal_cpp_test
-    minimal_cpp_test.cpp
+# set_target_properties(multi_user_inference PROPERTIES
+#     INSTALL_RPATH "${CMAKE_BINARY_DIR}/bin"
+# )
+
+# Include directories for main executable
+target_include_directories(multi_user_inference PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/server
 )
 
-target_link_libraries(minimal_cpp_test PRIVATE llama)
+# Link our c_library to the main executable
+target_link_libraries(multi_user_inference PRIVATE
+    c_library
+)
 
 # Windows options
 if(WIN32)

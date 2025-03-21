@@ -6,7 +6,7 @@ import { logger } from "@/common/logging.ts";
 import { loadModel } from "@/common/modelContainer.ts";
 import { getYalsVersion } from "@/common/utils.ts";
 import { overridesFromFile } from "@/common/samplerOverrides.ts";
-import { loadBindingLibrary } from "@/bindings/bindings.ts";
+import { loadYalsBindings } from "@/bindings/lib.ts";
 
 if (import.meta.main) {
     // Use Promise resolution to avoid nested try/catch
@@ -19,7 +19,7 @@ if (import.meta.main) {
     }
 
     // Load bindings
-    loadBindingLibrary();
+    loadYalsBindings();
 
     // Parse CLI args
     const { args, usage } = parseArgs();

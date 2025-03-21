@@ -1,250 +1,373 @@
 export default {
-    LoadModel: {
+    // Model functions
+    model_load: {
         parameters: [
-            "buffer", // const char *modelPath
-            "i32", // int32_t numberGpuLayers
-            "buffer", // const float* tensorSplit
-            "pointer", // llama_progress_callback callback
+            "buffer", // model_path: const char*
+            "i32", // number_gpu_layers: int32_t
+            "buffer", // tensor_split: const float*
+            "pointer", // callback: llama_progress_callback
         ],
-        result: "pointer" as const, // void*
-        nonblocking: true,
-    },
-    InitiateCtx: {
-        parameters: [
-            "pointer", // llama_model* model
-            "u32", // unsigned contextLength
-            "i32", // int32_t numberGpuLayers
-            "u32", // unsigned numBatches
-            "bool", // bool flashAttn
-            "f32", // float ropeFreqBase
-            "bool", // bool useYarn
-            "i32", // int kCacheQuantType
-            "i32", // int vCacheQuantType
-            "f32", // float kvDefragThreshold
-        ],
-        result: "pointer" as const, // llama_context*
-        nonblocking: true,
-    },
-    BosToken: {
-        parameters: [
-            "pointer", // llama_model* model
-        ],
-        result: "i32" as const, // llama_token
-    },
-    EosToken: {
-        parameters: [
-            "pointer", // llama_model* model
-        ],
-        result: "i32" as const, // llama_token
-    },
-    EotToken: {
-        parameters: [
-            "pointer", // llama_model* model
-        ],
-        result: "i32" as const, // llama_token
-    },
-    TokenToString: {
-        parameters: ["pointer", "i32"],
-        result: "pointer" as const,
-        nonblocking: true,
-    },
-    MaxSeqLen: {
-        parameters: ["pointer"], // llama_context* ctx
-        result: "u32" as const, // uint32_t
-    },
-    FreeSampler: {
-        parameters: ["pointer"],
-        result: "void",
-        nonblocking: true,
-    },
-    FreeCtx: {
-        parameters: ["pointer"],
-        result: "void",
-        nonblocking: true,
-    },
-    ClearContextKVCache: {
-        parameters: ["pointer"],
-        result: "void",
-    },
-    FreeModel: {
-        parameters: ["pointer"],
-        result: "void",
-        nonblocking: true,
-    },
-    MakeSampler: {
-        parameters: [],
-        result: "pointer" as const, // void*
-    },
-    DistSampler: {
-        parameters: ["pointer", "u32"], // void* sampler, uint32_t seed
-        result: "pointer" as const, // void*
-    },
-    GrammarSampler: {
-        parameters: ["pointer", "pointer", "buffer", "buffer"], // void* sampler, const llama_model* model, const char* grammar, const char* root
-        result: "pointer" as const, // void*
-    },
-    GreedySampler: {
-        parameters: ["pointer"], // void* sampler
-        result: "pointer" as const, // void*
-    },
-    InfillSampler: {
-        parameters: ["pointer", "pointer"], // void* sampler, const llama_model* model
-        result: "pointer" as const, // void*
-    },
-    LogitBiasSampler: {
-        parameters: ["pointer", "pointer", "i32", "pointer"], // void* sampler, const llama_model* model, int32_t nBias, const llama_logit_bias* logitBias
-        result: "pointer" as const, // void*
-    },
-    MinPSampler: {
-        parameters: ["pointer", "f32", "usize"], // void* sampler, float minP, size_t minKeep
-        result: "pointer" as const, // void*
-    },
-    MirostatSampler: {
-        parameters: ["pointer", "pointer", "u32", "f32", "f32", "i32"], // void* sampler, void* llamaModel, uint32_t seed, float tau, float eta, int m
-        result: "pointer" as const, // void*
-    },
-    MirostatV2Sampler: {
-        parameters: ["pointer", "u32", "f32", "f32"], // void* sampler, uint32_t seed, float tau, float eta
-        result: "pointer" as const, // void*
-    },
-    PenaltiesSampler: {
-        parameters: [
-            "pointer",
-            "i32",
-            "f32",
-            "f32",
-            "f32",
-        ], // void* sampler, int penaltyLastN, float penaltyRepeat, float penaltyFreq, float penaltyPresent
-        result: "pointer" as const, // void*
-    },
-    TempSampler: {
-        parameters: ["pointer", "f32"], // void* sampler, float temp
-        result: "pointer" as const, // void*
-    },
-    TempExtSampler: {
-        parameters: ["pointer", "f32", "f32", "f32"], // void* sampler, float temp, float dynatempRange, float dynatempExponent
-        result: "pointer" as const, // void*
-    },
-    TopKSampler: {
-        parameters: ["pointer", "i32"], // void* sampler, int topK
-        result: "pointer" as const, // void*
-    },
-    TopPSampler: {
-        parameters: ["pointer", "f32", "usize"], // void* sampler, float topP, size_t minKeep
-        result: "pointer" as const, // void*
-    },
-    TypicalSampler: {
-        parameters: ["pointer", "f32", "usize"], // void* sampler, float typicalP, size_t minKeep
-        result: "pointer" as const, // void*
-    },
-    TopNSigmaSampler: {
-        parameters: ["pointer", "f32"], // void* sampler, float nSigma
-        result: "pointer" as const, // void*
-    },
-    XtcSampler: {
-        parameters: ["pointer", "f32", "f32", "usize", "u32"], // void* sampler, float xtcProbability, float xtcThreshold, size_t minKeep, uint32_t seed
-        result: "pointer" as const, // void*
-    },
-    DrySampler: {
-        parameters: [
-            "pointer",
-            "pointer",
-            "f32",
-            "f32",
-            "i32",
-            "i32",
-            "buffer",
-            "u64",
-        ], // void* sampler, const llama_model* model, float multiplier, float base, int32_t allowed_length, int32_t penalty_last_n, const char* const* sequence_breakers, size_t n_breakers
-        result: "pointer" as const, // void*
-    },
-    CreateReadbackBuffer: {
-        parameters: [],
-        result: "pointer" as const, // void*
-    },
-    ResetReadbackBuffer: {
-        parameters: ["pointer"], // ReadbackBuffer*
-        result: "void",
-    },
-    ReadbackNext: {
-        parameters: ["pointer", "pointer", "pointer"], // void* readbackBufferPtr, char* outChar, int outTokenId
-        result: "bool" as const, // True if data is filled, false if outran buffer (no data)
-        nonblocking: true,
-    },
-    ReadbackJsonStatus: {
-        parameters: ["pointer"], // void* readbackBufferPtr
-        result: "pointer" as const, // void*
-        nonblocking: true,
-    },
-    IsReadbackBufferDone: {
-        parameters: ["pointer"], // void* readbackBufferPtr
-        result: "bool" as const,
-    },
-    InferToReadbackBuffer: {
-        parameters: [
-            "pointer", // const llama_model* model
-            "pointer", // llama_sampler* sampler
-            "pointer", // llama_context* context
-            "pointer", // ReadbackBuffer* readbackBufferPtr
-            "buffer", // const char* prompt
-            "u32", // const unsigned numberTokensToPredict
-            "bool", // const bool addSpecial
-            "bool", // const bool decodeSpecial
-            "pointer", // ggml_abort_callback abortCallback
-            "u32", // const unsigned seed
-            "buffer", // const char** rewindStrings
-            "u32", // count of rewind strings
-            "buffer", // const char** stoppingStrings
-            "u32", // count of stop strings
-            "buffer", // const unsigned* stoppingTokens
-            "u32", // count of stop tokens
-        ],
-        result: "pointer" as const,
-        nonblocking: true,
-    },
-    EndpointTokenize: {
-        parameters: [
-            "pointer", // const llama_model* llamaModel
-            "buffer", // const char* prompt
-            "bool", // bool addSpecial
-            "bool", // bool parseSpecial
-        ],
-        result: "pointer" as const, // int32_t*
-        nonblocking: true,
-    },
-    EndpointDetokenize: {
-        parameters: [
-            "pointer", // const llama_model* llamaModel
-            "pointer", // int32_t* tokens
-            "usize", // size_t numTokens
-            "usize", // size_t maxTextSize
-            "bool", // bool addSpecial
-            "bool", // bool parseSpecial
-        ],
-        result: "pointer" as const, // char*
+        result: "pointer", // llama_model*
         nonblocking: true,
     },
 
-    EndpointFreeTokens: {
-        parameters: [
-            "pointer", // const int32_t* tokens
-        ],
+    model_get_freq_base: {
+        parameters: ["pointer"], // model: const llama_model*
+        result: "f32", // float
+    },
+
+    model_free: {
+        parameters: ["pointer"], // model: llama_model*
         result: "void",
         nonblocking: true,
     },
 
-    EndpointFreeString: {
+    model_chat_template: {
+        parameters: ["pointer"], // model: const llama_model*
+        result: "pointer", // char*
+    },
+
+    // Processor functions
+    processor_submit_work: {
         parameters: [
-            "pointer", // const char* str
+            "pointer", // processor: Processor*
+            "buffer", // prompt: const char*
+            "pointer", // sampler: llama_sampler*
+            "pointer", // readback_buffer: ReadbackBuffer*
+            "i32", // max_tokens: int
+            "i32", // min_tokens: int
+            "u32", // seed: unsigned
+            "buffer", // rewind_strings: const char**
+            "u32", // num_rewind_strings: unsigned
+            "buffer", // stopping_strings: const char**
+            "u32", // num_stopping_strings: unsigned
+            "buffer", // stopping_tokens: const int32_t*
+            "u32", // num_stopping_tokens: unsigned
         ],
+        result: "i32", // int
+        nonblocking: true,
+    },
+
+    processor_cancel_work: {
+        parameters: [
+            "pointer", // processor: Processor*
+            "i32", // request_id_to_cancel: int
+        ],
+        result: "bool", // bool
+    },
+
+    processor_make: {
+        parameters: [
+            "pointer", // model: llama_model*
+            "pointer", // ctx: llama_context*
+            "i32", // num_processor_slots: int
+        ],
+        result: "pointer", // Processor*
+        nonblocking: true,
+    },
+
+    // Endpoint functions
+    endpoint_tokenize: {
+        parameters: [
+            "pointer", // model: const llama_model*
+            "buffer", // prompt: const char*
+            "bool", // add_special: bool
+            "bool", // parse_special: bool
+        ],
+        result: "pointer", // int32_t*
+        nonblocking: true,
+    },
+
+    endpoint_detokenize: {
+        parameters: [
+            "pointer", // model: const llama_model*
+            "pointer", // tokens: const int32_t*
+            "i32", // num_tokens: int32_t
+            "i32", // max_text_size: int32_t
+            "bool", // add_special: bool
+            "bool", // parse_special: bool
+        ],
+        result: "pointer", // char*
+        nonblocking: true,
+    },
+
+    endpoint_free_string: {
+        parameters: ["pointer"], // str: const char*
         result: "void",
         nonblocking: true,
     },
-    GetModelChatTemplate: {
-        parameters: [
-            "pointer", // const llama_model* model
-        ],
-        result: "pointer" as const, // char*
+
+    endpoint_free_tokens: {
+        parameters: ["pointer"], // tokens: const int32_t*
+        result: "void",
         nonblocking: true,
+    },
+
+    // Vocab functions
+    model_vocab_bos: {
+        parameters: ["pointer"], // model: const llama_model*
+        result: "i32", // llama_token
+    },
+
+    model_vocab_eos: {
+        parameters: ["pointer"], // model: const llama_model*
+        result: "i32", // llama_token
+    },
+
+    model_vocab_eot: {
+        parameters: ["pointer"], // model: const llama_model*
+        result: "i32", // llama_token
+    },
+
+    model_vocab_token_to_string: {
+        parameters: [
+            "pointer", // model: const llama_model*
+            "i32", // token: llama_token
+        ],
+        result: "pointer", // const char*
+    },
+
+    // Context functions
+    ctx_make: {
+        parameters: [
+            "pointer", // model: llama_model*
+            "u32", // context_length: unsigned
+            "i32", // number_gpu_layers: int32_t
+            "u32", // num_batches: unsigned
+            "bool", // flash_attn: bool
+            "f32", // rope_freq_base: float
+            "bool", // use_yarn: bool
+            "i32", // k_cache_quant_type: int
+            "i32", // v_cache_quant_type: int
+            "f32", // kv_defrag_threshold: float
+        ],
+        result: "pointer", // llama_context*
+        nonblocking: true,
+    },
+
+    ctx_max_seq_len: {
+        parameters: ["pointer"], // ctx: const llama_context*
+        result: "u32", // uint32_t
+    },
+
+    ctx_free: {
+        parameters: ["pointer"], // ctx: llama_context*
+        result: "void",
+        nonblocking: true,
+    },
+
+    ctx_clear_kv: {
+        parameters: ["pointer"], // ctx: llama_context*
+        result: "void",
+    },
+
+    // Readback Buffer functions
+    readback_create_buffer: {
+        parameters: [],
+        result: "pointer", // ReadbackBuffer*
+    },
+
+    readback_is_buffer_finished: {
+        parameters: ["pointer"], // buffer: const ReadbackBuffer*
+        result: "bool", // bool
+    },
+
+    readback_read_next: {
+        parameters: [
+            "pointer", // buffer: ReadbackBuffer*
+            "pointer", // outChar: char**
+            "pointer", // outToken: llama_token*
+        ],
+        result: "bool", // bool
+        nonblocking: true,
+    },
+
+    readback_read_status: {
+        parameters: ["pointer"], // buffer: const ReadbackBuffer*
+        result: "pointer", // char*
+        nonblocking: true,
+    },
+
+    readback_reset: {
+        parameters: ["pointer"], // buffer: ReadbackBuffer*
+        result: "void",
+    },
+
+    readback_annihilate: {
+        parameters: ["pointer"], // buffer: ReadbackBuffer*
+        result: "void",
+        nonblocking: true,
+    },
+
+    // Sampler functions
+    sampler_make: {
+        parameters: [],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_free: {
+        parameters: ["pointer"], // sampler: llama_sampler*
+        result: "void",
+        nonblocking: true,
+    },
+
+    sampler_dist: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "u32", // seed: uint32_t
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_greedy: {
+        parameters: ["pointer"], // chain: llama_sampler*
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_min_p: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "f32", // min_p: float
+            "usize", // min_keep: size_t
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_mirostat_v2: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "u32", // seed: uint32_t
+            "f32", // tau: float
+            "f32", // eta: float
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_penalties: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "i32", // penalty_last_n: int
+            "f32", // penalty_repeat: float
+            "f32", // penalty_freq: float
+            "f32", // penalty_present: float
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_temp: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "f32", // temp: float
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_temp_ext: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "f32", // temp: float
+            "f32", // dynatemp_range: float
+            "f32", // dynatemp_exponent: float
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_top_k: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "i32", // top_k: int
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_top_p: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "f32", // top_p: float
+            "usize", // min_keep: size_t
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_typical: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "f32", // typical_p: float
+            "usize", // min_keep: size_t
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_top_n_sigma: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "f32", // n_sigma: float
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_xtc: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "f32", // xtc_probability: float
+            "f32", // xtc_threshold: float
+            "usize", // min_keep: size_t
+            "u32", // seed: uint32_t
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_grammar: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "pointer", // model: const llama_model*
+            "pointer", // grammar: const char*
+            "pointer", // root: const char*
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_dry: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "pointer", // model: const llama_model*
+            "f32", // multiplier: float
+            "f32", // base: float
+            "i32", // allowed_length: int32_t
+            "i32", // penalty_last_n: int32_t
+            "pointer", // sequence_breakers: const char**
+            "usize", // n_breakers: size_t
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_infill: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "pointer", // model: const llama_model*
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_logit_bias: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "pointer", // model: const llama_model*
+            "i32", // n_bias: int32_t
+            "pointer", // logit_bias: const llama_logit_bias*
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_mirostat: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "pointer", // model: const llama_model*
+            "u32", // seed: uint32_t
+            "f32", // tau: float
+            "f32", // eta: float
+            "i32", // m: int
+        ],
+        result: "pointer", // llama_sampler*
     },
 } as const;
