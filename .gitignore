@@ -60,3 +60,7 @@ YALS
 
 # macOS
 *.DS_Store
+
+# Exclude all .yml except config sample
+*.yml
+!config_sample.yml

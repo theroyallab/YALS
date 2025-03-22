@@ -10,7 +10,7 @@ struct Request {
     int id;
     std::vector<llama_token> prompt_tokens;
     InferenceArgs inference_args;
-    struct ReadbackBuffer* readback_buffer;
+    ReadbackBuffer* readback_buffer;
 };
 
 #endif // REQUEST_HPP

@@ -32,7 +32,7 @@ struct Slot {
         std::string previous_seq_stream_buffer;
         int32_t previous_kv_pos{};
 
-        static SlotSnapshot snapshot_slot(const Slot& slot, llama_context* ctx) {
+        static SlotSnapshot snapshot_slot(const Slot& slot, llama_context* ctx, bool during_prompt) {
             SlotSnapshot snapshot;
             snapshot.prompt_tokens_processed = slot.prompt_tokens_processed;
             snapshot.tokens_generated = slot.tokens_generated;
@@ -40,7 +40,9 @@ struct Slot {
             snapshot.i_batch = slot.i_batch;
             snapshot.last_token = slot.last_token;
             snapshot.previous_seq_stream_buffer = slot.sequence_stream->sequence_buffer;
-            snapshot.previous_kv_pos = llama_kv_self_seq_pos_max(ctx, slot.job_index);
+
+            // During the prompt because we do not call decode, we need a special case to update the kv pos for prompt
+            snapshot.previous_kv_pos = during_prompt ? slot.n_past : llama_kv_self_seq_pos_max(ctx, slot.job_index);
             return snapshot;
         }
 
@@ -51,7 +53,6 @@ struct Slot {
             slot.i_batch = i_batch;
             slot.last_token = last_token;
             slot.sequence_stream->sequence_buffer = previous_seq_stream_buffer;
-
             return previous_kv_pos;
         }
     };

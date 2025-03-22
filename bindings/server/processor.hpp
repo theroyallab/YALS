@@ -159,7 +159,7 @@ class Processor {
         best_slot->readback_buffer = readback_buffer;
 
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
-        best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx);
+        best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
 
         // Ban the EOS tokens immediately before starting generation if we have min tokens.
         if (inference_args.min_tokens_to_gen > 0 && inference_args.min_tokens_to_gen < inference_args.max_tokens_to_gen) {
@@ -181,6 +181,8 @@ class Processor {
 
                     add_to_batch(slot, token, is_last_prompt_token);
                     slot.prompt_tokens_processed++;
+
+                    slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, true);
                 }
 
                 if (slot.prompt_tokens_processed >= slot.prompt_tokens.size()) {
@@ -207,13 +209,11 @@ class Processor {
 
         if (!piece.empty()) {
             std::string out_string;
-            const auto result = slot.sequence_stream->append(piece, token, out_string);
-
-            switch (result) {
+            switch (slot.sequence_stream->append(piece, token, out_string)) {
                 case SequenceStream::Continuation::ACCEPT:
                     slot.generated_text += out_string;
                     slot.presampler.clear_rewind_bans(model);
-                    slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx);
+                    slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, false);
                     yield_final = true;
 
                     if (slot.inference_args.min_tokens_to_gen > 0
