@@ -9,16 +9,14 @@ import { asyncDefer, defer } from "@/common/utils.ts";
 import { lib } from "./lib.ts";
 import { SamplerBuilder } from "./samplers.ts";
 import { Job } from "./job.ts";
-import { ReadbackBuffer } from "./readbackBuffer.ts";
+import {
+    ReadbackBuffer,
+    ReadbackFinish,
+    ReadbackFinishReason,
+} from "./readbackBuffer.ts";
 
 import { pointerArrayFromStrings } from "./utils.ts";
-import {
-    BindingFinishReason,
-    BindingFinishResponse,
-    BindingStreamResponse,
-    FinishChunk,
-    GenerationChunk,
-} from "./types.ts";
+import { FinishChunk, GenerationChunk } from "./types.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -302,6 +300,48 @@ export class Model {
         };
     }
 
+    handleReadbackFinish(finishResponse: ReadbackFinish): FinishChunk {
+        switch (finishResponse.finishReason) {
+            case ReadbackFinishReason.CtxExceeded:
+                throw new Error(
+                    `Prompt exceeds max context length of ${this.maxSeqLen}`,
+                );
+
+            case ReadbackFinishReason.BatchDecode:
+                throw new Error(
+                    "Internal generation state is broken due to llama_decode error. " +
+                        "Please restart the server.",
+                );
+
+            case ReadbackFinishReason.TokenEncode:
+                throw new Error(
+                    "Could not tokenize the provided prompt. " +
+                        "Please make sure your prompt is formatted correctly.",
+                );
+        }
+
+        const totalTime = finishResponse.promptSec + finishResponse.genSec;
+        logger.info(
+            `Metrics: ` +
+                `${finishResponse.genTokens} tokens ` +
+                `generated in ${totalTime.toFixed(2)} seconds ` +
+                `(Prompt: ${finishResponse.promptTokens} tokens in ` +
+                `${finishResponse.promptTokensPerSec.toFixed(2)} T/s, ` +
+                `Generate: ${finishResponse.genTokensPerSec.toFixed(2)} T/s, ` +
+                `Context: ${finishResponse.promptTokens} tokens)`,
+        );
+
+        const finishReason =
+            finishResponse.finishReason == ReadbackFinishReason.MaxNewTokens
+                ? "length"
+                : "stop";
+
+        return {
+            ...finishResponse,
+            finishReason,
+        };
+    }
+
     async *generateGen(
         prompt: string,
         params: BaseSamplerRequest,
@@ -467,62 +507,10 @@ export class Model {
                     yield chunk;
                     break;
                 case "finish":
-                    yield {
-                        kind: "finish",
-                        finishReason: BindingFinishReason.MaxNewTokens,
-                        text: "",
-                        promptTokens: 0,
-                        genTokens: 0,
-                        stopToken: "a",
-                    };
+                    yield this.handleReadbackFinish(chunk);
+                    break;
             }
         }
-
-        // TODO: Proper finish handling
-        // const finishResponse = await this.readbackBuffer.readJsonStatus();
-        // if (finishResponse) {
-        //     switch (finishResponse.finishReason) {
-        //         case BindingFinishReason.CtxExceeded:
-        //             throw new Error(
-        //                 `Prompt exceeds max context length of ${this.maxSeqLen}`,
-        //             );
-
-        //         case BindingFinishReason.BatchDecode:
-        //             throw new Error(
-        //                 "Internal generation state is broken due to llama_decode error. " +
-        //                     "Please restart the server.",
-        //             );
-
-        //         case BindingFinishReason.TokenEncode:
-        //             throw new Error(
-        //                 "Could not tokenize the provided prompt. " +
-        //                     "Please make sure your prompt is formatted correctly.",
-        //             );
-        //     }
-
-        //     const totalTime = finishResponse.promptSec + finishResponse.genSec;
-        //     logger.info(
-        //         `Metrics: ` +
-        //             `${finishResponse.genTokens} tokens ` +
-        //             `generated in ${totalTime.toFixed(2)} seconds ` +
-        //             `(Prompt: ${finishResponse.promptTokens} tokens in ` +
-        //             `${finishResponse.promptTokensPerSec.toFixed(2)} T/s, ` +
-        //             `Generate: ${
-        //                 finishResponse.genTokensPerSec.toFixed(2)
-        //             } T/s, ` +
-        //             `Context: ${finishResponse.promptTokens} tokens)`,
-        //     );
-
-        //     const finishReason =
-        //         finishResponse.finishReason == BindingFinishReason.MaxNewTokens
-        //             ? "length"
-        //             : "stop";
-
-        //     yield {
-        //         ...finishResponse,
-        //         finishReason,
-        //     };
-        // }
     }
 
     async tokenize(

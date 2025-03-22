@@ -1,15 +1,24 @@
 import { lib } from "./lib.ts";
+import { FinishChunk, StreamChunk } from "@/bindings/types.ts";
 
-export interface ReadbackData {
-    kind: "data";
-    text: string;
-    token: number;
+export enum ReadbackFinishReason {
+    CtxExceeded = "CtxExceeded",
+    BatchDecode = "BatchDecode",
+    StopToken = "StopToken",
+    MaxNewTokens = "MaxNewTokens",
+    StopString = "StopString",
+    TokenEncode = "TokenEncode",
+    Aborted = "Aborted",
 }
 
-export interface ReadbackFinish {
-    kind: "finish";
-    text: string;
-    [key: string]: unknown; // Additional properties from status JSON
+export type ReadbackData = StreamChunk;
+
+export interface ReadbackFinish extends FinishChunk {
+    promptSec: number;
+    genSec: number;
+    genTokensPerSec: number;
+    promptTokensPerSec: number;
+    finishReason: ReadbackFinishReason;
 }
 
 /**

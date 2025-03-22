@@ -10,16 +10,6 @@ export enum GGMLType {
     q8_0 = 8,
 }
 
-export enum BindingFinishReason {
-    CtxExceeded = "CtxExceeded",
-    BatchDecode = "BatchDecode",
-    StopToken = "StopToken",
-    MaxNewTokens = "MaxNewTokens",
-    StopString = "StopString",
-    TokenEncode = "TokenEncode",
-    Aborted = "Aborted",
-}
-
 export type GenerationChunk = StreamChunk | FinishChunk;
 
 export interface StreamChunk {
@@ -28,8 +18,6 @@ export interface StreamChunk {
     token: number;
 }
 
-export type BindingStreamResponse = StreamChunk;
-
 export interface FinishChunk {
     kind: "finish";
     text: string;
@@ -37,12 +25,4 @@ export interface FinishChunk {
     genTokens: number;
     finishReason: string;
     stopToken: string;
-}
-
-export interface BindingFinishResponse extends FinishChunk {
-    promptSec: number;
-    genSec: number;
-    genTokensPerSec: number;
-    promptTokensPerSec: number;
-    finishReason: BindingFinishReason;
 }
