@@ -164,11 +164,6 @@ llama_context* ctx_make(
     ctx_params.defrag_thold = kv_defrag_threshold;
     llama_context* ctx = llama_init_from_model(model, ctx_params);
 
-    if (ctx == nullptr) {
-        std::cerr << "error: couldn't make llama ctx in InitiateCtx()" << std::endl;
-        return nullptr;
-    }
-
     return ctx;
 }
 
@@ -202,7 +197,6 @@ int32_t* endpoint_tokenize(
     if (llama_tokenize(&model->vocab, prompt, promptLength,
     tokenArray + 1, n_prompt + 1,
         add_special, parse_special) < 0) {
-        std::cerr << "error: failed to tokenize the prompt in TokenizePrompt()" << std::endl;
         return nullptr;
         }
 

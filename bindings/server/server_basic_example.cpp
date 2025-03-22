@@ -61,8 +61,10 @@ Hi how are you?
             std::cout << char_out;
             std::cout.flush();
         }
-        //std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
+    const char* status = readback_read_status(readback_buffer);
+    std::cout << status << std::endl;
 
     return 0;
 }

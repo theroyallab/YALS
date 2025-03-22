@@ -9,7 +9,6 @@
 #include <condition_variable>
 #include <atomic>
 #include <cmath>
-#include <iostream>
 #include <thread>
 
 #include "inference_args.hpp"
@@ -18,6 +17,7 @@
 #include "slot.hpp"
 #include "request.hpp"
 #include "sequence_stream.hpp"
+#include "json_status.hpp"
 
 /*
  * Primary server processor. Controls the overall flow. This processes in slot-order and does not
@@ -196,7 +196,7 @@ class Processor {
     bool process_token(Slot& slot, const llama_token token) const {
         const auto piece_opt = slot.detokenizer->process_token(token, true);
         if (!piece_opt) {
-            std::cerr << "error: failed to process token " << token << std::endl;
+            readback_finish(slot.readback_buffer, make_json_status_string(ctx, "TokenEncode", ""));
             return false;
         }
 
@@ -206,6 +206,16 @@ class Processor {
         bool is_complete = is_eos || slot.tokens_generated >= slot.inference_args.max_tokens_to_gen;
         bool yield_final = false;
         const std::string& piece = piece_opt.value_or("");
+
+        std::string finish_reason = "Unspecified";
+        std::string stop_token = "Unspecified";
+
+        if (is_eos) {
+            finish_reason = "StopToken";
+            stop_token = common_token_to_piece(ctx, token, true);
+        } else if (slot.tokens_generated >= slot.inference_args.max_tokens_to_gen) {
+            finish_reason = "MaxNewTokens";
+        }
 
         if (!piece.empty()) {
             std::string out_string;
@@ -230,10 +240,7 @@ class Processor {
 
                     //Ban every token in the buffer.
                     const auto tokens = tokenizer.tokenize(out_string, false, false);
-                    if (!tokens) {
-                        //Todo::@Z This is a hard error as it will infinite loop if tokens is empty here.
-                    }
-                    slot.presampler.add_rewind_bans(model, tokens.value());
+                    slot.presampler.add_rewind_bans(model, tokens);
 
                     //It's possible we rewind to before the min token threshold, so we need to ensure the eos tokens are actually banned.
                     if (slot.inference_args.min_tokens_to_gen > 0 && slot.inference_args.min_tokens_to_gen < slot.inference_args.max_tokens_to_gen) {
@@ -244,6 +251,8 @@ class Processor {
                     return true;
                 case SequenceStream::Continuation::STOP:
                     is_complete = true;
+                    finish_reason = "StopString";
+                    stop_token = out_string;
                     break;
                 case SequenceStream::Continuation::BUFFER:
                     break;
@@ -267,8 +276,7 @@ class Processor {
             readback_write_to_buffer(slot.readback_buffer, final_piece, token);
         }
 
-        //TODO::@Z JSON status.
-        readback_finish(slot.readback_buffer, R"({"status": "Job Completed", "reason": "Normal completion"})");
+        readback_finish(slot.readback_buffer, make_json_status_string(ctx, finish_reason, stop_token));
         return false;
     }
 
@@ -284,7 +292,13 @@ class Processor {
         }
 
         if (llama_decode(ctx, batch) != 0) {
-            //TODO @Z:: Log error.
+            //Terminal error, the full batch decode entirely failed. We need to end everything this is not recoverable.
+            for (auto& slot : slots) {
+                if (slot.i_batch >= 0 && slot.i_batch < batch.n_tokens) {
+                    readback_finish(slot.readback_buffer, make_json_status_string(ctx, "BatchDecode", ""));
+                    slot.end(++current_job_index, ctx);
+                }
+            }
             return;
         }
 
@@ -311,7 +325,7 @@ class Processor {
 
                 if (const bool continue_gen = process_token(slot, token); !continue_gen) {
                     slot.end(++current_job_index, ctx);
-                    //TODO @Z:: Log or something
+                    //Status reported by process_token
                 }
             }
         }
@@ -402,7 +416,7 @@ public:
                         new_queue.push(req);
                     } else {
                         if (req.readback_buffer) {
-                            readback_finish(req.readback_buffer, R"({"status": "Job Cancelled", "reason": "User requested cancellation"})");
+                            readback_finish(req.readback_buffer, make_json_status_string(ctx, "Aborted", "None"));
                         }
                         found = true;
                     }
@@ -418,7 +432,8 @@ public:
         for (auto& slot : slots) {
             if (slot.request_id == request_id_to_cancel) {
                 if (slot.readback_buffer) {
-                    readback_finish(slot.readback_buffer, R"({"status": "Job Cancelled", "reason": "User requested cancellation"})");
+                    std::string last_token_piece = common_token_to_piece(ctx, slot.last_token, true);
+                    readback_finish(slot.readback_buffer, make_json_status_string(ctx, "Aborted", last_token_piece));
                 }
                 slot.clear(ctx);
                 slot.job_index = ++current_job_index;
@@ -448,12 +463,7 @@ public:
         const std::string& prompt,
         const InferenceArgs& args,
         ReadbackBuffer* readback_buffer) {
-        const auto tokens_opt = tokenizer.tokenize(prompt, args.max_tokens_to_gen);
-        if (!tokens_opt) {
-            std::cerr << "error: failed to tokenize prompt" << std::endl;
-            return -1;
-        }
-        const std::vector<llama_token>& prompt_tokens = tokens_opt.value();
+        const std::vector<llama_token>& prompt_tokens = tokenizer.tokenize(prompt, args.max_tokens_to_gen);
         static int next_id = 1;
         const int request_id = next_id++;
 

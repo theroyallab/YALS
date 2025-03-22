@@ -88,7 +88,7 @@ public:
         return token == llama_vocab_eos(vocab);
     }
 
-    [[nodiscard]] std::optional<std::vector<llama_token>> tokenize(const std::string_view& text, const bool add_special = true, const bool parse_special = true) const {
+    [[nodiscard]]std::vector<llama_token> tokenize(const std::string_view& text, const bool add_special = true, const bool parse_special = true) const {
         return common_tokenize(vocab, std::string(text), add_special, parse_special);
     }
 };
