@@ -41,7 +41,6 @@ class Processor {
     llama_model* model;
     llama_context* ctx;
     llama_batch batch{};
-    std::atomic<bool> work_cancelling{false};
     bool abort_inference = false;
     bool aborting_trap_active = false;
 
@@ -301,7 +300,16 @@ class Processor {
             return;
         }
 
-        if (llama_decode(ctx, batch) != 0) {
+        const auto decode_result = llama_decode(ctx, batch);
+        if (decode_result != 0) {
+            // Fallback to avoid a deadlock scenario, we need to check in both places
+            // that we call llama_decode, as it's possible we ask to abort and the backend is decoding
+            // Status 2 is the abort signal.
+            if (decode_result == 2) {
+                std::cerr << "2! Releasing abort trap -- Fallback" << std::endl;
+                aborting_trap_active = false;
+                return;
+            }
             //Terminal error, the full batch decode entirely failed. We need to end everything this is not recoverable.
             for (auto& slot : slots) {
                 if (slot.i_batch >= 0 && slot.i_batch < batch.n_tokens) {
@@ -343,19 +351,18 @@ class Processor {
 
     void run() {
         while (!should_exit) {
-            if(work_cancelling) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                continue;
-            }
+            // As far as I can tell, this is the only way to trap work, wait for llama decode to fail status 2.
+            // Very hacky, but does not seem to have an alternative. We need to check in both places
+            // that we call llama_decode, as it's possible we ask to abort and the backend is decoding
+            // status 2 is the abort signal.
             if (aborting_trap_active) {
-                // This is insanely hacky but as far as I can tell waiting for decode to throw status 2
-                // there's no direct way of checking
-                if (llama_decode(ctx, batch) == 2) {
-                    std::cerr << "Released abort trap -- work can be enqueued again." << std::endl;
+                if (const auto decode_result = llama_decode(ctx, batch); decode_result == 2) {
+                    std::cerr << "2! Releasing abort trap -- Work can now be enqueued again." << std::endl;
                     aborting_trap_active = false;
+                } else {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    continue;
                 }
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                continue;
             }
             process_tasks();
             update_slots();
@@ -417,7 +424,6 @@ public:
 
     //TODO:: @Z: Should this output the cancelled residual outputs or not?
     bool cancel_work(const int request_id_to_cancel) {
-        work_cancelling = true;
         bool found = false;
 
         // Is our job pending in the request queue? If so, remove it.
@@ -463,7 +469,6 @@ public:
 
         //We do not want to throw an abort request cancellation if nothing was cancelled in the processor
         if (!were_any_cancelled) {
-          work_cancelling = false;
           return false;
         }
 
@@ -483,7 +488,6 @@ public:
             aborting_trap_active = true;
         }
 
-        work_cancelling = false;
         return found;
     }
 
