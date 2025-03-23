@@ -26,7 +26,7 @@ message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
 
 # Optional: You can also enable mixed FP16/FP32 computation for faster processing
 # set(LLAMA_CUDA_F16 ON CACHE BOOL "llama.cpp: use float16 for GPU operations" FORCE)
-# set(GGML_CUDA ON CACHE BOOL "llama.cpp: use float16 for GPU operations" FORCE)
+set(GGML_CUDA ON CACHE BOOL "llama.cpp: use float16 for GPU operations" FORCE)
 
 # Disable unused components to speed up build
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "llama.cpp: build examples" FORCE)

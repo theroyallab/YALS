@@ -41,7 +41,9 @@ class Processor {
     llama_model* model;
     llama_context* ctx;
     llama_batch batch{};
+    std::atomic<bool> work_cancelling{false};
     bool abort_inference = false;
+    bool aborting_trap_active = false;
 
     std::vector<Slot> slots;
     uint32_t batch_size;
@@ -341,6 +343,20 @@ class Processor {
 
     void run() {
         while (!should_exit) {
+            if(work_cancelling) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+            if (aborting_trap_active) {
+                // This is insanely hacky but as far as I can tell waiting for decode to throw status 2
+                // there's no direct way of checking
+                if (llama_decode(ctx, batch) == 2) {
+                    std::cerr << "Released abort trap -- work can be enqueued again." << std::endl;
+                    aborting_trap_active = false;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
             process_tasks();
             update_slots();
 
@@ -356,7 +372,7 @@ class Processor {
                 std::unique_lock lock(mutex_tasks);
                 if (queue_tasks.empty()) {
                     cv_tasks.wait(lock, [this]() {
-                        return !queue_tasks.empty() || should_exit;
+                        return !queue_tasks.empty() || should_exit || aborting_trap_active;
                     });
                 }
             }
@@ -401,6 +417,7 @@ public:
 
     //TODO:: @Z: Should this output the cancelled residual outputs or not?
     bool cancel_work(const int request_id_to_cancel) {
+        work_cancelling = true;
         bool found = false;
 
         // Is our job pending in the request queue? If so, remove it.
@@ -445,7 +462,10 @@ public:
         }
 
         //We do not want to throw an abort request cancellation if nothing was cancelled in the processor
-        if (!were_any_cancelled) { return false; }
+        if (!were_any_cancelled) {
+          work_cancelling = false;
+          return false;
+        }
 
         bool all_idle = true;
         for (auto& slot : slots) {
@@ -455,9 +475,15 @@ public:
         }
 
         if (queue_tasks.empty() && all_idle) {
+            std::cerr << "Holding work queue hostage until backend finishes abort." << std::endl;
             // Abort inference is reset via the mechanism in the lambda abort fn
             abort_inference = true;
+            // We signal trap and wait for the backend to actually finish aborting, to avoiding enqueueing work
+            // during an active abort.
+            aborting_trap_active = true;
         }
+
+        work_cancelling = false;
         return found;
     }
 
