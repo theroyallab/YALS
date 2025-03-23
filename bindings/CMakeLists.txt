@@ -36,13 +36,13 @@ set(LLAMA_BUILD_SERVER OFF CACHE BOOL "llama.cpp: build server" FORCE)
 # Enable common
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "llama.cpp: build common utils library" FORCE)
 
-## OPTIONAL DEP REQUIRES RUST
-#set(LLAMA_LLGUIDANCE ON CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
-#find_program(CARGO cargo)
-#if(NOT CARGO)
+# OPTIONAL DEP REQUIRES RUST
+# set(LLAMA_LLGUIDANCE ON CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
+# find_program(CARGO cargo)
+# if(NOT CARGO)
 #    message(WARNING "LLGuidance needs rust. GO GET RUST. WTF R U DOING https://rustup.rs/")
 #    set(LLAMA_LLGUIDANCE OFF CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
-#endif()
+# endif()
 
 # Fetch llama.cpp latest
 # FIXME: Maybe use a vendored llama.cpp build for stability

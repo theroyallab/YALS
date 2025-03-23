@@ -477,6 +477,24 @@ export class Model {
             promptBosToken + prompt,
         );
 
+        //TODO::@Z
+        // const larkGrammar = `
+        // // Define the start rule
+        // start: json_string
+        // // The exact JSON string with fixed format
+        // json_string: "{\\n \\"action\\" : [\\"" ACTION_CONTENT "\\"],\\n \\"mood\\" : \\"" EMOTION "\\",\\n \\"magazine capacity\\" : \\"" CAPACITY_CONTENT "\\"\\n}"
+        // // Content restrictions
+        // ACTION_CONTENT: /[a-zA-Z0-9 ,]{1,15}/
+        // CAPACITY_CONTENT: /[0-9]+( rounds| bullets| shots)?/
+        // EMOTION: "happy" | "sad" | "angry" | "excited" | "bored" | "anxious" | "calm" | "confused"
+        //  | "curious" | "depressed" | "ecstatic" | "fearful" | "grateful" | "hopeful"
+        //  | "irritated" | "jealous" | "peaceful" | "proud" | "surprised" | "tired"
+        // `;
+    
+
+        // // Convert the string to a null-terminated buffer
+        // const grammarBuffer = new TextEncoder().encode(larkGrammar + "\0");
+
         const jobId = await lib.symbols.processor_submit_work(
             this.processor,
             promptPtr,
@@ -491,6 +509,7 @@ export class Model {
             stopStrings.length,
             stopTokensPtr,
             stopTokens.length,
+            null
         );
 
         const job = new Job(jobId, this.readbackBuffer);

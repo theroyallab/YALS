@@ -11,6 +11,8 @@
 #include <cmath>
 #include <thread>
 
+#include <iostream>
+
 #include "inference_args.hpp"
 #include "llama.h"
 #include "tokenization.hpp"
@@ -161,10 +163,16 @@ class Processor {
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
         best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
 
+        best_slot->multi_sampler.sampler = inference_args.sampler;
+
+        if (inference_args.grammar != nullptr) {
+            best_slot->multi_sampler.constrain(inference_args.grammar);
+        }
+
         // Ban the EOS tokens immediately before starting generation if we have min tokens.
         if (inference_args.min_tokens_to_gen > 0 && inference_args.min_tokens_to_gen < inference_args.max_tokens_to_gen) {
             const std::vector terminal_token_bans {llama_vocab_eos(llama_model_get_vocab(model)), llama_vocab_eot(llama_model_get_vocab(model))};
-            best_slot->presampler.add_eos_ban(model, terminal_token_bans);
+            best_slot->multi_sampler.presampler.add_eos_ban(model, terminal_token_bans);
         }
     }
 
@@ -222,14 +230,14 @@ class Processor {
             switch (slot.sequence_stream->append(piece, token, out_string)) {
                 case SequenceStream::Continuation::ACCEPT:
                     slot.generated_text += out_string;
-                    slot.presampler.clear_rewind_bans(model);
+                    slot.multi_sampler.presampler.clear_rewind_bans(model);
                     slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, false);
                     yield_final = true;
 
                     if (slot.inference_args.min_tokens_to_gen > 0
                         && slot.tokens_generated >= slot.inference_args.min_tokens_to_gen
                         && slot.inference_args.min_tokens_to_gen < slot.inference_args.max_tokens_to_gen) {
-                        slot.presampler.clear_eos_bans(model);
+                        slot.multi_sampler.presampler.clear_eos_bans(model);
                     }
                     break;
                 case SequenceStream::Continuation::REWIND: {
@@ -240,12 +248,12 @@ class Processor {
 
                     //Ban every token in the buffer.
                     const auto tokens = tokenizer.tokenize(out_string, false, false);
-                    slot.presampler.add_rewind_bans(model, tokens);
+                    slot.multi_sampler.presampler.add_rewind_bans(model, tokens);
 
                     //It's possible we rewind to before the min token threshold, so we need to ensure the eos tokens are actually banned.
                     if (slot.inference_args.min_tokens_to_gen > 0 && slot.inference_args.min_tokens_to_gen < slot.inference_args.max_tokens_to_gen) {
                         const std::vector terminal_token_bans {llama_vocab_eos(llama_model_get_vocab(model)), llama_vocab_eot(llama_model_get_vocab(model))};
-                        slot.presampler.add_eos_ban(model, terminal_token_bans);
+                        slot.multi_sampler.presampler.add_eos_ban(model, terminal_token_bans);
                     }
                     }
                     return true;
@@ -308,18 +316,12 @@ class Processor {
             }
 
             if (slot.is_generating()) {
-                llama_token token;
-
-                // If we have a presampler, we append our main sampler to it, otherwise we just use our main sampler.
-                if (slot.presampler.should_presample) {
-                    const int presampler_tail = llama_sampler_chain_n(slot.presampler.sampler);
-                    llama_sampler_chain_add(slot.presampler.sampler, slot.inference_args.sampler);
-                    token = llama_sampler_sample(slot.presampler.sampler, ctx, slot.i_batch);
-                    llama_sampler_chain_remove(slot.presampler.sampler, presampler_tail);
-                } else {
-                    token = llama_sampler_sample(slot.inference_args.sampler, ctx, slot.i_batch);
+                const auto maybe_token = slot.multi_sampler.sample(ctx, slot.i_batch);
+                if (!maybe_token.has_value()) {
+                    // TODO:: @Z Bug.
+                    break;
                 }
-                llama_sampler_accept(slot.inference_args.sampler, token);
+                const llama_token token = maybe_token.value();
                 slot.last_token = token;
                 slot.i_batch = -1;
 

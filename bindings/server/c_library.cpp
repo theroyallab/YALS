@@ -16,10 +16,10 @@ int processor_submit_work(
     const char** stopping_strings,
     const unsigned num_stopping_strings,
     const int32_t* stopping_tokens,
-    const unsigned num_stopping_tokens) {
+    const unsigned num_stopping_tokens,
+    const char* grammar) {
 
     const std::string prompt_as_string(prompt);
-
     const InferenceArgs args(
         sampler,
         max_tokens,
@@ -30,7 +30,8 @@ int processor_submit_work(
         stopping_strings,
         num_stopping_strings,
         stopping_tokens,
-        num_stopping_tokens
+        num_stopping_tokens,
+        grammar
     );
 
     return processor->submit_work(

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "llama.h"
+#include "multisampler.hpp"
 #include "tokenization.hpp"
 #include "sequence_stream.hpp"
 #include "presampler.hpp"
@@ -32,7 +33,7 @@ struct Slot {
         std::string previous_seq_stream_buffer;
         int32_t previous_kv_pos{};
 
-        static SlotSnapshot snapshot_slot(const Slot& slot, llama_context* ctx, bool during_prompt) {
+        static SlotSnapshot snapshot_slot(const Slot& slot, llama_context* ctx, const bool during_prompt) {
             SlotSnapshot snapshot;
             snapshot.prompt_tokens_processed = slot.prompt_tokens_processed;
             snapshot.tokens_generated = slot.tokens_generated;
@@ -73,12 +74,12 @@ struct Slot {
 
     TokenStreamDetokenizer* detokenizer;
     SequenceStream* sequence_stream;
-    Presampler presampler;
+    MultistageSampler multi_sampler;
     InferenceArgs inference_args;
     SlotSnapshot rewind_snapshot;
     ReadbackBuffer* readback_buffer = nullptr;
 
-    explicit Slot(const llama_model* model, llama_context* ctx): presampler() {
+    explicit Slot(const llama_model* model, llama_context* ctx): multi_sampler(model) {
         detokenizer = new TokenStreamDetokenizer(ctx);
         sequence_stream = new SequenceStream();
     }

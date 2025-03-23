@@ -21,8 +21,9 @@ public:
     std::vector<std::string> rewind_strings;
     std::vector<std::string> stopping_strings;
     std::vector<int32_t> stopping_tokens;
+    const char* grammar;
 
-    InferenceArgs(): sampler(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0), seed(0) {
+    InferenceArgs(): sampler(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0), seed(0), grammar(nullptr) {
     };
 
     explicit InferenceArgs(
@@ -35,11 +36,14 @@ public:
         const char** stopping_strings = nullptr,
         const unsigned num_stopping_strings = 0,
         const int32_t* stopping_tokens = nullptr,
-        const unsigned num_stopping_tokens = 0)
-        : sampler(sampler),
-          max_tokens_to_gen(max_tokens),
-          min_tokens_to_gen(min_tokens),
-          seed(seed)
+        const unsigned num_stopping_tokens = 0,
+        const char* grammar = nullptr)
+
+    :   sampler(sampler),
+        max_tokens_to_gen(max_tokens),
+        min_tokens_to_gen(min_tokens),
+        seed(seed),
+        grammar(grammar)
     {
         if (rewind_strings != nullptr && num_rewind_strings > 0) {
             this->rewind_strings.reserve(num_rewind_strings);
