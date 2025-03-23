@@ -11,8 +11,6 @@
 #include <cmath>
 #include <thread>
 
-#include <iostream>
-
 #include "inference_args.hpp"
 #include "llama.h"
 #include "tokenization.hpp"
@@ -203,18 +201,12 @@ class Processor {
 
     // Processes the next sequence token. Finalizes the request if gen is finished.
     bool process_token(Slot& slot, const llama_token token) const {
-        const auto piece_opt = slot.detokenizer->process_token(token, true);
-        if (!piece_opt) {
-            readback_finish(slot.readback_buffer, make_json_status_string(ctx, "TokenEncode", ""));
-            return false;
-        }
-
+        auto piece = slot.detokenizer->process_token(token, true);
         slot.tokens_generated++;
 
         const bool is_eos = tokenizer.is_eos_token(token);
         bool is_complete = is_eos || slot.tokens_generated >= slot.inference_args.max_tokens_to_gen;
         bool yield_final = false;
-        const std::string& piece = piece_opt.value_or("");
 
         std::string finish_reason = "Unspecified";
         std::string stop_token = "Unspecified";
@@ -228,7 +220,8 @@ class Processor {
 
         if (!piece.empty()) {
             std::string out_string;
-            switch (slot.sequence_stream->append(piece, token, out_string)) {
+            std::string out_unmatched;
+            switch (slot.sequence_stream->append(piece, token, out_string, out_unmatched)) {
                 case SequenceStream::Continuation::ACCEPT:
                     slot.generated_text += out_string;
                     slot.multi_sampler.presampler.clear_rewind_bans(model);
@@ -262,6 +255,8 @@ class Processor {
                     is_complete = true;
                     finish_reason = "StopString";
                     stop_token = out_string;
+                    piece = out_unmatched;
+                    yield_final = true;
                     break;
                 case SequenceStream::Continuation::BUFFER:
                     break;
@@ -306,7 +301,6 @@ class Processor {
             // that we call llama_decode, as it's possible we ask to abort and the backend is decoding
             // Status 2 is the abort signal.
             if (decode_result == 2) {
-                std::cerr << "2! Releasing abort trap -- Fallback" << std::endl;
                 aborting_trap_active = false;
                 return;
             }
@@ -357,7 +351,6 @@ class Processor {
             // status 2 is the abort signal.
             if (aborting_trap_active) {
                 if (const auto decode_result = llama_decode(ctx, batch); decode_result == 2) {
-                    std::cerr << "2! Releasing abort trap -- Work can now be enqueued again." << std::endl;
                     aborting_trap_active = false;
                 } else {
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -480,7 +473,6 @@ public:
         }
 
         if (queue_tasks.empty() && all_idle) {
-            std::cerr << "Holding work queue hostage until backend finishes abort." << std::endl;
             // Abort inference is reset via the mechanism in the lambda abort fn
             abort_inference = true;
             // We signal trap and wait for the backend to actually finish aborting, to avoiding enqueueing work

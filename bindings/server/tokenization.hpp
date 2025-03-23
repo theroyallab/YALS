@@ -39,7 +39,7 @@ public:
         : ctx(ctx) {
     }
 
-    std::optional<std::string> process_token(const llama_token token, const bool parse_special) {
+    std::string process_token(const llama_token token, const bool parse_special) {
         const std::string piece = common_token_to_piece(ctx, token, parse_special);
         utf_buffer += piece;
 

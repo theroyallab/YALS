@@ -49,13 +49,8 @@ public:
         this->sequence_buffer.clear();
     }
 
-    Continuation append(const std::string_view& next_item, const llama_token last_token, std::string& out_sequence) {
-        //Strip leading whitespace
-        if (sequence_buffer.empty()) {
-            sequence_buffer = next_item;
-        } else {
-            sequence_buffer += next_item;
-        }
+    Continuation append(const std::string_view& next_item, const llama_token last_token, std::string& out_sequence, std::string& out_unmatched) {
+        sequence_buffer += next_item;
 
         if (stop_tokens.count(last_token) > 0) {
             return Continuation::STOP;
@@ -65,17 +60,21 @@ public:
         if (!stripped.empty() && std::isspace(static_cast<unsigned char>(stripped.front()))) {
             stripped.erase(0, 1);
         }
-        switch (const auto result = match_trie->check_buffer(stripped)) {
+
+        const auto [result, unmatched] = match_trie->check_buffer(stripped);
+        switch (result) {
             case MatchResult::MAYBE:
                 return Continuation::BUFFER;
 
             case MatchResult::MATCHED_REWIND:
                 out_sequence = std::move(sequence_buffer);
+                out_unmatched = unmatched;
                 sequence_buffer.clear();
                 return Continuation::REWIND;
 
             case MatchResult::MATCHED_STOP:
                 sequence_buffer.clear();
+                out_unmatched = unmatched;
                 return Continuation::STOP;
 
             case MatchResult::NO:
