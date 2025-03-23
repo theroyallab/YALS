@@ -38,8 +38,8 @@ public:
         // Delete nullptr is safe
         delete match_trie;
         match_trie = new MatchTrie();
-        match_trie->AddMatchableWords(stop_seq, MatchType::STOP);
-        match_trie->AddMatchableWords(rewind_seq, MatchType::REWIND);
+        match_trie->add_matchable_words(stop_seq, MatchType::STOP);
+        match_trie->add_matchable_words(rewind_seq, MatchType::REWIND);
 
         this->stop_tokens.clear();
         if (stop_tokens.has_value()) {
@@ -65,8 +65,7 @@ public:
         if (!stripped.empty() && std::isspace(static_cast<unsigned char>(stripped.front()))) {
             stripped.erase(0, 1);
         }
-        const auto result = match_trie->CheckBuffer(stripped);
-        switch (result) {
+        switch (const auto result = match_trie->check_buffer(stripped)) {
             case MatchResult::MAYBE:
                 return Continuation::BUFFER;
 

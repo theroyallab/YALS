@@ -6,10 +6,6 @@
 #include <memory>
 #include <cctype>
 
-/*
- * A simple prefix tree for efficient sequence to sequence matches.
- */
-
 enum class MatchType {
     REWIND,
     STOP
@@ -25,77 +21,74 @@ enum class MatchResult {
 class TrieNode {
 public:
     std::unordered_map<char, std::unique_ptr<TrieNode>> children;
-    bool isEndOfWord;
-    MatchType matchType;
+    bool is_end_of_word;
+    MatchType match_type;
 
-    TrieNode() : isEndOfWord(false), matchType() {
+    TrieNode() : is_end_of_word(false), match_type() {
     }
 };
 
 class MatchTrie {
     std::unique_ptr<TrieNode> root;
 
-    static char ToLower(const char c) {
+    static char to_lower(const char c) {
         return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     }
 
 public:
     MatchTrie() : root(std::make_unique<TrieNode>()) {}
 
-    void AddMatchableWords(const std::vector<std::string>& words, const MatchType type) const {
+    void add_matchable_words(const std::vector<std::string>& words, const MatchType type) const {
         for (const auto& word : words) {
             TrieNode* current = root.get();
 
             for (const char c : word) {
-                char lowerChar = ToLower(c);
-                if (current->children.find(lowerChar) == current->children.end()) {
-                    current->children[lowerChar] = std::make_unique<TrieNode>();
+                char lower_char = to_lower(c);
+                if (current->children.find(lower_char) == current->children.end()) {
+                    current->children[lower_char] = std::make_unique<TrieNode>();
                 }
-                current = current->children[lowerChar].get();
+                current = current->children[lower_char].get();
             }
-            current->isEndOfWord = true;
-            current->matchType = type;
+            current->is_end_of_word = true;
+            current->match_type = type;
         }
     }
 
-    [[nodiscard]] MatchResult CheckBuffer(const std::string_view& buffer) const {
-        TrieNode* node = root.get();
-
-        // If the root node is blank, we can't possibly have any matches.
-        if (node->children.empty())
+    // Does substring matches to check submatches in the buffer, which is actually needed.
+    [[nodiscard]] MatchResult check_buffer(const std::string_view& buffer) const {
+        if (root->children.empty())
             return MatchResult::NO;
 
-        // Check each character in the buffer
-        for (size_t i = 0; i < buffer.length(); ++i) {
-            char lowerChar = ToLower(buffer[i]);
+        MatchResult result = MatchResult::NO;
 
-            // Look for this character in current node's children
-            auto it = node->children.find(lowerChar);
-            if (it == node->children.end()) {
-                // Character not found, no match possible
-                return MatchResult::NO;
+        for (size_t start = 0; start < buffer.length(); ++start) {
+            TrieNode* node = root.get();
+            size_t i = start;
+            
+            for (; i < buffer.length(); ++i) {
+                char lower_char = to_lower(buffer[i]);
+                
+                auto it = node->children.find(lower_char);
+                if (it == node->children.end()) {
+                    break;
+                }
+                
+                node = it->second.get();
+                
+                if (node->is_end_of_word) {
+                    return (node->match_type == MatchType::REWIND) ?
+                        MatchResult::MATCHED_REWIND :
+                        MatchResult::MATCHED_STOP;
+                }
             }
-
-            // Move to the next node
-            node = it->second.get();
-
-            if (node->isEndOfWord) {
-                return (node->matchType == MatchType::REWIND) ?
-                    MatchResult::MATCHED_REWIND :
-                    MatchResult::MATCHED_STOP;
+            
+            if (i == buffer.length() && !node->children.empty() && result == MatchResult::NO) {
+                result = MatchResult::MAYBE;
             }
         }
-
-        // If we've processed the entire buffer and haven't found a match yet,
-        // but the current node has children, then there's a potential match
-        if (!node->children.empty()) {
-            return MatchResult::MAYBE;
-        }
-
-        return MatchResult::NO;
+        
+        return result;
     }
 };
-
-
 
 #endif // MATCH_TRIE_HPP
