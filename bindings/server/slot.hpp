@@ -60,6 +60,7 @@ struct Slot {
 
     int job_index = -1;
     int request_id = -1;
+    int slot_id = 0;
     State state = State::IDLE;
 
     std::vector<llama_token> prompt_tokens;

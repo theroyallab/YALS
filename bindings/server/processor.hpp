@@ -64,7 +64,7 @@ class Processor {
         batch.token[batch.n_tokens] = token;
         batch.pos[batch.n_tokens] = slot.n_past;
         batch.n_seq_id[batch.n_tokens] = 1;
-        batch.seq_id[batch.n_tokens][0] = slot.job_index;
+        batch.seq_id[batch.n_tokens][0] = slot.slot_id;
         batch.logits[batch.n_tokens] = static_cast<int8_t>(compute_logits);
 
         batch.n_tokens++;
@@ -104,6 +104,12 @@ class Processor {
             inference_args,
             readback_buffer] = queue_tasks.front();
 
+        // Prompt is longer than the entire ctx length.
+        if (prompt_tokens.size() > llama_n_ctx(ctx)) {
+            readback_finish(readback_buffer, make_json_status_string(ctx, "ContextExceeded", ""));
+            return;
+        }
+
         queue_tasks.pop();
         lock.unlock();
 
@@ -138,7 +144,7 @@ class Processor {
 
         if (longest_prefix > 0) {
             // Reuse prefix, cut the KV to the prefix size and adjust to gen or prompt appropriately.
-            llama_kv_self_seq_rm(ctx, best_slot->job_index, longest_prefix, -1);
+            llama_kv_self_seq_rm(ctx, best_slot->slot_id, longest_prefix, -1);
             best_slot->prompt_tokens_processed = longest_prefix;
             best_slot->n_past = longest_prefix;
 
@@ -169,6 +175,14 @@ class Processor {
         if (inference_args.min_tokens_to_gen > 0 && inference_args.min_tokens_to_gen < inference_args.max_tokens_to_gen) {
             const std::vector terminal_token_bans {llama_vocab_eos(llama_model_get_vocab(model)), llama_vocab_eot(llama_model_get_vocab(model))};
             best_slot->multi_sampler.presampler.add_eos_ban(model, terminal_token_bans);
+        }
+    }
+
+    void defrag_kv_if_thresh_greater(const float thresh) const {
+        const auto used_cells = llama_kv_self_used_cells(ctx);
+        const auto total_cells = llama_n_ctx(ctx);
+        if (static_cast<float>(used_cells) > thresh * static_cast<float>(total_cells) && slots.size() > 1) {
+            llama_kv_self_defrag(ctx);
         }
     }
 
@@ -235,7 +249,7 @@ class Processor {
                     //Restore the slot to whatever the last accepted snapshot was.
                     //Then delete the part of the KV we're rewinding
                     const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
-                    llama_kv_self_seq_rm(ctx, slot.job_index, prev_kv_pos, -1);
+                    llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos, -1);
 
                     //Ban every token in the buffer.
                     const auto tokens = tokenizer.tokenize(out_string, false, false);
@@ -337,6 +351,8 @@ class Processor {
     }
 
     void update_slots() {
+        defrag_kv_if_thresh_greater(.9);
+
         batch.n_tokens = 0;
         update_prompt_slots();
         update_gen_slots();
@@ -369,6 +385,7 @@ class Processor {
 
             if (all_idle) {
                 std::unique_lock lock(mutex_tasks);
+                defrag_kv_if_thresh_greater(0.6);
                 if (queue_tasks.empty()) {
                     cv_tasks.wait(lock, [this]() {
                         return !queue_tasks.empty() || should_exit || aborting_trap_active;
@@ -389,6 +406,7 @@ public:
         for (int i = 0; i < num_slots; i++) {
             slots.emplace_back(model, ctx);
             slots.back().end(++current_job_index, ctx);
+            slots.back().slot_id = i;
         }
 
         worker_thread = std::thread(&Processor::run, this);
