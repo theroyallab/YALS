@@ -113,7 +113,7 @@ target_link_libraries(multi_user_inference PRIVATE
 
 # Windows options
 if(WIN32)
-    set_target_properties(deno_cpp_binding PROPERTIES
+    set_target_properties(c_library PROPERTIES
         WINDOWS_EXPORT_ALL_SYMBOLS TRUE
     )
 endif()

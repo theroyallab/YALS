@@ -44,6 +44,6 @@ if ($env:GGML_VULKAN -eq 1) {
 }
 
 cmake . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release $extraCmakeArgs
-cmake --build build --config Release --target deno_cpp_binding -j $jobs
+cmake --build build --config Release --target c_library -j $jobs
 Copy-Item build/*.dll ../lib
 Copy-Item build/bin/*.dll ../lib
