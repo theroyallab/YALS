@@ -54,7 +54,7 @@ class Processor {
     std::thread worker_thread;
     std::atomic<bool> should_exit{false};
 
-    int current_job_index = 0;
+    std::atomic<int> current_job_index = 0;
     Tokenizer tokenizer;
 
     // nearly eq to common_add_to_batch from lcpp server
@@ -140,18 +140,13 @@ class Processor {
             // Reuse prefix, cut the KV to the prefix size and adjust to gen or prompt appropriately.
             llama_kv_self_seq_rm(ctx, best_slot->job_index, longest_prefix, -1);
             best_slot->prompt_tokens_processed = longest_prefix;
-            best_slot->tokens_generated = 0;
-            best_slot->generated_text.clear();
-
-            best_slot->n_past = llama_kv_self_seq_pos_max(ctx, best_slot->job_index);
+            best_slot->n_past = longest_prefix;
 
             best_slot->state =
                 longest_prefix == prompt_tokens.size() ?
                 Slot::State::GENERATING :
                 Slot::State::PROMPT;
         } else {
-            // Nothing to reuse, clear the kv and start fresh
-            best_slot->clear(ctx);
             best_slot->prompt_tokens_processed = 0;
             best_slot->state = Slot::State::PROMPT;
         }
@@ -393,8 +388,7 @@ public:
         slots.reserve(num_slots);
         for (int i = 0; i < num_slots; i++) {
             slots.emplace_back(model, ctx);
-            slots.back().job_index = (++current_job_index);
-            slots.back().clear(ctx);
+            slots.back().end(++current_job_index, ctx);
         }
 
         worker_thread = std::thread(&Processor::run, this);
@@ -457,8 +451,7 @@ public:
                     std::string last_token_piece = common_token_to_piece(ctx, slot.last_token, true);
                     readback_finish(slot.readback_buffer, make_json_status_string(ctx, "Aborted", last_token_piece));
                 }
-                slot.clear(ctx);
-                slot.job_index = ++current_job_index;
+                slot.end(++current_job_index, ctx);
                 found = true;
                 were_any_cancelled = true;
             }
