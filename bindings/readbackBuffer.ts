@@ -32,7 +32,6 @@ export type ReadbackResponse = ReadbackData | ReadbackFinish;
  */
 export class ReadbackBuffer {
     private bufferPtr: Deno.PointerValue;
-    private isFreed = false;
 
     /**
      * Creates a new ReadbackBuffer instance
@@ -52,7 +51,6 @@ export class ReadbackBuffer {
      * Checks if the buffer has finished processing
      */
     isFinished(): boolean {
-        this.ensureNotFreed();
         return lib.symbols.readback_is_buffer_finished(this.bufferPtr);
     }
 
@@ -61,8 +59,6 @@ export class ReadbackBuffer {
      * @returns A ReadbackData object or null if no more data is available
      */
     async readNext(): Promise<ReadbackData | null> {
-        this.ensureNotFreed();
-
         const outCharPtrBuf = new Uint8Array(8); // For char**
         const outTokenBuf = new Int32Array(1); // For llama_token*
 
@@ -116,8 +112,6 @@ export class ReadbackBuffer {
      * @returns A ReadbackFinish object or null if status couldn't be read
      */
     async readStatus(): Promise<ReadbackFinish | null> {
-        this.ensureNotFreed();
-
         const statusPtr = await lib.symbols.readback_read_status(
             this.bufferPtr,
         );
@@ -145,7 +139,6 @@ export class ReadbackBuffer {
      * Resets the buffer to its initial state
      */
     reset(): void {
-        this.ensureNotFreed();
         lib.symbols.readback_reset(this.bufferPtr);
     }
 
@@ -160,23 +153,4 @@ export class ReadbackBuffer {
             this.bufferPtr = null;
         }
     }
-
-    /**
-     * Ensures the buffer hasn't been freed before performing operations
-     * @throws Error if the buffer has been freed
-     */
-    private ensureNotFreed() {
-        if (this.isFreed) {
-            throw new Error("Cannot perform operation on freed ReadbackBuffer");
-        }
-    }
-}
-
-/**
- * Creates a ReadbackBuffer that will be automatically freed when it goes out of scope
- * @returns A tuple with the ReadbackBuffer and a function to free it
- */
-export function createReadbackBuffer(): [ReadbackBuffer, () => void] {
-    const buffer = new ReadbackBuffer();
-    return [buffer, async () => await buffer.free()];
 }

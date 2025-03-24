@@ -127,23 +127,23 @@ extern "C" {
     ReadbackBuffer* readback_create_buffer();
 
     bool readback_is_buffer_finished(
-        const ReadbackBuffer* buffer);
+        ReadbackBuffer* buffer);
 
     bool readback_read_next(
-            ReadbackBuffer* buffer,
-            char** outChar,
-            llama_token* outToken);
+        ReadbackBuffer* buffer,
+        char** outChar,
+        llama_token* outToken);
 
     //TODO::@Z Validate.
     //  Not leakable, owned by readback buffer ?
     char* readback_read_status(
-            const ReadbackBuffer* buffer);
+        const ReadbackBuffer* buffer);
 
     void readback_reset(
-            ReadbackBuffer* buffer);
+        ReadbackBuffer* buffer);
 
     void readback_annihilate(
-            ReadbackBuffer* buffer);
+        ReadbackBuffer* buffer);
 
     // ~~~ Samplers ~~~
 

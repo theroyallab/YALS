@@ -31,8 +31,11 @@ inline void release_spinlock(ReadbackBuffer* buffer) {
 }
 
 // C API
-bool readback_is_buffer_finished(const ReadbackBuffer* buffer) {
-    return buffer->buffer_finished_write;
+bool readback_is_buffer_finished(ReadbackBuffer* buffer) {
+    acquire_spinlock(buffer);
+    const auto status = buffer->buffer_finished_write && buffer->last_readback_index >= buffer->ids->size();
+    release_spinlock(buffer);
+    return status;
 }
 
 // C API
@@ -60,7 +63,6 @@ char* readback_read_status(const ReadbackBuffer* buffer) {
 
 // C API
 void readback_reset(ReadbackBuffer* buffer) {
-    // Ensure we entirely free the string data we allocated. We own this data.
     for (char* str : *(buffer->data)) {
         free(str);  // memory was created via strdup which is a malloc.
     }
@@ -101,8 +103,10 @@ void readback_write_to_buffer(ReadbackBuffer* buffer, const std::string& data, c
 void readback_finish(ReadbackBuffer* buffer, const std::string& status) {
     char* copy = strdup(status.c_str());
 
+    acquire_spinlock(buffer);
     buffer->buffer_finished_write = true;
     buffer->status_buffer = copy;
+    release_spinlock(buffer);
 }
 
 #endif // READBACK_BUFFER_HPP

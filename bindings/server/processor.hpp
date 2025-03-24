@@ -11,6 +11,8 @@
 #include <cmath>
 #include <thread>
 
+#include <iostream>
+
 #include "inference_args.hpp"
 #include "llama.h"
 #include "tokenization.hpp"
@@ -280,7 +282,9 @@ class Processor {
             readback_write_to_buffer(slot.readback_buffer, final_piece, token);
         }
 
-        readback_finish(slot.readback_buffer, make_json_status_string(ctx, finish_reason, stop_token));
+        const auto status = make_json_status_string(ctx, finish_reason, stop_token);
+
+        readback_finish(slot.readback_buffer, status);
         return false;
     }
 

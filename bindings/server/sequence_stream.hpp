@@ -56,8 +56,10 @@ public:
             return Continuation::STOP;
         }
 
+        bool had_initial_whitespace = false;
         std::string stripped = sequence_buffer;
         if (!stripped.empty() && std::isspace(static_cast<unsigned char>(stripped.front()))) {
+            had_initial_whitespace = true;
             stripped.erase(0, 1);
         }
 
@@ -73,8 +75,9 @@ public:
                 return Continuation::REWIND;
 
             case MatchResult::MATCHED_STOP:
+                out_sequence = std::move(sequence_buffer);
+                out_unmatched = had_initial_whitespace ? " " + std::string(unmatched) : unmatched;
                 sequence_buffer.clear();
-                out_unmatched = unmatched;
                 return Continuation::STOP;
 
             case MatchResult::NO:

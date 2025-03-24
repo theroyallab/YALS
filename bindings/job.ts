@@ -21,15 +21,23 @@ export class Job {
             return null;
         }
 
+        const data = await this.buffer.readNext();
+        if (data !== null) {
+            return data;
+        }
+
         if (this.buffer.isFinished()) {
+            const data = await this.buffer.readNext();
+            if (data !== null) {
+                return data;
+            }
             const status = await this.buffer.readStatus();
             this.buffer.reset();
             this.isComplete = true;
             return status;
         }
 
-        const data = await this.buffer.readNext();
-        return data;
+        return null;
     }
 
     async *stream(): AsyncGenerator<
