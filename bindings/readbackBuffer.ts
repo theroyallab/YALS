@@ -147,10 +147,7 @@ export class ReadbackBuffer {
      * After calling this method, the buffer can no longer be used
      */
     async free() {
-        if (!this.isFreed && this.bufferPtr) {
-            await lib.symbols.readback_annihilate(this.bufferPtr);
-            this.isFreed = true;
-            this.bufferPtr = null;
-        }
+        await lib.symbols.readback_annihilate(this.bufferPtr);
+        this.bufferPtr = null;
     }
 }
