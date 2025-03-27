@@ -43,7 +43,7 @@ struct Slot {
             snapshot.previous_seq_stream_buffer = slot.sequence_stream->sequence_buffer;
 
             // During the prompt because we do not call decode, we need a special case to update the kv pos for prompt
-            snapshot.previous_kv_pos = during_prompt ? slot.n_past : llama_kv_self_seq_pos_max(ctx, slot.job_index);
+            snapshot.previous_kv_pos = during_prompt ? slot.n_past : llama_kv_self_seq_pos_max(ctx, slot.slot_id);
             return snapshot;
         }
 
@@ -95,8 +95,6 @@ struct Slot {
     [[nodiscard]] bool is_generating() const { return state == State::GENERATING; }
 
     void clear(llama_context* ctx) {
-        llama_kv_self_seq_rm(ctx, job_index, 0, -1);
-
         request_id = -1;
         state = State::IDLE;
         prompt_tokens_processed = 0;
@@ -104,12 +102,38 @@ struct Slot {
         n_past = 0;
         i_batch = -1;
         last_token = 0;
-        prompt_tokens.clear();
         generated_text.clear();
         detokenizer->reset();
     }
 
+    void print_dbg_info(llama_context* ctx) const {
+        std::cout << "=== Slot Debug Info ===\n";
+        std::cout << "KV cache size: " << llama_kv_self_seq_pos_max(ctx, slot_id) << std:: endl;
+        std::cout << "job_index: " << job_index << "\n";
+        std::cout << "request_id: " << request_id << "\n";
+        std::cout << "slot_id: " << slot_id << "\n";
+
+        std::cout << "state: ";
+        switch (state) {
+            case State::IDLE:      std::cout << "IDLE"; break;
+            case State::PROMPT:    std::cout << "PROMPT"; break;
+            case State::GENERATING: std::cout << "GENERATING"; break;
+            default:               std::cout << static_cast<int>(state); break;
+        }
+        std::cout << "\n";
+
+        std::cout << "prompt_tokens.size(): " << prompt_tokens.size() << "\n";
+        std::cout << "prompt_tokens_processed: " << prompt_tokens_processed << "\n";
+        std::cout << "tokens_generated: " << tokens_generated << "\n";
+        std::cout << "n_past: " << n_past << "\n";
+        std::cout << "i_batch: " << i_batch << "\n";
+        std::cout << "last_token: " << last_token << "\n";
+        std::cout << "generated_text: \"" << generated_text << "\"\n";
+        std::cout << "======================\n";
+    }
+
     void end(const int new_id, llama_context* ctx) {
+        this->print_dbg_info(ctx);
         clear(ctx);
         job_index = new_id;
     }

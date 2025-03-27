@@ -144,17 +144,24 @@ class Processor {
 
         if (longest_prefix > 0) {
             // Reuse prefix, cut the KV to the prefix size and adjust to gen or prompt appropriately.
+            std::cout << "Longest prefix: " << longest_prefix << std:: endl;
+            std::cout << "Kv size pre-rm: " << llama_kv_self_seq_pos_max(ctx, best_slot->slot_id) << std:: endl;
             llama_kv_self_seq_rm(ctx, best_slot->slot_id, longest_prefix, -1);
+            std::cout << "KV cache size post-rm: " << llama_kv_self_seq_pos_max(ctx, best_slot->slot_id) << std:: endl;
+
             best_slot->prompt_tokens_processed = longest_prefix;
             best_slot->n_past = longest_prefix;
+            best_slot->last_token = prompt_tokens[longest_prefix - 1];
 
             best_slot->state =
                 longest_prefix == prompt_tokens.size() ?
                 Slot::State::GENERATING :
                 Slot::State::PROMPT;
         } else {
+            llama_kv_self_seq_rm(ctx, best_slot->slot_id, 0, -1);
             best_slot->prompt_tokens_processed = 0;
             best_slot->state = Slot::State::PROMPT;
+            best_slot->prompt_tokens.clear();
         }
 
         best_slot->request_id = id;
@@ -176,6 +183,8 @@ class Processor {
             const std::vector terminal_token_bans {llama_vocab_eos(llama_model_get_vocab(model)), llama_vocab_eot(llama_model_get_vocab(model))};
             best_slot->multi_sampler.presampler.add_eos_ban(model, terminal_token_bans);
         }
+
+        best_slot->print_dbg_info(ctx);
     }
 
     void defrag_kv_if_thresh_greater(const float thresh) const {
@@ -351,6 +360,7 @@ class Processor {
     }
 
     void update_slots() {
+        common_batch_clear(batch);
         defrag_kv_if_thresh_greater(.9);
 
         batch.n_tokens = 0;
