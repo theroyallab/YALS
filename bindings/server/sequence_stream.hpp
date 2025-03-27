@@ -19,6 +19,7 @@
 
 class SequenceStream {
     std::unordered_set<llama_token> stop_tokens;
+    int buffered_seq_size {};
     MatchTrie* match_trie = nullptr;
 
 public:
@@ -49,8 +50,9 @@ public:
         this->sequence_buffer.clear();
     }
 
-    Continuation append(const std::string_view& next_item, const llama_token last_token, std::string& out_sequence, std::string& out_unmatched) {
+    Continuation append(const std::string_view& next_item, const llama_token last_token, int& seq_size_out, std::string& out_sequence, std::string& out_unmatched) {
         sequence_buffer += next_item;
+        buffered_seq_size++;
 
         if (stop_tokens.count(last_token) > 0) {
             return Continuation::STOP;
@@ -74,6 +76,8 @@ public:
                 return Continuation::STOP;
 
             case MatchResult::NO:
+                seq_size_out = buffered_seq_size;
+                buffered_seq_size = 0;
                 out_sequence = std::move(sequence_buffer);
                 sequence_buffer.clear();
                 return Continuation::ACCEPT;

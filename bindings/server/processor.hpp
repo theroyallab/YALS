@@ -144,10 +144,7 @@ class Processor {
 
         if (longest_prefix > 0) {
             // Reuse prefix, cut the KV to the prefix size and adjust to gen or prompt appropriately.
-            std::cout << "Longest prefix: " << longest_prefix << std:: endl;
-            std::cout << "Kv size pre-rm: " << llama_kv_self_seq_pos_max(ctx, best_slot->slot_id) << std:: endl;
             llama_kv_self_seq_rm(ctx, best_slot->slot_id, longest_prefix, -1);
-            std::cout << "KV cache size post-rm: " << llama_kv_self_seq_pos_max(ctx, best_slot->slot_id) << std:: endl;
 
             best_slot->prompt_tokens_processed = longest_prefix;
             best_slot->n_past = longest_prefix;
@@ -198,22 +195,21 @@ class Processor {
     void update_prompt_slots() {
         for (auto& slot : slots) {
             if (slot.is_processing_prompt() && slot.prompt_tokens_processed < slot.prompt_tokens.size()) {
-                while (slot.prompt_tokens_processed < slot.prompt_tokens.size() &&
-                       batch.n_tokens < batch_size) {
+                while (batch.n_tokens < batch_size) {
 
                     const llama_token token = slot.prompt_tokens[slot.prompt_tokens_processed];
                     const bool is_last_prompt_token = (slot.prompt_tokens_processed == slot.prompt_tokens.size() - 1);
 
                     slot.i_batch = batch.n_tokens;
-
-                    add_to_batch(slot, token, is_last_prompt_token);
                     slot.prompt_tokens_processed++;
+                    slot.last_token = token;
+                    add_to_batch(slot, token, is_last_prompt_token);
 
-                    slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, true);
-                }
-
-                if (slot.prompt_tokens_processed >= slot.prompt_tokens.size()) {
-                    slot.state = Slot::State::GENERATING;
+                    if (slot.prompt_tokens_processed >= slot.prompt_tokens.size()) {
+                        slot.state = Slot::State::GENERATING;
+                        slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, true);
+                        break;
+                    }
                 }
             }
         }
@@ -222,7 +218,6 @@ class Processor {
     // Processes the next sequence token. Finalizes the request if gen is finished.
     bool process_token(Slot& slot, const llama_token token) const {
         auto piece = slot.detokenizer->process_token(token, true);
-        slot.tokens_generated++;
 
         const bool is_eos = tokenizer.is_eos_token(token);
         bool is_complete = is_eos || slot.tokens_generated >= slot.inference_args.max_tokens_to_gen;
@@ -241,8 +236,10 @@ class Processor {
         if (!piece.empty()) {
             std::string out_string;
             std::string out_unmatched;
-            switch (slot.sequence_stream->append(piece, token, out_string, out_unmatched)) {
+            int out_seq_len;
+            switch (slot.sequence_stream->append(piece, token, out_seq_len, out_string, out_unmatched)) {
                 case SequenceStream::Continuation::ACCEPT:
+                    slot.tokens_generated += out_seq_len;
                     slot.generated_text += out_string;
                     slot.multi_sampler.presampler.clear_rewind_bans(model);
                     slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, false);
@@ -257,8 +254,14 @@ class Processor {
                 case SequenceStream::Continuation::REWIND: {
                     //Restore the slot to whatever the last accepted snapshot was.
                     //Then delete the part of the KV we're rewinding
-                    const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
-                    llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos, -1);
+                    if (slot.rewind_snapshot.last_token_prompt) {
+                        const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
+                        llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos + 1, -1);
+                        slot.n_past += 1;
+                    } else {
+                        const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
+                        llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos + 1, -1);
+                    }
 
                     //Ban every token in the buffer.
                     const auto tokens = tokenizer.tokenize(out_string, false, false);
@@ -308,7 +311,7 @@ class Processor {
 
     void update_gen_slots() {
         for (auto& slot : slots) {
-            if (slot.is_generating() && batch.n_tokens < batch_size) {
+            if (slot.is_generating() && batch.n_tokens < batch_size && slot.test_safeguard) {
                 add_to_batch(slot, slot.last_token, true);
             }
         }
@@ -341,7 +344,7 @@ class Processor {
                 continue;
             }
 
-            if (slot.is_generating()) {
+            if (slot.is_generating() && slot.test_safeguard) {
                 const auto maybe_token = slot.multi_sampler.sample(ctx, slot.i_batch);
                 if (!maybe_token.has_value()) {
                     // TODO:: @Z Bug.
@@ -355,6 +358,8 @@ class Processor {
                     slot.end(++current_job_index, ctx);
                     //Status reported by process_token
                 }
+            } else {
+                slot.test_safeguard = true;
             }
         }
     }

@@ -32,6 +32,7 @@ struct Slot {
         llama_token last_token{};
         std::string previous_seq_stream_buffer;
         int32_t previous_kv_pos{};
+        bool last_token_prompt{};
 
         static SlotSnapshot snapshot_slot(const Slot& slot, llama_context* ctx, const bool during_prompt) {
             SlotSnapshot snapshot;
@@ -41,6 +42,8 @@ struct Slot {
             snapshot.i_batch = slot.i_batch;
             snapshot.last_token = slot.last_token;
             snapshot.previous_seq_stream_buffer = slot.sequence_stream->sequence_buffer;
+
+            snapshot.last_token_prompt = during_prompt;
 
             // During the prompt because we do not call decode, we need a special case to update the kv pos for prompt
             snapshot.previous_kv_pos = during_prompt ? slot.n_past : llama_kv_self_seq_pos_max(ctx, slot.slot_id);
@@ -70,6 +73,8 @@ struct Slot {
     int n_past = 0;
     int i_batch = -1;
 
+    bool test_safeguard = false;
+
     llama_token last_token = 0;
     std::string generated_text;
 
@@ -94,7 +99,7 @@ struct Slot {
     [[nodiscard]] bool is_processing_prompt() const { return state == State::PROMPT; }
     [[nodiscard]] bool is_generating() const { return state == State::GENERATING; }
 
-    void clear(llama_context* ctx) {
+    void clear() {
         request_id = -1;
         state = State::IDLE;
         prompt_tokens_processed = 0;
@@ -133,8 +138,7 @@ struct Slot {
     }
 
     void end(const int new_id, llama_context* ctx) {
-        this->print_dbg_info(ctx);
-        clear(ctx);
+        clear();
         job_index = new_id;
     }
 };
