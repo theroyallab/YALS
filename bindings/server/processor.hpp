@@ -180,8 +180,6 @@ class Processor {
             const std::vector terminal_token_bans {llama_vocab_eos(llama_model_get_vocab(model)), llama_vocab_eot(llama_model_get_vocab(model))};
             best_slot->multi_sampler.presampler.add_eos_ban(model, terminal_token_bans);
         }
-
-        best_slot->print_dbg_info(ctx);
     }
 
     void defrag_kv_if_thresh_greater(const float thresh) const {
@@ -231,14 +229,9 @@ class Processor {
                 case SequenceStream::Continuation::REWIND: {
                     //Restore the slot to whatever the last accepted snapshot was.
                     //Then delete the part of the KV we're rewinding
-                    if (slot.rewind_snapshot.last_token_prompt) {
-                        const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
-                        llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos + 1, -1);
-                        slot.n_past += 1;
-                    } else {
-                        const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
-                        llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos + 1, -1);
-                    }
+
+                    const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
+                    llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos + 1, -1);
 
                     //Ban every token in the buffer.
                     const auto tokens = tokenizer.tokenize(out_string, false, false);
@@ -305,7 +298,7 @@ class Processor {
                     }
                 }
             } else {
-                if (batch.n_tokens < batch_size) {
+                if (slot.is_generating() && batch.n_tokens < batch_size) {
                     add_to_batch(slot, slot.last_token, true);
                 }
             }
@@ -341,7 +334,7 @@ class Processor {
                 continue;
             }
 
-            if (slot.is_generating() && slot.test_safeguard) {
+            if (slot.is_generating()) {
                 const auto maybe_token = slot.multi_sampler.sample(ctx, slot.i_batch);
                 if (!maybe_token.has_value()) {
                     // TODO:: @Z Bug.
@@ -355,8 +348,6 @@ class Processor {
                     slot.end(++current_job_index, ctx);
                     //Status reported by process_token
                 }
-            } else {
-                slot.test_safeguard = true;
             }
         }
     }
