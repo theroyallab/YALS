@@ -76,9 +76,9 @@ struct Slot {
     TokenStreamDetokenizer* detokenizer;
     SequenceStream* sequence_stream;
     MultistageSampler multi_sampler;
-    InferenceArgs inference_args;
     SlotSnapshot rewind_snapshot;
     ReadbackBuffer* readback_buffer = nullptr;
+    class RuleStream* rule_stream = nullptr;
 
     explicit Slot(const llama_model* model, llama_context* ctx): multi_sampler(model) {
         detokenizer = new TokenStreamDetokenizer(ctx);
@@ -105,7 +105,7 @@ struct Slot {
         generated_text.clear();
         detokenizer->reset();
     }
-    
+
     void end(const int new_id, llama_context* ctx) {
         clear();
         job_index = new_id;

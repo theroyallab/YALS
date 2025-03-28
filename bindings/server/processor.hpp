@@ -18,6 +18,7 @@
 #include "request.hpp"
 #include "sequence_stream.hpp"
 #include "json_status.hpp"
+#include "rule_stream.hpp"
 
 /*
  * Primary server processor. Controls the overall flow. This processes in slot-order and does not
@@ -160,7 +161,6 @@ class Processor {
 
         best_slot->request_id = id;
         best_slot->prompt_tokens = prompt_tokens;
-        best_slot->inference_args = inference_args;
         best_slot->readback_buffer = readback_buffer;
 
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
@@ -172,10 +172,12 @@ class Processor {
             best_slot->multi_sampler.constrain(inference_args.grammar);
         }
 
-        // Ban the EOS tokens immediately before starting generation if we have min tokens.
-        if (inference_args.min_tokens_to_gen > 0 && inference_args.min_tokens_to_gen < inference_args.max_tokens_to_gen) {
-            const std::vector terminal_token_bans {llama_vocab_eos(llama_model_get_vocab(model)), llama_vocab_eot(llama_model_get_vocab(model))};
-            best_slot->multi_sampler.presampler.add_eos_ban(model, terminal_token_bans);
+        if (inference_args.min_tokens_to_gen > 0) {
+            RuleEngine::rule_min_tokens(*best_slot->rule_stream, inference_args.min_tokens_to_gen, model, ctx, *best_slot);
+        }
+
+        if (inference_args.max_tokens_to_gen > 0 && inference_args.max_tokens_to_gen >= inference_args.min_tokens_to_gen) {
+            RuleEngine::rule_max_tokens(*best_slot->rule_stream, inference_args.max_tokens_to_gen, model, ctx, *best_slot);
         }
     }
 
@@ -187,13 +189,16 @@ class Processor {
         }
     }
 
+    template<class... Ts> struct action_type : Ts... { using Ts::operator()...; };
+    template<class... Ts> action_type(Ts...) -> action_type<Ts...>;
     // Processes the next sequence token. Finalizes the request if gen is finished.
     bool process_token(Slot& slot, const llama_token token) const {
         auto piece = slot.detokenizer->process_token(token, true);
-
         const bool is_eos = tokenizer.is_eos_token(token);
-        bool is_complete = is_eos || slot.tokens_generated >= slot.inference_args.max_tokens_to_gen;
+        bool is_complete = is_eos;
         bool yield_final = false;
+
+        slot.tokens_generated++;
 
         std::string finish_reason = "Unspecified";
         std::string stop_token = "Unspecified";
@@ -201,57 +206,56 @@ class Processor {
         if (is_eos) {
             finish_reason = "StopToken";
             stop_token = common_token_to_piece(ctx, token, true);
-        } else if (slot.tokens_generated >= slot.inference_args.max_tokens_to_gen) {
-            finish_reason = "MaxNewTokens";
         }
 
-        if (!piece.empty()) {
-            std::string out_string;
-            std::string out_unmatched;
-            int out_seq_len;
-            switch (slot.sequence_stream->append(piece, token, out_seq_len, out_string, out_unmatched)) {
-                case SequenceStream::Continuation::ACCEPT:
-                    slot.tokens_generated += out_seq_len;
-                    slot.generated_text += out_string;
-                    slot.multi_sampler.presampler.clear_rewind_bans(model);
-                    slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, false);
-                    yield_final = true;
+        const auto seq_res = slot.sequence_stream->append(piece);
+        const auto triggered_actions = slot.rule_stream->apply_engine(token, seq_res, model, ctx, slot);
+        for (const auto& actionWrapper : triggered_actions) {
+            std::visit(action_type {
 
-                    if (slot.inference_args.min_tokens_to_gen > 0
-                        && slot.tokens_generated >= slot.inference_args.min_tokens_to_gen
-                        && slot.inference_args.min_tokens_to_gen < slot.inference_args.max_tokens_to_gen) {
-                        slot.multi_sampler.presampler.clear_eos_bans(model);
-                    }
-                    break;
-                case SequenceStream::Continuation::REWIND: {
-                    //Restore the slot to whatever the last accepted snapshot was.
-                    //Then delete the part of the KV we're rewinding
-
-                    const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
-                    llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos + 1, -1);
-
-                    //Ban every token in the buffer.
-                    const auto tokens = tokenizer.tokenize(out_string, false, false);
-                    slot.multi_sampler.presampler.add_rewind_bans(model, tokens);
-
-                    //It's possible we rewind to before the min token threshold, so we need to ensure the eos tokens are actually banned.
-                    if (slot.inference_args.min_tokens_to_gen > 0 && slot.inference_args.min_tokens_to_gen < slot.inference_args.max_tokens_to_gen) {
-                        const std::vector terminal_token_bans {llama_vocab_eos(llama_model_get_vocab(model)), llama_vocab_eot(llama_model_get_vocab(model))};
-                        slot.multi_sampler.presampler.add_eos_ban(model, terminal_token_bans);
-                    }
-                    }
-                    return true;
-                case SequenceStream::Continuation::STOP:
+                //case: ActionEndGeneration:
+                [&](const ActionEndGeneration& action) {
+                    finish_reason = action.stop_reason;
                     is_complete = true;
-                    finish_reason = "StopString";
-                    stop_token = out_string;
-                    piece = out_unmatched;
-                    yield_final = true;
-                    break;
-                case SequenceStream::Continuation::BUFFER:
-                    break;
-            }
+                },
+
+                //default: (does nothing)
+                [](auto&&) { }
+
+            }, actionWrapper.get());
         }
+
+        switch (seq_res.sequence_status) {
+            case SequenceStream::SequenceStatus::ACCEPT: {
+                slot.generated_text += seq_res.current_sequence;
+                slot.multi_sampler.presampler.clear_rewind_bans(model);
+                slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, false);
+                yield_final = true;
+                }
+                break;
+            case SequenceStream::SequenceStatus::REWIND: {
+                //Restore the slot to whatever the last accepted snapshot was.
+                //Then delete the part of the KV we're rewinding
+                const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
+                llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos, -1);
+
+                //Ban every token in the buffer.
+                const auto tokens = tokenizer.tokenize(seq_res.current_sequence, false, false);
+                slot.multi_sampler.presampler.add_rewind_bans(model, tokens);
+
+                }
+                return true;
+            case SequenceStream::SequenceStatus::STOP:
+                is_complete = true;
+                finish_reason = "StopString";
+                stop_token = seq_res.current_sequence;
+                piece = seq_res.unmatched_sequence;
+                yield_final = true;
+                break;
+            case SequenceStream::SequenceStatus::BUFFER:
+                break;
+        }
+
 
         if (!is_complete) {
             if (!piece.empty()) {
@@ -398,6 +402,7 @@ public:
             slots.emplace_back(model, ctx);
             slots.back().end(++current_job_index, ctx);
             slots.back().slot_id = i;
+            slots.back().rule_stream = new RuleStream();
         }
 
         worker_thread = std::thread(&Processor::run, this);
@@ -416,6 +421,9 @@ public:
     ~Processor() {
         should_exit = true;
         cv_tasks.notify_all();
+        for (const auto slot : slots) {
+            delete slot.rule_stream;
+        }
         if (worker_thread.joinable()) {
             worker_thread.join();
         }
