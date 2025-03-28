@@ -192,29 +192,6 @@ class Processor {
         }
     }
 
-    void update_prompt_slots() {
-        for (auto& slot : slots) {
-            if (slot.is_processing_prompt() && slot.prompt_tokens_processed < slot.prompt_tokens.size()) {
-                while (batch.n_tokens < batch_size) {
-
-                    const llama_token token = slot.prompt_tokens[slot.prompt_tokens_processed];
-                    const bool is_last_prompt_token = (slot.prompt_tokens_processed == slot.prompt_tokens.size() - 1);
-
-                    slot.i_batch = batch.n_tokens;
-                    slot.prompt_tokens_processed++;
-                    slot.last_token = token;
-                    add_to_batch(slot, token, is_last_prompt_token);
-
-                    if (slot.prompt_tokens_processed >= slot.prompt_tokens.size()) {
-                        slot.state = Slot::State::GENERATING;
-                        slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, true);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
     // Processes the next sequence token. Finalizes the request if gen is finished.
     bool process_token(Slot& slot, const llama_token token) const {
         auto piece = slot.detokenizer->process_token(token, true);
@@ -309,13 +286,33 @@ class Processor {
         return false;
     }
 
-    void update_gen_slots() {
+    void update_batch() {
         for (auto& slot : slots) {
-            if (slot.is_generating() && batch.n_tokens < batch_size && slot.test_safeguard) {
-                add_to_batch(slot, slot.last_token, true);
+            if (slot.is_processing_prompt() && slot.prompt_tokens_processed < slot.prompt_tokens.size()) {
+                while (batch.n_tokens < batch_size) {
+
+                    const llama_token token = slot.prompt_tokens[slot.prompt_tokens_processed];
+                    const bool is_last_prompt_token = (slot.prompt_tokens_processed == slot.prompt_tokens.size() - 1);
+                    slot.i_batch = batch.n_tokens;
+                    slot.prompt_tokens_processed++;
+                    slot.last_token = token;
+                    add_to_batch(slot, token, is_last_prompt_token);
+
+                    if (slot.prompt_tokens_processed >= slot.prompt_tokens.size()) {
+                        slot.state = Slot::State::GENERATING;
+                        slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, true);
+                        break;
+                    }
+                }
+            } else {
+                if (batch.n_tokens < batch_size) {
+                    add_to_batch(slot, slot.last_token, true);
+                }
             }
         }
+    }
 
+    void update_gen_slots() {
         if (batch.n_tokens == 0) {
             return;
         }
@@ -369,7 +366,7 @@ class Processor {
         defrag_kv_if_thresh_greater(.9);
 
         batch.n_tokens = 0;
-        update_prompt_slots();
+        update_batch();
         update_gen_slots();
     }
 
