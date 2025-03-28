@@ -61,7 +61,6 @@ export async function streamCompletion(
             stream.onAbort(() => {
                 if (!finished) {
                     abortController.abort();
-                    logger.error("Streaming completion aborted");
                     finished = true;
 
                     // Break out of the stream loop

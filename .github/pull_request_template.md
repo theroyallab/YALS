@@ -1,3 +1,6 @@
+**Warning**
+Make all Pull Requests to the dev branch. Main is reserved for stability and building actions.
+
 **Is your pull request related to a problem? Please describe.**
 A clear and concise description of what the problem is. You can also link to an existing issue.
 
