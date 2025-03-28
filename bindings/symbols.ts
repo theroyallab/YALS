@@ -43,7 +43,7 @@ export default {
             "u32", // num_stopping_strings: unsigned
             "buffer", // stopping_tokens: const int32_t*
             "u32", // num_stopping_tokens: unsigned
-            "buffer" // grammar const char* 
+            "buffer", // grammar const char*
         ],
         result: "i32", // int
         nonblocking: true,

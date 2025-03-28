@@ -287,7 +287,19 @@ export class Model {
             }
         }
 
-        // This shouldn't fire
+        // Create a dummy chunk to satisfy typescript
+        if (abortSignal.aborted) {
+            result = {
+                kind: "finish",
+                text: "",
+                promptTokens: 0,
+                genTokens: 0,
+                finishReason: ReadbackFinishReason.Aborted,
+            };
+        }
+
+        // Fire if a finish chunk isn't found
+        // This means the generation didn't complete properly
         if (!result) {
             throw new Error(
                 "Generation completed without receiving finish chunk",
@@ -490,7 +502,6 @@ export class Model {
         //  | "curious" | "depressed" | "ecstatic" | "fearful" | "grateful" | "hopeful"
         //  | "irritated" | "jealous" | "peaceful" | "proud" | "surprised" | "tired"
         // `;
-    
 
         // // Convert the string to a null-terminated buffer
         // const grammarBuffer = new TextEncoder().encode(larkGrammar + "\0");
@@ -509,7 +520,7 @@ export class Model {
             stopStrings.length,
             stopTokensPtr,
             stopTokens.length,
-            null
+            null,
         );
 
         const job = new Job(jobId, this.readbackBuffer);

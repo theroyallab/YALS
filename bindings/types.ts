@@ -24,5 +24,5 @@ export interface FinishChunk {
     promptTokens: number;
     genTokens: number;
     finishReason: string;
-    stopToken: string;
+    stopToken?: string;
 }
