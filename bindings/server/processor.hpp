@@ -42,7 +42,6 @@ class Processor {
     llama_context* ctx;
     llama_batch batch{};
     bool abort_inference = false;
-    bool aborting_trap_active = false;
 
     std::vector<Slot> slots;
     uint32_t batch_size;
@@ -165,6 +164,9 @@ class Processor {
         best_slot->prompt_tokens = prompt_tokens;
         best_slot->inference_args = inference_args;
         best_slot->readback_buffer = readback_buffer;
+
+        readback_reset(best_slot->readback_buffer);
+        best_slot->generated_text.clear();
 
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
         best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
@@ -312,11 +314,7 @@ class Processor {
 
         const auto decode_result = llama_decode(ctx, batch);
         if (decode_result != 0) {
-            // Fallback to avoid a deadlock scenario, we need to check in both places
-            // that we call llama_decode, as it's possible we ask to abort and the backend is decoding
-            // Status 2 is the abort signal.
             if (decode_result == 2) {
-                aborting_trap_active = false;
                 return;
             }
             //Terminal error, the full batch decode entirely failed. We need to end everything this is not recoverable.
@@ -363,18 +361,6 @@ class Processor {
 
     void run() {
         while (!should_exit) {
-            // As far as I can tell, this is the only way to trap work, wait for llama decode to fail status 2.
-            // Very hacky, but does not seem to have an alternative. We need to check in both places
-            // that we call llama_decode, as it's possible we ask to abort and the backend is decoding
-            // status 2 is the abort signal.
-            if (aborting_trap_active) {
-                if (const auto decode_result = llama_decode(ctx, batch); decode_result == 2) {
-                    aborting_trap_active = false;
-                } else {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    continue;
-                }
-            }
             process_tasks();
             update_slots();
 
@@ -391,7 +377,7 @@ class Processor {
                 defrag_kv_if_thresh_greater(0.6);
                 if (queue_tasks.empty()) {
                     cv_tasks.wait(lock, [this]() {
-                        return !queue_tasks.empty() || should_exit || aborting_trap_active;
+                        return !queue_tasks.empty() || should_exit;
                     });
                 }
             }
@@ -493,9 +479,6 @@ public:
         if (queue_tasks.empty() && all_idle) {
             // Abort inference is reset via the mechanism in the lambda abort fn
             abort_inference = true;
-            // We signal trap and wait for the backend to actually finish aborting, to avoiding enqueueing work
-            // during an active abort.
-            aborting_trap_active = true;
         }
 
         return found;
