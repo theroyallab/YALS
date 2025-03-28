@@ -45,6 +45,7 @@ export class Job {
         void,
         unknown
     > {
+        this.buffer.reset();
         while (!this.isComplete) {
             const data = await this.readNext();
             if (data === null) {

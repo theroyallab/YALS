@@ -165,9 +165,6 @@ class Processor {
         best_slot->inference_args = inference_args;
         best_slot->readback_buffer = readback_buffer;
 
-        readback_reset(best_slot->readback_buffer);
-        best_slot->generated_text.clear();
-
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
         best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
 
