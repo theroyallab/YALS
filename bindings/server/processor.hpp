@@ -11,8 +11,6 @@
 #include <cmath>
 #include <thread>
 
-#include <iostream>
-
 #include "inference_args.hpp"
 #include "llama.h"
 #include "tokenization.hpp"
@@ -279,6 +277,7 @@ class Processor {
     }
 
     void update_batch() {
+        batch.n_tokens = 0;
         for (auto& slot : slots) {
             if (slot.is_processing_prompt() && slot.prompt_tokens_processed < slot.prompt_tokens.size()) {
                 while (batch.n_tokens < batch_size) {
@@ -309,9 +308,8 @@ class Processor {
             return;
         }
 
-        int32_t decode_result = -1;
         while (true) {
-            decode_result = llama_decode(ctx, batch);
+            const int32_t decode_result = llama_decode(ctx, batch);
 
             //Decode aborted, this is not a failure, we can redo the decode.
             if (decode_result == 2) {
@@ -359,7 +357,6 @@ class Processor {
         common_batch_clear(batch);
         defrag_kv_if_thresh_greater(.9);
 
-        batch.n_tokens = 0;
         update_batch();
         update_gen_slots();
     }
@@ -425,7 +422,6 @@ public:
         llama_batch_free(batch);
     }
 
-    //TODO:: @Z: Should this output the cancelled residual outputs or not?
     bool cancel_work(const int request_id_to_cancel) {
         bool found = false;
 

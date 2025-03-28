@@ -105,33 +105,7 @@ struct Slot {
         generated_text.clear();
         detokenizer->reset();
     }
-
-    void print_dbg_info(llama_context* ctx) const {
-        std::cout << "=== Slot Debug Info ===\n";
-        std::cout << "KV cache size: " << llama_kv_self_seq_pos_max(ctx, slot_id) << std:: endl;
-        std::cout << "job_index: " << job_index << "\n";
-        std::cout << "request_id: " << request_id << "\n";
-        std::cout << "slot_id: " << slot_id << "\n";
-
-        std::cout << "state: ";
-        switch (state) {
-            case State::IDLE:      std::cout << "IDLE"; break;
-            case State::PROMPT:    std::cout << "PROMPT"; break;
-            case State::GENERATING: std::cout << "GENERATING"; break;
-            default:               std::cout << static_cast<int>(state); break;
-        }
-        std::cout << "\n";
-
-        std::cout << "prompt_tokens.size(): " << prompt_tokens.size() << "\n";
-        std::cout << "prompt_tokens_processed: " << prompt_tokens_processed << "\n";
-        std::cout << "tokens_generated: " << tokens_generated << "\n";
-        std::cout << "n_past: " << n_past << "\n";
-        std::cout << "i_batch: " << i_batch << "\n";
-        std::cout << "last_token: " << last_token << "\n";
-        std::cout << "generated_text: \"" << generated_text << "\"\n";
-        std::cout << "======================\n";
-    }
-
+    
     void end(const int new_id, llama_context* ctx) {
         clear();
         job_index = new_id;
