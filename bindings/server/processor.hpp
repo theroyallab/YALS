@@ -309,11 +309,17 @@ class Processor {
             return;
         }
 
-        const auto decode_result = llama_decode(ctx, batch);
-        if (decode_result != 0) {
+        int32_t decode_result = -1;
+        while (true) {
+            decode_result = llama_decode(ctx, batch);
             if (decode_result == 2) {
-                return;
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                continue;
             }
+            break;
+        }
+        
+        if (decode_result != 0) {
             //Terminal error, the full batch decode entirely failed. We need to end everything this is not recoverable.
             for (auto& slot : slots) {
                 if (slot.i_batch >= 0 && slot.i_batch < batch.n_tokens) {
