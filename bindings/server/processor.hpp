@@ -36,6 +36,9 @@
  * It's a server.
  */
 
+template<class... Ts> struct rule_action_type : Ts... { using Ts::operator()...; };
+template<class... Ts> rule_action_type(Ts...) -> rule_action_type<Ts...>;
+
 class Processor {
     llama_model* model;
     llama_context* ctx;
@@ -193,8 +196,6 @@ class Processor {
         }
     }
 
-    template<class... Ts> struct action_type : Ts... { using Ts::operator()...; };
-    template<class... Ts> action_type(Ts...) -> action_type<Ts...>;
     // Processes the next sequence token. Finalizes the request if gen is finished.
     bool process_token(Slot& slot, const llama_token token) const {
         auto piece = slot.detokenizer->process_token(token, true);
@@ -215,7 +216,7 @@ class Processor {
         const auto seq_res = slot.sequence_stream->append(piece);
         const auto triggered_actions = slot.rule_stream->apply_engine(token, seq_res, model, ctx, slot);
         for (const auto& actionWrapper : triggered_actions) {
-            std::visit(action_type {
+            std::visit(rule_action_type {
 
                 //case: ActionEndGeneration:
                 [&](const ActionEndGeneration& action) {
