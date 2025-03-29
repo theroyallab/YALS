@@ -168,10 +168,6 @@ class Processor {
 
         best_slot->multi_sampler.sampler = inference_args.sampler;
 
-        if (inference_args.grammar != nullptr) {
-            best_slot->multi_sampler.constrain(inference_args.grammar);
-        }
-
         if (inference_args.min_tokens_to_gen > 0) {
             RuleEngine::rule_min_tokens(*best_slot->rule_stream, inference_args.min_tokens_to_gen, model, ctx, *best_slot);
         }
@@ -179,6 +175,16 @@ class Processor {
         if (inference_args.max_tokens_to_gen > 0 && inference_args.max_tokens_to_gen >= inference_args.min_tokens_to_gen) {
             RuleEngine::rule_max_tokens(*best_slot->rule_stream, inference_args.max_tokens_to_gen, model, ctx, *best_slot);
         }
+
+        /* EXAMPLE OF CONSTRAINED GRAMMAR RULE
+        if (inference_args.grammar) {
+            RuleEngine::rule_record_constrained_grammar(*best_slot->rule_stream, inference_args.grammar,
+                [](const std::string& str) {
+                    std::cerr << "\nRULE TRIGGERED CONSTRAINED RECORD:\n" << str << std::endl;
+                },
+                model, ctx, *best_slot);
+        }
+        */
     }
 
     void defrag_kv_if_thresh_greater(const float thresh) const {
