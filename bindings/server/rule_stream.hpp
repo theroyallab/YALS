@@ -4,7 +4,6 @@
 #include "multisampler.hpp"
 #include "slot.hpp"
 #include "sequence_stream.hpp"
-#include "forward_sequence_filter.hpp"
 
 #include "llama.h"
 #include "sampling.h"
@@ -24,11 +23,9 @@ enum class TriggerState {
 struct RuleContext {
     const llama_token current_token;
     const SequenceStream::SequenceContext& sequence_ctx;
-    ForwardSequenceMatcher& matcher;
-    const std::set<unsigned> matched_sequence_ids;
 
-    explicit RuleContext(const llama_token token, const SequenceStream::SequenceContext& seq_ctx, ForwardSequenceMatcher& matcher, const std::set<unsigned> &matched_sequence_ids)
-        : current_token(token), sequence_ctx(seq_ctx), matcher(matcher), matched_sequence_ids(matched_sequence_ids) {
+    explicit RuleContext(const llama_token token, const SequenceStream::SequenceContext& seq_ctx)
+        : current_token(token), sequence_ctx(seq_ctx) {
     }
 };
 
@@ -66,26 +63,21 @@ struct TriggerNever {
 };
 
 struct TriggerOnSequences {
+    SequenceStream match_stream;
     bool latches_until_reset;
     bool latched = false;
-    unsigned match_id;
 
     explicit TriggerOnSequences(
-        ForwardSequenceMatcher& matcher,
-        const std::set<std::string> &sequences,
+        const std::vector<std::string> &sequences,
         const bool should_latch_until_reset = true):
     latches_until_reset(should_latch_until_reset) {
-        match_id = matcher.add_matches(sequences);
+        match_stream.bind_sequences(sequences, {});
     }
 
     bool should_activate(const llama_model*, const llama_context*, const Slot&, const RuleContext* const rctx) {
         if (!rctx) return false;
-        if (latched || rctx->matched_sequence_ids.count(match_id) == 0) return false;
-        if (rctx->sequence_ctx.sequence_status != SequenceStream::BUFFER) {
-            latched = false;
-        } else if (latches_until_reset) {
-            latched = true;
-        }
+        const auto result = match_stream.append(rctx->sequence_ctx.current_text_piece);
+        if (result.sequence_status != SequenceStream::STOP) return false;
         return true;
     }
 };
@@ -151,7 +143,8 @@ struct ActionRecordToCallback {
         if (rctx && rctx->sequence_ctx.sequence_status & sequence_status_accept_on_flags) {
             buffer += rctx->sequence_ctx.current_text_piece;
         }
-        callback(buffer);
+        callback(std::move(buffer));
+        buffer = "";
     }
 };
 
@@ -196,12 +189,13 @@ struct Rule {
     Trigger end_trigger;
     std::vector<Action> actions;
     TriggerState state = TriggerState::INACTIVE;
+    bool reusable;
 
-    Rule(Trigger start, Trigger end, std::vector<Action> a)
-        : start_trigger(std::move(start)), end_trigger(std::move(end)), actions(std::move(a)) {}
+    Rule(Trigger start, Trigger end, std::vector<Action> a, const bool can_reuse = false)
+        : start_trigger(std::move(start)), end_trigger(std::move(end)), actions(std::move(a)), reusable(can_reuse) {}
 
-    Rule(Trigger start, Trigger end, Action a)
-        : start_trigger(std::move(start)), end_trigger(std::move(end)), actions{std::move(a)} {}
+    Rule(Trigger start, Trigger end, Action a, const bool can_reuse = false)
+        : start_trigger(std::move(start)), end_trigger(std::move(end)), actions{std::move(a)}, reusable(can_reuse) {}
 
     std::vector<std::reference_wrapper<const Action>> process(const llama_model* model, llama_context* ctx, Slot& slot, const RuleContext* const context) {
         const TriggerState prev_state = state;
@@ -246,6 +240,10 @@ struct Rule {
             for (const auto& action : actions) {
                 completed_actions.push_back(action);
             }
+
+            if (reusable) {
+                state = TriggerState::INACTIVE;
+            }
         }
 
         return completed_actions;
@@ -274,7 +272,6 @@ class RuleStream {
     }
 
 public:
-    ForwardSequenceMatcher sequence_matcher;
     unsigned add_rules(std::vector<Rule> rules,
                       const llama_model* model,
                       llama_context* ctx,
@@ -306,15 +303,7 @@ public:
         Slot& slot
     ) {
         std::vector<std::reference_wrapper<const Action>> all_triggered_actions;
-
-        std::set<unsigned> match_results{};
-        if (seq_ctx.sequence_status == SequenceStream::ACCEPT) {
-            match_results = sequence_matcher.process_token(seq_ctx.current_sequence);
-        } else {
-            sequence_matcher.reset();
-        }
-
-        const RuleContext context_obj{token, seq_ctx, sequence_matcher, match_results};
+        const RuleContext context_obj{token, seq_ctx};
         const RuleContext* const context = &context_obj;
 
         for (auto& [id, rule_list] : rules_by_id) {
@@ -383,10 +372,11 @@ inline unsigned rule_constrain_grammar(
 inline unsigned rule_complex_action(
     RuleStream& stream, const Trigger& start, const Trigger& end,
     const std::vector<Action>& actions,
-    const llama_model* model, llama_context* ctx, Slot& slot
+    const llama_model* model, llama_context* ctx, Slot& slot,
+    bool reusable
 ) {
     std::vector<Rule> rules;
-    rules.emplace_back(start, end, actions);
+    rules.emplace_back(start, end, actions, reusable);
     return stream.add_rules(std::move(rules), model, ctx, slot);
 }
 
@@ -400,7 +390,7 @@ inline unsigned rule_record_constrained_grammar(
         ActionApplyGrammar(grammar),
         ActionRecordToCallback(callback, SequenceStream::ACCEPT)
     };
-    return rule_complex_action(stream, TriggerOnTokenCount(50), TriggerOnSequences(stream.sequence_matcher, {"}"}), std::move(actions), model, ctx, slot);
+    return rule_complex_action(stream, TriggerOnSequences({"Hello"}), TriggerOnSequences({"}"}), std::move(actions), model, ctx, slot, true);
 }
 
 }
