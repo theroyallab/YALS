@@ -511,8 +511,8 @@ export class Model {
             promptPtr,
             sampler,
             this.readbackBuffer.rawPointer(),
-            params.max_tokens ?? 150,
-            0, // min_tokens
+            params.max_tokens,
+            params.min_tokens, // min_tokens
             seed,
             rewindPtrArray.inner,
             params.banned_strings.length,

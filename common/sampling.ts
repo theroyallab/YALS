@@ -5,9 +5,14 @@ import { forcedSamplerOverrides } from "@/common/samplerOverrides.ts";
 const GenerationOptionsSchema = z.aliasedObject(
     z.object({
         max_tokens: z.number().gte(0).nullish()
-            .samplerOverride("max_tokens")
+            .samplerOverride("max_tokens", 0)
             .openapi({
                 description: "Aliases: max_length",
+            }),
+        min_tokens: z.number().gte(0).nullish()
+            .samplerOverride("min_tokens", 0)
+            .openapi({
+                description: "Aliases: min_length",
             }),
         stop: z.union([
             z.string().transform((str) => [str]),
@@ -57,6 +62,7 @@ const GenerationOptionsSchema = z.aliasedObject(
     }),
     [
         { field: "max_tokens", aliases: ["max_length"] },
+        { field: "min_tokens", aliases: ["min_length"] },
         { field: "ban_eos_token", aliases: ["ignore_eos"] },
         { field: "stop", aliases: ["stop_sequence"] },
         { field: "banned_tokens", aliases: ["custom_token_bans"] },
