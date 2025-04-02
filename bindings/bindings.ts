@@ -91,8 +91,9 @@ export class Model {
     processor: Deno.PointerValue;
     path: Path.ParsedPath;
     tokenizer: Tokenizer;
-    readbackBuffer: ReadbackBuffer;
+    //readbackBuffer: ReadbackBuffer;
     promptTemplate?: PromptTemplate;
+    jobs: Map<number, Job> = new Map<number, Job>();
 
     // Concurrency
     shutdown: boolean = false;
@@ -117,7 +118,7 @@ export class Model {
         this.tokenizer = tokenizer;
         this.promptTemplate = promptTemplate;
         this.maxSeqLen = maxSeqLen;
-        this.readbackBuffer = new ReadbackBuffer();
+        //this.readbackBuffer = new ReadbackBuffer();
     }
 
     static async init(
@@ -179,7 +180,7 @@ export class Model {
 
         // Only create a processor with 1 slot for now
         // TODO: Make slots configurable for cont. batching
-        const processor = await lib.symbols.processor_make(model, context, 1);
+        const processor = await lib.symbols.processor_make(model, context, 4);
 
         const maxSeqLen = lib.symbols.ctx_max_seq_len(context);
 
@@ -240,7 +241,7 @@ export class Model {
         lib.symbols.ctx_clear_kv(this.context);
     }
 
-    async cancelJob(job: Job) {
+    async cancelJob(job: Job, readbackBuffer: ReadbackBuffer) {
         if (job.isComplete) {
             return;
         }
@@ -249,11 +250,11 @@ export class Model {
             this.processor,
             job.getId(),
         );
-        if (cancelled && this.readbackBuffer.isFinished()) {
-            await this.readbackBuffer.readStatus();
+        if (cancelled && readbackBuffer.isFinished()) {
+            await readbackBuffer.readStatus();
         }
 
-        this.readbackBuffer.reset();
+        readbackBuffer.reset();
         job.isComplete = true;
     }
 
@@ -340,7 +341,9 @@ export class Model {
                 `(Prompt: ${finishResponse.promptTokens} tokens in ` +
                 `${finishResponse.promptTokensPerSec.toFixed(2)} T/s, ` +
                 `Generate: ${finishResponse.genTokensPerSec.toFixed(2)} T/s, ` +
-                `Context: ${finishResponse.promptTokens + finishResponse.genTokens} tokens)`,
+                `Context: ${
+                    finishResponse.promptTokens + finishResponse.genTokens
+                } tokens)`,
         );
 
         const finishReason =
@@ -359,12 +362,15 @@ export class Model {
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
     ): AsyncGenerator<GenerationChunk> {
+        const readbackBuffer = new ReadbackBuffer();
+
         // Cleanup operations
-        using _ = defer(() => {
+        using _cleanup = defer(() => {
             // Log generation params to console
             logGenParams(params);
 
-            this.readbackBuffer.reset();
+            // Free the readback buffer from memory
+            readbackBuffer.free();
         });
 
         // Get out if the model is shutting down
@@ -373,7 +379,7 @@ export class Model {
         }
 
         // Acquire the mutex
-        using _lock = await this.generationLock.acquire();
+        //using _lock = await this.generationLock.acquire();
 
         const samplerBuilder = new SamplerBuilder(this.model);
         const seed = params.seed && params.seed > 0
@@ -510,7 +516,7 @@ export class Model {
             this.processor,
             promptPtr,
             sampler,
-            this.readbackBuffer.rawPointer(),
+            readbackBuffer.rawPointer(),
             params.max_tokens,
             params.min_tokens, // min_tokens
             seed,
@@ -523,12 +529,12 @@ export class Model {
             null,
         );
 
-        const job = new Job(jobId, this.readbackBuffer);
+        const job = new Job(jobId, readbackBuffer);
 
         // Read from the read buffer
         for await (const chunk of job.stream()) {
             if (abortSignal.aborted) {
-                await this.cancelJob(job);
+                await this.cancelJob(job, readbackBuffer);
                 break;
             }
 
