@@ -70,6 +70,10 @@ struct Slot {
     int n_past = 0;
     int i_batch = -1;
 
+    double slot_start_time = 0.0;
+    double prompt_end_time = 0.0;
+    double generating_end_time = 0.0;
+
     llama_token last_token = 0;
     std::string generated_text;
 
@@ -102,6 +106,9 @@ struct Slot {
         n_past = 0;
         i_batch = -1;
         last_token = 0;
+        slot_start_time = 0;
+        prompt_end_time = 0.0;
+        generating_end_time = 0.0;
         generated_text.clear();
         detokenizer->reset();
     }

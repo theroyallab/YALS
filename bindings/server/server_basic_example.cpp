@@ -21,7 +21,7 @@ int main() {
     std::cout << "Model and context loaded successfully" << std::endl;
 
     auto sampler = sampler_make();
-    sampler = sampler_temp(sampler, 2);
+    sampler = sampler_temp(sampler, .5);
     sampler = sampler_dist(sampler, 1337);
 
     const auto processor = processor_make(model, ctx, 4);

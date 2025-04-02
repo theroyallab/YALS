@@ -107,7 +107,7 @@ class Processor {
 
         // Prompt is longer than the entire ctx length.
         if (prompt_tokens.size() > llama_n_ctx(ctx)) {
-            readback_finish(readback_buffer, make_json_status_string(ctx, "ContextExceeded", ""));
+            readback_finish(readback_buffer, make_empty_json_status_string("ContextExceeded", ""));
             return;
         }
 
@@ -155,6 +155,8 @@ class Processor {
                 longest_prefix == prompt_tokens.size() ?
                 Slot::State::GENERATING :
                 Slot::State::PROMPT;
+
+            best_slot->prompt_end_time = 1e-3 * ggml_time_us();
         } else {
             llama_kv_self_seq_rm(ctx, best_slot->slot_id, 0, -1);
             best_slot->prompt_tokens_processed = 0;
@@ -165,6 +167,8 @@ class Processor {
         best_slot->request_id = id;
         best_slot->prompt_tokens = prompt_tokens;
         best_slot->readback_buffer = readback_buffer;
+
+        best_slot->slot_start_time = 1e-3 * ggml_time_us();
 
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
         best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
@@ -279,8 +283,8 @@ class Processor {
             readback_write_to_buffer(slot.readback_buffer, final_piece, token);
         }
 
-        const auto status = make_json_status_string(ctx, finish_reason, stop_token);
-
+        slot.generating_end_time = 1e-3 * ggml_time_us();
+        const auto status = make_json_status_string(slot, finish_reason, stop_token);
         readback_finish(slot.readback_buffer, status);
         return false;
     }
@@ -330,7 +334,8 @@ class Processor {
             if (decode_result != 0) {
                 for (auto& slot : slots) {
                     if (slot.i_batch >= 0 && slot.i_batch < batch.n_tokens) {
-                        readback_finish(slot.readback_buffer, make_json_status_string(ctx, "BatchDecode", ""));
+                        slot.generating_end_time = 1e-3 * ggml_time_us();
+                        readback_finish(slot.readback_buffer, make_json_status_string(slot, "BatchDecode", ""));
                         slot.end(++current_job_index, ctx);
                     }
                 }
@@ -340,6 +345,10 @@ class Processor {
         }
 
         for (auto& slot : slots) {
+            if (slot.prompt_end_time == 0.0) {
+                slot.prompt_end_time =  1e-3 * ggml_time_us();
+            }
+
             if (slot.i_batch < 0 || slot.i_batch >= batch.n_tokens) {
                 continue;
             }
@@ -426,7 +435,7 @@ public:
     ~Processor() {
         should_exit = true;
         cv_tasks.notify_all();
-        for (const auto slot : slots) {
+        for (const auto& slot : slots) {
             delete slot.rule_stream;
         }
         if (worker_thread.joinable()) {
@@ -453,7 +462,7 @@ public:
                         new_queue.push(req);
                     } else {
                         if (req.readback_buffer) {
-                            readback_finish(req.readback_buffer, make_json_status_string(ctx, "Aborted", "None"));
+                            readback_finish(req.readback_buffer, make_empty_json_status_string("Aborted", "None"));
                         }
                         found = true;
                     }
@@ -470,7 +479,8 @@ public:
             if (slot.request_id == request_id_to_cancel) {
                 if (slot.readback_buffer) {
                     std::string last_token_piece = common_token_to_piece(ctx, slot.last_token, true);
-                    readback_finish(slot.readback_buffer, make_json_status_string(ctx, "Aborted", last_token_piece));
+                    slot.generating_end_time = 1e-3 * ggml_time_us();
+                    readback_finish(slot.readback_buffer, make_json_status_string(slot, "Aborted", last_token_piece));
                 }
                 slot.end(++current_job_index, ctx);
                 found = true;
