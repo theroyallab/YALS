@@ -340,7 +340,7 @@ export class Model {
                 `(Prompt: ${finishResponse.promptTokens} tokens in ` +
                 `${finishResponse.promptTokensPerSec.toFixed(2)} T/s, ` +
                 `Generate: ${finishResponse.genTokensPerSec.toFixed(2)} T/s, ` +
-                `Context: ${finishResponse.promptTokens} tokens)`,
+                `Context: ${finishResponse.promptTokens + finishResponse.genTokens} tokens)`,
         );
 
         const finishReason =
