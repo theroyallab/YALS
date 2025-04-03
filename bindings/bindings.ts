@@ -42,35 +42,27 @@ class Tokenizer {
     eosToken?: Token;
     eotToken?: Token;
 
-    private constructor(bosToken?: Token, eosToken?: Token, eotToken?: Token) {
-        this.bosToken = bosToken;
-        this.eosToken = eosToken;
-        this.eotToken = eotToken;
-    }
-
-    static async init(model: Deno.PointerValue) {
+    constructor(model: Deno.PointerValue) {
         const bosTokenId = lib.symbols.model_vocab_bos(model);
         const eosTokenId = lib.symbols.model_vocab_eos(model);
         const eotTokenId = lib.symbols.model_vocab_eot(model);
 
-        const bosToken = await this.createTokenPair(model, bosTokenId);
-        const eosToken = await this.createTokenPair(model, eosTokenId);
-        const eotToken = await this.createTokenPair(model, eotTokenId);
-
-        return new Tokenizer(bosToken, eosToken, eotToken);
+        this.bosToken = Tokenizer.createTokenPair(model, bosTokenId);
+        this.eosToken = Tokenizer.createTokenPair(model, eosTokenId);
+        this.eotToken = Tokenizer.createTokenPair(model, eotTokenId);
     }
 
-    static async createTokenPair(model: Deno.PointerValue, tokenId: number) {
+    static createTokenPair(model: Deno.PointerValue, tokenId: number) {
         if (tokenId == -1) {
             return undefined;
         }
 
-        const piece = await this.tokenToText(model, tokenId);
+        const piece = this.tokenToText(model, tokenId);
         return { id: tokenId, piece };
     }
 
-    static async tokenToText(model: Deno.PointerValue, tokenId: number) {
-        const stringPtr = await lib.symbols.model_vocab_token_to_string(
+    static tokenToText(model: Deno.PointerValue, tokenId: number) {
+        const stringPtr = lib.symbols.model_vocab_token_to_string(
             model,
             tokenId,
         );
@@ -184,7 +176,7 @@ export class Model {
         const maxSeqLen = lib.symbols.ctx_max_seq_len(context);
 
         const parsedModelPath = Path.parse(modelPath);
-        const tokenizer = await Tokenizer.init(model);
+        const tokenizer = new Tokenizer(model);
         const findTemplateFunctions = [
             Model.getChatTemplate(model),
         ];
