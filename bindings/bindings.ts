@@ -42,6 +42,9 @@ class Tokenizer {
     eosToken?: Token;
     eotToken?: Token;
 
+    // Private references
+    private model: Deno.PointerValue;
+
     constructor(model: Deno.PointerValue) {
         const bosTokenId = lib.symbols.model_vocab_bos(model);
         const eosTokenId = lib.symbols.model_vocab_eos(model);
@@ -50,6 +53,8 @@ class Tokenizer {
         this.bosToken = Tokenizer.createTokenPair(model, bosTokenId);
         this.eosToken = Tokenizer.createTokenPair(model, eosTokenId);
         this.eotToken = Tokenizer.createTokenPair(model, eotTokenId);
+
+        this.model = model;
     }
 
     static createTokenPair(model: Deno.PointerValue, tokenId: number) {
@@ -74,6 +79,83 @@ class Tokenizer {
 
         const cString = new Deno.UnsafePointerView(stringPtr);
         return cString.getCString();
+    }
+
+    async tokenize(
+        text: string,
+        addSpecial: boolean = true,
+        parseSpecial: boolean = true,
+    ) {
+        const textPtr = new TextEncoder().encode(text + "\0");
+
+        const tokensPtr = await lib.symbols.endpoint_tokenize(
+            this.model,
+            textPtr,
+            addSpecial,
+            parseSpecial,
+        );
+
+        // Always free the original pointer
+        await using _ = asyncDefer(async () => {
+            await lib.symbols.endpoint_free_tokens(tokensPtr);
+        });
+
+        if (tokensPtr === null) {
+            throw new Error("Tokenization failed");
+        }
+
+        // The first 4 bytes contain the length of the array
+        const ptrView = new Deno.UnsafePointerView(tokensPtr);
+        const length = new Int32Array(ptrView.getArrayBuffer(4))[0];
+
+        // Copy the actual tokens (starting after the length prefix)
+        const dataPtr = Deno.UnsafePointer.create(
+            Deno.UnsafePointer.value(tokensPtr) + 4n,
+        )!;
+        const tokenData = new Int32Array(
+            new Deno.UnsafePointerView(dataPtr).getArrayBuffer(length * 4),
+        );
+
+        // Create owned copy
+        const ownedTokens = new Int32Array(tokenData);
+
+        return [...ownedTokens];
+    }
+
+    async detokenize(
+        tokens: number[],
+        maxTextSize: number = 4096,
+        addSpecial: boolean = true,
+        parseSpecial: boolean = true,
+    ) {
+        // Create a pointer to the tokens data
+        const tokensArray = new Int32Array(tokens);
+        const tokensPtr = Deno.UnsafePointer.of(tokensArray.buffer);
+
+        // Get raw pointer from C++
+        const textPtr = await lib.symbols.endpoint_detokenize(
+            this.model,
+            tokensPtr,
+            tokens.length,
+            maxTextSize,
+            addSpecial,
+            parseSpecial,
+        );
+
+        // Always free the original pointer
+        await using _ = asyncDefer(async () => {
+            await lib.symbols.endpoint_free_string(textPtr);
+        });
+
+        if (textPtr === null) {
+            throw new Error("Detokenization failed");
+        }
+
+        // Copy to owned string
+        const cString = new Deno.UnsafePointerView(textPtr);
+        const text: string = cString.getCString();
+
+        return text;
     }
 }
 
@@ -518,83 +600,6 @@ export class Model {
                     break;
             }
         }
-    }
-
-    async tokenize(
-        text: string,
-        addSpecial: boolean = true,
-        parseSpecial: boolean = true,
-    ) {
-        const textPtr = new TextEncoder().encode(text + "\0");
-
-        const tokensPtr = await lib.symbols.endpoint_tokenize(
-            this.model,
-            textPtr,
-            addSpecial,
-            parseSpecial,
-        );
-
-        // Always free the original pointer
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_tokens(tokensPtr);
-        });
-
-        if (tokensPtr === null) {
-            throw new Error("Tokenization failed");
-        }
-
-        // The first 4 bytes contain the length of the array
-        const ptrView = new Deno.UnsafePointerView(tokensPtr);
-        const length = new Int32Array(ptrView.getArrayBuffer(4))[0];
-
-        // Copy the actual tokens (starting after the length prefix)
-        const dataPtr = Deno.UnsafePointer.create(
-            Deno.UnsafePointer.value(tokensPtr) + 4n,
-        )!;
-        const tokenData = new Int32Array(
-            new Deno.UnsafePointerView(dataPtr).getArrayBuffer(length * 4),
-        );
-
-        // Create owned copy
-        const ownedTokens = new Int32Array(tokenData);
-
-        return [...ownedTokens];
-    }
-
-    async detokenize(
-        tokens: number[],
-        maxTextSize: number = 4096,
-        addSpecial: boolean = true,
-        parseSpecial: boolean = true,
-    ) {
-        // Create a pointer to the tokens data
-        const tokensArray = new Int32Array(tokens);
-        const tokensPtr = Deno.UnsafePointer.of(tokensArray.buffer);
-
-        // Get raw pointer from C++
-        const textPtr = await lib.symbols.endpoint_detokenize(
-            this.model,
-            tokensPtr,
-            tokens.length,
-            maxTextSize,
-            addSpecial,
-            parseSpecial,
-        );
-
-        // Always free the original pointer
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_string(textPtr);
-        });
-
-        if (textPtr === null) {
-            throw new Error("Detokenization failed");
-        }
-
-        // Copy to owned string
-        const cString = new Deno.UnsafePointerView(textPtr);
-        const text: string = cString.getCString();
-
-        return text;
     }
 
     static async getChatTemplate(model: Deno.PointerValue) {
