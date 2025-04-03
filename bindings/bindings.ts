@@ -240,23 +240,6 @@ export class Model {
         lib.symbols.ctx_clear_kv(this.context);
     }
 
-    async cancelJob(job: Job) {
-        if (job.isComplete) {
-            return;
-        }
-
-        const cancelled = lib.symbols.processor_cancel_work(
-            this.processor,
-            job.getId(),
-        );
-        if (cancelled && this.readbackBuffer.isFinished()) {
-            await this.readbackBuffer.readStatus();
-        }
-
-        this.readbackBuffer.reset();
-        job.isComplete = true;
-    }
-
     async unload(skipQueue: boolean = false) {
         // Tell all jobs that the model is being unloaded
         if (skipQueue) {
@@ -340,7 +323,9 @@ export class Model {
                 `(Prompt: ${finishResponse.promptTokens} tokens in ` +
                 `${finishResponse.promptTokensPerSec.toFixed(2)} T/s, ` +
                 `Generate: ${finishResponse.genTokensPerSec.toFixed(2)} T/s, ` +
-                `Context: ${finishResponse.promptTokens + finishResponse.genTokens} tokens)`,
+                `Context: ${
+                    finishResponse.promptTokens + finishResponse.genTokens
+                } tokens)`,
         );
 
         const finishReason =
@@ -523,12 +508,12 @@ export class Model {
             null,
         );
 
-        const job = new Job(jobId, this.readbackBuffer);
+        const job = new Job(jobId, this.readbackBuffer, this.processor);
 
         // Read from the read buffer
         for await (const chunk of job.stream()) {
             if (abortSignal.aborted) {
-                await this.cancelJob(job);
+                await job.cancel();
                 break;
             }
 

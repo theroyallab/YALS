@@ -1,3 +1,6 @@
+import { delay } from "@std/async";
+
+import { lib } from "@/bindings/lib.ts";
 import {
     ReadbackBuffer,
     ReadbackData,
@@ -6,14 +9,20 @@ import {
 
 export class Job {
     isComplete = false;
+    id: number;
+
+    // Private references
+    private readbackBuffer: ReadbackBuffer;
+    private processor: Deno.PointerValue;
 
     constructor(
-        private readonly id: number,
-        private readonly buffer: ReadbackBuffer,
-    ) {}
-
-    getId(): number {
-        return this.id;
+        id: number,
+        readbackBuffer: ReadbackBuffer,
+        processor: Deno.PointerValue,
+    ) {
+        this.id = id;
+        this.readbackBuffer = readbackBuffer;
+        this.processor = processor;
     }
 
     async readNext(): Promise<ReadbackData | ReadbackFinish | null> {
@@ -21,18 +30,18 @@ export class Job {
             return null;
         }
 
-        const data = await this.buffer.readNext();
+        const data = await this.readbackBuffer.readNext();
         if (data !== null) {
             return data;
         }
 
-        if (this.buffer.isFinished()) {
-            const data = await this.buffer.readNext();
+        if (this.readbackBuffer.isFinished()) {
+            const data = await this.readbackBuffer.readNext();
             if (data !== null) {
                 return data;
             }
-            const status = await this.buffer.readStatus();
-            this.buffer.reset();
+            const status = await this.readbackBuffer.readStatus();
+            this.readbackBuffer.reset();
             this.isComplete = true;
             return status;
         }
@@ -45,7 +54,8 @@ export class Job {
         void,
         unknown
     > {
-        this.buffer.reset();
+        this.readbackBuffer.reset();
+
         while (!this.isComplete) {
             const data = await this.readNext();
             if (data === null) {
@@ -53,7 +63,7 @@ export class Job {
                     break;
                 }
 
-                await new Promise((resolve) => setTimeout(resolve, 10));
+                await delay(10);
                 continue;
             }
 
@@ -63,5 +73,24 @@ export class Job {
                 break;
             }
         }
+    }
+
+    async cancel() {
+        console.log("CANCELLED");
+        if (this.isComplete) {
+            return;
+        }
+
+        const cancelled = lib.symbols.processor_cancel_work(
+            this.processor,
+            this.id,
+        );
+
+        if (cancelled && this.readbackBuffer.isFinished()) {
+            await this.readbackBuffer.readStatus();
+        }
+
+        this.readbackBuffer.reset();
+        this.isComplete = true;
     }
 }
