@@ -1,15 +1,15 @@
+import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as loggerMiddleware } from "hono/logger";
 import { ContentfulStatusCode } from "hono/utils/http-status";
+import { openAPISpecs } from "hono-openapi";
 import { apiReference } from "@scalar/hono-api-reference";
 
-import { Hono } from "hono";
-import { openAPISpecs } from "hono-openapi";
-
-import core from "./core/router.ts";
-import oai from "./OAI/router.ts";
 import { config } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
+import core from "./core/router.ts";
+import oai from "./OAI/router.ts";
+import requestIdMiddleware from "./middleware/requestIdMiddleware.ts";
 
 export function createApi() {
     const app = new Hono();
@@ -22,6 +22,7 @@ export function createApi() {
     // Middleware
     app.use(loggerMiddleware(printToLogger));
     app.use("*", cors());
+    app.use(requestIdMiddleware);
 
     // Add routers
     app.route("/", core);
