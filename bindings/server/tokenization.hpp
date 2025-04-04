@@ -84,8 +84,8 @@ public:
         : ctx(ctx), vocab(llama_model_get_vocab(model)) {
     }
 
-    [[nodiscard]] bool is_eos_token(const llama_token token) const {
-        return token == llama_vocab_eos(vocab);
+    [[nodiscard]] bool is_end_of_generation_token(const llama_token token) const {
+        return llama_vocab_is_eog(vocab, token);
     }
 
     [[nodiscard]]std::vector<llama_token> tokenize(const std::string_view& text, const bool add_special = true, const bool parse_special = true) const {
