@@ -1,12 +1,13 @@
 import { HonoRequest } from "hono";
 import { SSEStreamingApi } from "hono/streaming";
+
 import {
     createUsageStats,
+    GenerationType,
     staticGenerate,
 } from "@/api/OAI/utils/generation.ts";
 import { Model } from "@/bindings/bindings.ts";
 import { FinishChunk, GenerationChunk } from "@/bindings/types.ts";
-import { logger } from "@/common/logging.ts";
 import { toGeneratorError } from "@/common/networking.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 
@@ -19,6 +20,7 @@ import {
     ChatCompletionStreamChoice,
     ChatCompletionStreamChunk,
 } from "../types/chatCompletions.ts";
+import { CancellationError } from "@/common/errors.ts";
 
 interface TemplateFormatOptions {
     addBosToken?: boolean;
@@ -151,8 +153,12 @@ export async function streamChatCompletion(
     // If an abort happens before streaming starts
     req.raw.signal.addEventListener("abort", () => {
         if (!finished) {
-            abortController.abort();
-            logger.error("Streaming completion aborted");
+            abortController.abort(
+                new CancellationError(
+                    `Streaming chat completion ${req.id} cancelled by user.`,
+                ),
+            );
+            finished = true;
         }
     });
 
@@ -178,17 +184,6 @@ export async function streamChatCompletion(
         );
 
         for await (const chunk of generator) {
-            stream.onAbort(() => {
-                if (!finished) {
-                    abortController.abort();
-                    logger.error("Streaming completion aborted");
-                    finished = true;
-
-                    // Break out of the stream loop
-                    return;
-                }
-            });
-
             const streamChunk = createStreamChunk(
                 chunk,
                 model.path.name,
@@ -243,7 +238,13 @@ export async function generateChatCompletion(
 
     addTemplateMetadata(promptTemplate, params);
 
-    const gen = await staticGenerate(req, model, prompt, params);
+    const gen = await staticGenerate(
+        req,
+        GenerationType.ChatCompletion,
+        model,
+        prompt,
+        params,
+    );
     const response = createResponse(gen, model.path.name);
 
     return response;

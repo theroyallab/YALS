@@ -344,17 +344,6 @@ export class Model {
             }
         }
 
-        // Create a dummy chunk to satisfy typescript
-        if (abortSignal.aborted) {
-            result = {
-                kind: "finish",
-                text: "",
-                promptTokens: 0,
-                genTokens: 0,
-                finishReason: ReadbackFinishReason.Aborted,
-            };
-        }
-
         // Fire if a finish chunk isn't found
         // This means the generation didn't complete properly
         if (!result) {
@@ -588,7 +577,7 @@ export class Model {
         for await (const chunk of job.stream()) {
             if (abortSignal.aborted) {
                 await job.cancel();
-                break;
+                abortSignal.throwIfAborted();
             }
 
             switch (chunk.kind) {

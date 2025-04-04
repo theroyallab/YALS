@@ -61,9 +61,12 @@ export function createApi() {
             ? (currentStatus as ContentfulStatusCode)
             : 500;
 
-        // Don't log a traceback for unauthorized
-        if (err.stack && currentStatus != 401) {
-            logger.error(err.stack);
+        // Only log the message for timeouts/cancellations
+        // Don't log the stack for unauthorized errors
+        if (statusCode === 408) {
+            logger.error(err.message);
+        } else if (statusCode !== 401) {
+            logger.error(err.stack || err.message);
         }
 
         return c.json({

@@ -76,7 +76,6 @@ export class Job {
     }
 
     async cancel() {
-        console.log("CANCELLED");
         if (this.isComplete) {
             return;
         }
