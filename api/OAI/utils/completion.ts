@@ -4,9 +4,9 @@ import { GenerationChunk } from "@/bindings/types.ts";
 import { HonoRequest } from "hono";
 import {
     createUsageStats,
+    GenerationType,
     staticGenerate,
 } from "@/api/OAI/utils/generation.ts";
-import { logger } from "@/common/logging.ts";
 
 import {
     CompletionRequest,
@@ -14,6 +14,7 @@ import {
     CompletionResponse,
 } from "../types/completions.ts";
 import { toGeneratorError } from "@/common/networking.ts";
+import { CancellationError } from "@/common/errors.ts";
 
 function createResponse(chunk: GenerationChunk, modelName: string) {
     const choice = CompletionRespChoice.parse({
@@ -43,8 +44,12 @@ export async function streamCompletion(
     // If an abort happens before streaming starts
     req.raw.signal.addEventListener("abort", () => {
         if (!finished) {
-            abortController.abort();
-            logger.error("Streaming completion aborted");
+            abortController.abort(
+                new CancellationError(
+                    `Streaming completion ${req.id} cancelled by user.`,
+                ),
+            );
+            finished = true;
         }
     });
 
@@ -57,16 +62,6 @@ export async function streamCompletion(
 
         for await (const chunk of generator) {
             const streamChunk = createResponse(chunk, model.path.name);
-
-            stream.onAbort(() => {
-                if (!finished) {
-                    abortController.abort();
-                    finished = true;
-
-                    // Break out of the stream loop
-                    return;
-                }
-            });
 
             await stream.writeSSE({
                 data: JSON.stringify(streamChunk),
@@ -86,7 +81,13 @@ export async function generateCompletion(
     model: Model,
     params: CompletionRequest,
 ) {
-    const gen = await staticGenerate(req, model, params.prompt, params);
+    const gen = await staticGenerate(
+        req,
+        GenerationType.Completion,
+        model,
+        params.prompt,
+        params,
+    );
     const response = createResponse(gen, model.path.name);
 
     return response;

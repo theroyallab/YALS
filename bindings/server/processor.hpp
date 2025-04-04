@@ -203,7 +203,7 @@ class Processor {
     // Processes the next sequence token. Finalizes the request if gen is finished.
     bool process_token(Slot& slot, const llama_token token) const {
         auto piece = slot.detokenizer->process_token(token, true);
-        const bool is_eos = tokenizer.is_eos_token(token);
+        const bool is_eos = tokenizer.is_end_of_generation_token(token);
         bool is_complete = is_eos;
         bool yield_final = false;
 

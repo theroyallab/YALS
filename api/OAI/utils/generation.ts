@@ -6,6 +6,12 @@ import { FinishChunk } from "@/bindings/types.ts";
 import { logger } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { toHttpException } from "@/common/networking.ts";
+import { CancellationError } from "@/common/errors.ts";
+
+export enum GenerationType {
+    Completion = "Completion",
+    ChatCompletion = "Chat completion",
+}
 
 export function createUsageStats(chunk: FinishChunk) {
     const usage = UsageStats.parse({
@@ -19,6 +25,7 @@ export function createUsageStats(chunk: FinishChunk) {
 
 export async function staticGenerate(
     req: HonoRequest,
+    genType: GenerationType,
     model: Model,
     prompt: string,
     params: BaseSamplerRequest,
@@ -28,8 +35,12 @@ export async function staticGenerate(
 
     req.raw.signal.addEventListener("abort", () => {
         if (!finished) {
-            abortController.abort();
-            logger.error("Completion aborted");
+            abortController.abort(
+                new CancellationError(
+                    `${genType} ${req.id} cancelled by user.`,
+                ),
+            );
+            finished = true;
         }
     });
 
@@ -39,6 +50,8 @@ export async function staticGenerate(
             params,
             abortController.signal,
         );
+
+        logger.info(`Finished ${genType.toLowerCase()} request ${req.id}`);
 
         finished = true;
         return result;

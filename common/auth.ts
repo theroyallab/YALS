@@ -2,6 +2,7 @@ import * as YAML from "@std/yaml";
 import * as z from "@/common/myZod.ts";
 import { config } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
+import { generateUuidHex } from "@/common/utils.ts";
 
 const AuthFileSchema = z.object({
     api_key: z.string(),
@@ -39,18 +40,6 @@ export class AuthKeys {
     }
 }
 
-function generateApiToken() {
-    const buffer = new Uint8Array(16);
-    crypto.getRandomValues(buffer);
-
-    // To hex string
-    const token = Array.from(buffer)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-    return token;
-}
-
 export let authKeys: AuthKeys | undefined = undefined;
 
 export async function loadAuthKeys() {
@@ -74,8 +63,8 @@ export async function loadAuthKeys() {
         );
     } else {
         const newAuthFile = AuthFileSchema.parse({
-            api_key: generateApiToken(),
-            admin_key: generateApiToken(),
+            api_key: generateUuidHex(),
+            admin_key: generateUuidHex(),
         });
 
         authKeys = new AuthKeys(
