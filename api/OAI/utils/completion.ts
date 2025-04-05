@@ -58,6 +58,7 @@ export async function streamCompletion(
 
     try {
         const generator = model.generateGen(
+            requestId,
             params.prompt,
             params,
             abortController.signal,

@@ -328,6 +328,7 @@ export class Model {
     }
 
     async generate(
+        requestId: string,
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
@@ -335,7 +336,12 @@ export class Model {
         let result: FinishChunk | undefined;
         const textParts: string[] = [];
 
-        const generator = this.generateGen(prompt, params, abortSignal);
+        const generator = this.generateGen(
+            requestId,
+            prompt,
+            params,
+            abortSignal,
+        );
         for await (const chunk of generator) {
             if (chunk.kind === "finish") {
                 result = chunk;
@@ -358,7 +364,10 @@ export class Model {
         };
     }
 
-    handleReadbackFinish(finishResponse: ReadbackFinish): FinishChunk {
+    handleReadbackFinish(
+        requestId: string,
+        finishResponse: ReadbackFinish,
+    ): FinishChunk {
         switch (finishResponse.finishReason) {
             case ReadbackFinishReason.CtxExceeded:
                 throw new Error(
@@ -380,7 +389,7 @@ export class Model {
 
         const totalTime = finishResponse.promptSec + finishResponse.genSec;
         logger.info(
-            `Metrics: ` +
+            `Metrics (ID: ${requestId}): ` +
                 `${finishResponse.genTokens} tokens ` +
                 `generated in ${totalTime.toFixed(2)} seconds ` +
                 `(Prompt: ${finishResponse.promptTokens} tokens in ` +
@@ -403,6 +412,7 @@ export class Model {
     }
 
     async *generateGen(
+        requestId: string,
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
@@ -410,7 +420,7 @@ export class Model {
         // Cleanup operations
         using _ = defer(() => {
             // Log generation params to console
-            logGenParams(params);
+            logGenParams(requestId, params);
 
             this.readbackBuffer.reset();
         });
@@ -585,7 +595,7 @@ export class Model {
                     yield chunk;
                     break;
                 case "finish":
-                    yield this.handleReadbackFinish(chunk);
+                    yield this.handleReadbackFinish(requestId, chunk);
                     break;
             }
         }

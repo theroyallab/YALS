@@ -181,6 +181,7 @@ export async function streamChatCompletion(
 
     try {
         const generator = model.generateGen(
+            requestId,
             prompt,
             params,
             abortController.signal,

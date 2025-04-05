@@ -45,6 +45,7 @@ export async function staticGenerate(
 
     try {
         const result = await model.generate(
+            requestId,
             prompt,
             params,
             abortController.signal,
