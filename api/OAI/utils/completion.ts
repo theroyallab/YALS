@@ -15,6 +15,7 @@ import {
 } from "../types/completions.ts";
 import { toGeneratorError } from "@/common/networking.ts";
 import { CancellationError } from "@/common/errors.ts";
+import { logger } from "@/common/logging.ts";
 
 function createResponse(chunk: GenerationChunk, modelName: string) {
     const choice = CompletionRespChoice.parse({
@@ -34,10 +35,13 @@ function createResponse(chunk: GenerationChunk, modelName: string) {
 
 export async function streamCompletion(
     req: HonoRequest,
+    requestId: string,
     stream: SSEStreamingApi,
     model: Model,
     params: CompletionRequest,
 ) {
+    logger.info(`Received streaming completion request ${requestId}`);
+
     const abortController = new AbortController();
     let finished = false;
 
@@ -46,7 +50,7 @@ export async function streamCompletion(
         if (!finished) {
             abortController.abort(
                 new CancellationError(
-                    `Streaming completion ${req.id} cancelled by user.`,
+                    `Streaming completion ${requestId} cancelled by user.`,
                 ),
             );
             finished = true;
@@ -67,6 +71,8 @@ export async function streamCompletion(
                 data: JSON.stringify(streamChunk),
             });
         }
+
+        logger.info(`Finished streaming completion request ${requestId}`);
     } catch (error) {
         await stream.writeSSE({
             data: JSON.stringify(toGeneratorError(error)),
@@ -78,16 +84,22 @@ export async function streamCompletion(
 
 export async function generateCompletion(
     req: HonoRequest,
+    requestId: string,
     model: Model,
     params: CompletionRequest,
 ) {
+    logger.info(`Received completion request ${requestId}`);
+
+    // Handle generation in the common function
     const gen = await staticGenerate(
         req,
+        requestId,
         GenerationType.Completion,
         model,
         params.prompt,
         params,
     );
+
     const response = createResponse(gen, model.path.name);
 
     return response;

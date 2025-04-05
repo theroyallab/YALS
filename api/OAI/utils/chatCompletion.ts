@@ -21,6 +21,7 @@ import {
     ChatCompletionStreamChunk,
 } from "../types/chatCompletions.ts";
 import { CancellationError } from "@/common/errors.ts";
+import { logger } from "@/common/logging.ts";
 
 interface TemplateFormatOptions {
     addBosToken?: boolean;
@@ -141,11 +142,14 @@ function addTemplateMetadata(
 // TODO: Possibly rewrite this to unify with completions
 export async function streamChatCompletion(
     req: HonoRequest,
+    requestId: string,
     stream: SSEStreamingApi,
     model: Model,
     promptTemplate: PromptTemplate,
     params: ChatCompletionRequest,
 ) {
+    logger.info(`Received streaming chat completion request ${requestId}`);
+
     const cmplId = `chatcmpl-${crypto.randomUUID().replaceAll("-", "")}`;
     const abortController = new AbortController();
     let finished = false;
@@ -155,7 +159,7 @@ export async function streamChatCompletion(
         if (!finished) {
             abortController.abort(
                 new CancellationError(
-                    `Streaming chat completion ${req.id} cancelled by user.`,
+                    `Streaming chat completion ${requestId} cancelled by user.`,
                 ),
             );
             finished = true;
@@ -209,6 +213,8 @@ export async function streamChatCompletion(
                 });
             }
         }
+
+        logger.info(`Finished streaming chat completion request ${requestId}`);
     } catch (error) {
         await stream.writeSSE({
             data: JSON.stringify(toGeneratorError(error)),
@@ -220,10 +226,13 @@ export async function streamChatCompletion(
 
 export async function generateChatCompletion(
     req: HonoRequest,
+    requestId: string,
     model: Model,
     promptTemplate: PromptTemplate,
     params: ChatCompletionRequest,
 ) {
+    logger.info(`Received chat completion request ${requestId}`);
+
     const prompt = applyChatTemplate(
         model,
         promptTemplate,
@@ -238,8 +247,10 @@ export async function generateChatCompletion(
 
     addTemplateMetadata(promptTemplate, params);
 
+    // Handle generation in the common function
     const gen = await staticGenerate(
         req,
+        requestId,
         GenerationType.ChatCompletion,
         model,
         prompt,

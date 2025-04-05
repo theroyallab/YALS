@@ -39,11 +39,18 @@ router.post(
 
         if (params.stream) {
             return streamSSE(c, async (stream) => {
-                await streamCompletion(c.req, stream, c.var.model, params);
+                await streamCompletion(
+                    c.req,
+                    c.var.requestId,
+                    stream,
+                    c.var.model,
+                    params,
+                );
             });
         } else {
             const completionResult = await generateCompletion(
                 c.req,
+                c.var.requestId,
                 c.var.model,
                 params,
             );
@@ -85,6 +92,7 @@ router.post(
             return streamSSE(c, async (stream) => {
                 await streamChatCompletion(
                     c.req,
+                    c.var.requestId,
                     stream,
                     c.var.model,
                     promptTemplate,
@@ -94,6 +102,7 @@ router.post(
         } else {
             const chatCompletionResult = await generateChatCompletion(
                 c.req,
+                c.var.requestId,
                 c.var.model,
                 promptTemplate,
                 params,

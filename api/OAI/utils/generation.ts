@@ -25,6 +25,7 @@ export function createUsageStats(chunk: FinishChunk) {
 
 export async function staticGenerate(
     req: HonoRequest,
+    requestId: string,
     genType: GenerationType,
     model: Model,
     prompt: string,
@@ -37,7 +38,7 @@ export async function staticGenerate(
         if (!finished) {
             abortController.abort(
                 new CancellationError(
-                    `${genType} ${req.id} cancelled by user.`,
+                    `${genType} ${requestId} cancelled by user.`,
                 ),
             );
             finished = true;
@@ -51,7 +52,7 @@ export async function staticGenerate(
             abortController.signal,
         );
 
-        logger.info(`Finished ${genType.toLowerCase()} request ${req.id}`);
+        logger.info(`Finished ${genType.toLowerCase()} request ${requestId}`);
 
         finished = true;
         return result;
