@@ -1,5 +1,3 @@
-import { HonoRequest } from "hono";
-
 import { UsageStats } from "@/api/OAI/types/completions.ts";
 import { Model } from "@/bindings/bindings.ts";
 import { FinishChunk } from "@/bindings/types.ts";
@@ -24,17 +22,17 @@ export function createUsageStats(chunk: FinishChunk) {
 }
 
 export async function staticGenerate(
-    req: HonoRequest,
     requestId: string,
     genType: GenerationType,
-    model: Model,
     prompt: string,
     params: BaseSamplerRequest,
+    model: Model,
+    requestSignal: AbortSignal,
 ) {
     const abortController = new AbortController();
     let finished = false;
 
-    req.raw.signal.addEventListener("abort", () => {
+    requestSignal.addEventListener("abort", () => {
         if (!finished) {
             abortController.abort(
                 new CancellationError(

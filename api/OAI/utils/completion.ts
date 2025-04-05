@@ -1,21 +1,20 @@
 import { SSEStreamingApi } from "hono/streaming";
-import { Model } from "@/bindings/bindings.ts";
-import { GenerationChunk } from "@/bindings/types.ts";
-import { HonoRequest } from "hono";
+
 import {
     createUsageStats,
     GenerationType,
     staticGenerate,
 } from "@/api/OAI/utils/generation.ts";
-
+import { Model } from "@/bindings/bindings.ts";
+import { GenerationChunk } from "@/bindings/types.ts";
+import { CancellationError } from "@/common/errors.ts";
+import { toGeneratorError } from "@/common/networking.ts";
+import { logger } from "@/common/logging.ts";
 import {
     CompletionRequest,
     CompletionRespChoice,
     CompletionResponse,
 } from "../types/completions.ts";
-import { toGeneratorError } from "@/common/networking.ts";
-import { CancellationError } from "@/common/errors.ts";
-import { logger } from "@/common/logging.ts";
 
 function createResponse(chunk: GenerationChunk, modelName: string) {
     const choice = CompletionRespChoice.parse({
@@ -34,11 +33,11 @@ function createResponse(chunk: GenerationChunk, modelName: string) {
 }
 
 export async function streamCompletion(
-    req: HonoRequest,
     requestId: string,
     stream: SSEStreamingApi,
-    model: Model,
     params: CompletionRequest,
+    model: Model,
+    requestSignal: AbortSignal,
 ) {
     logger.info(`Received streaming completion request ${requestId}`);
 
@@ -46,7 +45,7 @@ export async function streamCompletion(
     let finished = false;
 
     // If an abort happens before streaming starts
-    req.raw.signal.addEventListener("abort", () => {
+    requestSignal.addEventListener("abort", () => {
         if (!finished) {
             abortController.abort(
                 new CancellationError(
@@ -83,21 +82,21 @@ export async function streamCompletion(
 }
 
 export async function generateCompletion(
-    req: HonoRequest,
     requestId: string,
-    model: Model,
     params: CompletionRequest,
+    model: Model,
+    requestSignal: AbortSignal,
 ) {
     logger.info(`Received completion request ${requestId}`);
 
     // Handle generation in the common function
     const gen = await staticGenerate(
-        req,
         requestId,
         GenerationType.Completion,
-        model,
         params.prompt,
         params,
+        model,
+        requestSignal,
     );
 
     const response = createResponse(gen, model.path.name);

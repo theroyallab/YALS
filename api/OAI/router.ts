@@ -40,19 +40,19 @@ router.post(
         if (params.stream) {
             return streamSSE(c, async (stream) => {
                 await streamCompletion(
-                    c.req,
                     c.var.requestId,
                     stream,
-                    c.var.model,
                     params,
+                    c.var.model,
+                    c.req.raw.signal,
                 );
             });
         } else {
             const completionResult = await generateCompletion(
-                c.req,
                 c.var.requestId,
-                c.var.model,
                 params,
+                c.var.model,
+                c.req.raw.signal,
             );
 
             return c.json(completionResult);
@@ -91,21 +91,21 @@ router.post(
         if (params.stream) {
             return streamSSE(c, async (stream) => {
                 await streamChatCompletion(
-                    c.req,
                     c.var.requestId,
                     stream,
+                    params,
                     c.var.model,
                     promptTemplate,
-                    params,
+                    c.req.raw.signal,
                 );
             });
         } else {
             const chatCompletionResult = await generateChatCompletion(
-                c.req,
                 c.var.requestId,
+                params,
                 c.var.model,
                 promptTemplate,
-                params,
+                c.req.raw.signal,
             );
             return c.json(chatCompletionResult);
         }

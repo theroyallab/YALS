@@ -1,4 +1,3 @@
-import { HonoRequest } from "hono";
 import { SSEStreamingApi } from "hono/streaming";
 
 import {
@@ -141,12 +140,12 @@ function addTemplateMetadata(
 
 // TODO: Possibly rewrite this to unify with completions
 export async function streamChatCompletion(
-    req: HonoRequest,
     requestId: string,
     stream: SSEStreamingApi,
+    params: ChatCompletionRequest,
     model: Model,
     promptTemplate: PromptTemplate,
-    params: ChatCompletionRequest,
+    requestSignal: AbortSignal,
 ) {
     logger.info(`Received streaming chat completion request ${requestId}`);
 
@@ -155,7 +154,7 @@ export async function streamChatCompletion(
     let finished = false;
 
     // If an abort happens before streaming starts
-    req.raw.signal.addEventListener("abort", () => {
+    requestSignal.addEventListener("abort", () => {
         if (!finished) {
             abortController.abort(
                 new CancellationError(
@@ -225,11 +224,11 @@ export async function streamChatCompletion(
 }
 
 export async function generateChatCompletion(
-    req: HonoRequest,
     requestId: string,
+    params: ChatCompletionRequest,
     model: Model,
     promptTemplate: PromptTemplate,
-    params: ChatCompletionRequest,
+    requestSignal: AbortSignal,
 ) {
     logger.info(`Received chat completion request ${requestId}`);
 
@@ -249,12 +248,12 @@ export async function generateChatCompletion(
 
     // Handle generation in the common function
     const gen = await staticGenerate(
-        req,
         requestId,
         GenerationType.ChatCompletion,
-        model,
         prompt,
         params,
+        model,
+        requestSignal,
     );
     const response = createResponse(gen, model.path.name);
 
