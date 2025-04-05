@@ -167,7 +167,7 @@ export class Model {
     tokenizer: Tokenizer;
     //readbackBuffer: ReadbackBuffer;
     promptTemplate?: PromptTemplate;
-    jobs: Map<number, Job> = new Map<number, Job>();
+    activeJobIds: Set<string> = new Set();
 
     // Concurrency
     shutdown: boolean = false;
@@ -421,9 +421,12 @@ export class Model {
         const readbackBuffer = new ReadbackBuffer();
 
         // Cleanup operations
-        using _cleanup = defer(() => {
+        using _ = defer(() => {
             // Log generation params to console
             logGenParams(requestId, params);
+
+            // Remove ID from active jobs
+            this.activeJobIds.delete(requestId);
 
             // Free the readback buffer from memory
             readbackBuffer.free();
@@ -436,6 +439,8 @@ export class Model {
 
         // Acquire the mutex
         //using _lock = await this.generationLock.acquire();
+
+        this.activeJobIds.add(requestId);
 
         const samplerBuilder = new SamplerBuilder(this.model);
         const seed = params.seed && params.seed > 0
