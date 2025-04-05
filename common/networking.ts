@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { ContentfulStatusCode } from "hono/utils/http-status";
 import { resolver } from "hono-openapi/zod";
 
+import { CancellationError } from "@/common/errors.ts";
 import { logger } from "@/common/logging.ts";
 
 // Originally from Stoker adopted for hono-openapi
@@ -22,34 +23,34 @@ export const jsonContent = <T extends ZodSchema>(
 
 // Return an HTTP exception for static request errors
 export function toHttpException(error: unknown, status = 422) {
-    const statusCode = status as ContentfulStatusCode;
+    let message = "An unexpected error occurred";
 
-    if (error instanceof Error) {
-        throw new HTTPException(statusCode, {
-            message: error.message,
-        });
+    if (error instanceof CancellationError) {
+        status = 408;
+        message = error.message;
+    } else if (error instanceof Error) {
+        message = error.message;
     }
 
-    throw new HTTPException(statusCode, {
-        message: "An unexpected error occurred",
-    });
+    const statusCode = status as ContentfulStatusCode;
+    throw new HTTPException(statusCode, { message });
 }
 
 // Return an error payload for stream generators
 export function toGeneratorError(error: unknown) {
-    if (error instanceof Error) {
-        logger.error(error.stack ?? error.message);
+    let message = "An unexpected error occurred";
 
-        return {
-            error: {
-                message: error.message,
-            },
-        };
+    if (error instanceof CancellationError) {
+        logger.error(error.message);
+        message = error.message;
+    } else if (error instanceof Error) {
+        logger.error(error.stack || error.message);
+        message = error.message;
     }
 
     return {
         error: {
-            message: "An unexpected error occurred",
+            message,
         },
     };
 }

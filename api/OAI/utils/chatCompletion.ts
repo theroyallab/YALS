@@ -1,12 +1,12 @@
-import { HonoRequest } from "hono";
 import { SSEStreamingApi } from "hono/streaming";
+
 import {
     createUsageStats,
+    GenerationType,
     staticGenerate,
 } from "@/api/OAI/utils/generation.ts";
 import { Model } from "@/bindings/bindings.ts";
 import { FinishChunk, GenerationChunk } from "@/bindings/types.ts";
-import { logger } from "@/common/logging.ts";
 import { toGeneratorError } from "@/common/networking.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 
@@ -19,6 +19,8 @@ import {
     ChatCompletionStreamChoice,
     ChatCompletionStreamChunk,
 } from "../types/chatCompletions.ts";
+import { CancellationError } from "@/common/errors.ts";
+import { logger } from "@/common/logging.ts";
 
 interface TemplateFormatOptions {
     addBosToken?: boolean;
@@ -138,21 +140,28 @@ function addTemplateMetadata(
 
 // TODO: Possibly rewrite this to unify with completions
 export async function streamChatCompletion(
-    req: HonoRequest,
+    requestId: string,
     stream: SSEStreamingApi,
+    params: ChatCompletionRequest,
     model: Model,
     promptTemplate: PromptTemplate,
-    params: ChatCompletionRequest,
+    requestSignal: AbortSignal,
 ) {
+    logger.info(`Received streaming chat completion request ${requestId}`);
+
     const cmplId = `chatcmpl-${crypto.randomUUID().replaceAll("-", "")}`;
     const abortController = new AbortController();
     let finished = false;
 
     // If an abort happens before streaming starts
-    req.raw.signal.addEventListener("abort", () => {
+    requestSignal.addEventListener("abort", () => {
         if (!finished) {
-            abortController.abort();
-            logger.error("Streaming completion aborted");
+            abortController.abort(
+                new CancellationError(
+                    `Streaming chat completion ${requestId} cancelled by user.`,
+                ),
+            );
+            finished = true;
         }
     });
 
@@ -172,23 +181,13 @@ export async function streamChatCompletion(
 
     try {
         const generator = model.generateGen(
+            requestId,
             prompt,
             params,
             abortController.signal,
         );
 
         for await (const chunk of generator) {
-            stream.onAbort(() => {
-                if (!finished) {
-                    abortController.abort();
-                    logger.error("Streaming completion aborted");
-                    finished = true;
-
-                    // Break out of the stream loop
-                    return;
-                }
-            });
-
             const streamChunk = createStreamChunk(
                 chunk,
                 model.path.name,
@@ -214,6 +213,8 @@ export async function streamChatCompletion(
                 });
             }
         }
+
+        logger.info(`Finished streaming chat completion request ${requestId}`);
     } catch (error) {
         await stream.writeSSE({
             data: JSON.stringify(toGeneratorError(error)),
@@ -224,11 +225,14 @@ export async function streamChatCompletion(
 }
 
 export async function generateChatCompletion(
-    req: HonoRequest,
+    requestId: string,
+    params: ChatCompletionRequest,
     model: Model,
     promptTemplate: PromptTemplate,
-    params: ChatCompletionRequest,
+    requestSignal: AbortSignal,
 ) {
+    logger.info(`Received chat completion request ${requestId}`);
+
     const prompt = applyChatTemplate(
         model,
         promptTemplate,
@@ -243,7 +247,15 @@ export async function generateChatCompletion(
 
     addTemplateMetadata(promptTemplate, params);
 
-    const gen = await staticGenerate(req, model, prompt, params);
+    // Handle generation in the common function
+    const gen = await staticGenerate(
+        requestId,
+        GenerationType.ChatCompletion,
+        prompt,
+        params,
+        model,
+        requestSignal,
+    );
     const response = createResponse(gen, model.path.name);
 
     return response;

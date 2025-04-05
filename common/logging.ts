@@ -51,7 +51,7 @@ export function logPrompt(prompt: string) {
     }
 }
 
-export function logGenParams(params: BaseSamplerRequest) {
+export function logGenParams(requestId: string, params: BaseSamplerRequest) {
     if (config.logging.log_generation_params) {
         const samplerParams = BaseSamplerRequest.parse(params);
         const formattedParams = Deno.inspect(samplerParams, {
@@ -60,6 +60,10 @@ export function logGenParams(params: BaseSamplerRequest) {
             breakLength: Infinity,
         });
 
-        logger.info(`Generation Parameters: ${colors.green(formattedParams)}`);
+        logger.info(
+            `Generation Parameters (ID: ${requestId}): ${
+                colors.green(formattedParams)
+            }`,
+        );
     }
 }

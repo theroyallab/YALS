@@ -33,3 +33,15 @@ export async function getYalsVersion() {
         return await getCommitSha();
     }
 }
+
+export function generateUuidHex() {
+    const buffer = new Uint8Array(16);
+    crypto.getRandomValues(buffer);
+
+    // To hex string
+    const token = Array.from(buffer)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+    return token;
+}

@@ -1,11 +1,15 @@
-import { HonoRequest } from "hono";
-
 import { UsageStats } from "@/api/OAI/types/completions.ts";
 import { Model } from "@/bindings/bindings.ts";
 import { FinishChunk } from "@/bindings/types.ts";
 import { logger } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { toHttpException } from "@/common/networking.ts";
+import { CancellationError } from "@/common/errors.ts";
+
+export enum GenerationType {
+    Completion = "Completion",
+    ChatCompletion = "Chat completion",
+}
 
 export function createUsageStats(chunk: FinishChunk) {
     const usage = UsageStats.parse({
@@ -18,27 +22,36 @@ export function createUsageStats(chunk: FinishChunk) {
 }
 
 export async function staticGenerate(
-    req: HonoRequest,
-    model: Model,
+    requestId: string,
+    genType: GenerationType,
     prompt: string,
     params: BaseSamplerRequest,
+    model: Model,
+    requestSignal: AbortSignal,
 ) {
     const abortController = new AbortController();
     let finished = false;
 
-    req.raw.signal.addEventListener("abort", () => {
+    requestSignal.addEventListener("abort", () => {
         if (!finished) {
-            abortController.abort();
-            logger.error("Completion aborted");
+            abortController.abort(
+                new CancellationError(
+                    `${genType} ${requestId} cancelled by user.`,
+                ),
+            );
+            finished = true;
         }
     });
 
     try {
         const result = await model.generate(
+            requestId,
             prompt,
             params,
             abortController.signal,
         );
+
+        logger.info(`Finished ${genType.toLowerCase()} request ${requestId}`);
 
         finished = true;
         return result;

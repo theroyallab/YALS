@@ -288,7 +288,7 @@ router.post(
             });
         }
 
-        const tokens = await c.var.model.tokenize(
+        const tokens = await c.var.model.tokenizer.tokenize(
             text,
             params.add_bos_token,
             params.encode_special_tokens,
@@ -318,7 +318,7 @@ router.post(
     async (c) => {
         const params = c.req.valid("json");
 
-        const text = await c.var.model.detokenize(
+        const text = await c.var.model.tokenizer.detokenize(
             params.tokens,
             undefined,
             params.add_bos_token,

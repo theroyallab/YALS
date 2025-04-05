@@ -42,35 +42,32 @@ class Tokenizer {
     eosToken?: Token;
     eotToken?: Token;
 
-    private constructor(bosToken?: Token, eosToken?: Token, eotToken?: Token) {
-        this.bosToken = bosToken;
-        this.eosToken = eosToken;
-        this.eotToken = eotToken;
-    }
+    // Private references
+    private model: Deno.PointerValue;
 
-    static async init(model: Deno.PointerValue) {
+    constructor(model: Deno.PointerValue) {
         const bosTokenId = lib.symbols.model_vocab_bos(model);
         const eosTokenId = lib.symbols.model_vocab_eos(model);
         const eotTokenId = lib.symbols.model_vocab_eot(model);
 
-        const bosToken = await this.createTokenPair(model, bosTokenId);
-        const eosToken = await this.createTokenPair(model, eosTokenId);
-        const eotToken = await this.createTokenPair(model, eotTokenId);
+        this.bosToken = Tokenizer.createTokenPair(model, bosTokenId);
+        this.eosToken = Tokenizer.createTokenPair(model, eosTokenId);
+        this.eotToken = Tokenizer.createTokenPair(model, eotTokenId);
 
-        return new Tokenizer(bosToken, eosToken, eotToken);
+        this.model = model;
     }
 
-    static async createTokenPair(model: Deno.PointerValue, tokenId: number) {
+    static createTokenPair(model: Deno.PointerValue, tokenId: number) {
         if (tokenId == -1) {
             return undefined;
         }
 
-        const piece = await this.tokenToText(model, tokenId);
+        const piece = this.tokenToText(model, tokenId);
         return { id: tokenId, piece };
     }
 
-    static async tokenToText(model: Deno.PointerValue, tokenId: number) {
-        const stringPtr = await lib.symbols.model_vocab_token_to_string(
+    static tokenToText(model: Deno.PointerValue, tokenId: number) {
+        const stringPtr = lib.symbols.model_vocab_token_to_string(
             model,
             tokenId,
         );
@@ -82,6 +79,83 @@ class Tokenizer {
 
         const cString = new Deno.UnsafePointerView(stringPtr);
         return cString.getCString();
+    }
+
+    async tokenize(
+        text: string,
+        addSpecial: boolean = true,
+        parseSpecial: boolean = true,
+    ) {
+        const textPtr = new TextEncoder().encode(text + "\0");
+
+        const tokensPtr = await lib.symbols.endpoint_tokenize(
+            this.model,
+            textPtr,
+            addSpecial,
+            parseSpecial,
+        );
+
+        // Always free the original pointer
+        await using _ = asyncDefer(async () => {
+            await lib.symbols.endpoint_free_tokens(tokensPtr);
+        });
+
+        if (tokensPtr === null) {
+            throw new Error("Tokenization failed");
+        }
+
+        // The first 4 bytes contain the length of the array
+        const ptrView = new Deno.UnsafePointerView(tokensPtr);
+        const length = new Int32Array(ptrView.getArrayBuffer(4))[0];
+
+        // Copy the actual tokens (starting after the length prefix)
+        const dataPtr = Deno.UnsafePointer.create(
+            Deno.UnsafePointer.value(tokensPtr) + 4n,
+        )!;
+        const tokenData = new Int32Array(
+            new Deno.UnsafePointerView(dataPtr).getArrayBuffer(length * 4),
+        );
+
+        // Create owned copy
+        const ownedTokens = new Int32Array(tokenData);
+
+        return [...ownedTokens];
+    }
+
+    async detokenize(
+        tokens: number[],
+        maxTextSize: number = 4096,
+        addSpecial: boolean = true,
+        parseSpecial: boolean = true,
+    ) {
+        // Create a pointer to the tokens data
+        const tokensArray = new Int32Array(tokens);
+        const tokensPtr = Deno.UnsafePointer.of(tokensArray.buffer);
+
+        // Get raw pointer from C++
+        const textPtr = await lib.symbols.endpoint_detokenize(
+            this.model,
+            tokensPtr,
+            tokens.length,
+            maxTextSize,
+            addSpecial,
+            parseSpecial,
+        );
+
+        // Always free the original pointer
+        await using _ = asyncDefer(async () => {
+            await lib.symbols.endpoint_free_string(textPtr);
+        });
+
+        if (textPtr === null) {
+            throw new Error("Detokenization failed");
+        }
+
+        // Copy to owned string
+        const cString = new Deno.UnsafePointerView(textPtr);
+        const text: string = cString.getCString();
+
+        return text;
     }
 }
 
@@ -185,7 +259,7 @@ export class Model {
         const maxSeqLen = lib.symbols.ctx_max_seq_len(context);
 
         const parsedModelPath = Path.parse(modelPath);
-        const tokenizer = await Tokenizer.init(model);
+        const tokenizer = new Tokenizer(model);
         const findTemplateFunctions = [
             Model.getChatTemplate(model),
         ];
@@ -241,23 +315,6 @@ export class Model {
         lib.symbols.ctx_clear_kv(this.context);
     }
 
-    async cancelJob(job: Job, readbackBuffer: ReadbackBuffer) {
-        if (job.isComplete) {
-            return;
-        }
-
-        const cancelled = lib.symbols.processor_cancel_work(
-            this.processor,
-            job.getId(),
-        );
-        if (cancelled && readbackBuffer.isFinished()) {
-            await readbackBuffer.readStatus();
-        }
-
-        readbackBuffer.reset();
-        job.isComplete = true;
-    }
-
     async unload(skipQueue: boolean = false) {
         // Tell all jobs that the model is being unloaded
         if (skipQueue) {
@@ -272,6 +329,7 @@ export class Model {
     }
 
     async generate(
+        requestId: string,
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
@@ -279,24 +337,18 @@ export class Model {
         let result: FinishChunk | undefined;
         const textParts: string[] = [];
 
-        const generator = this.generateGen(prompt, params, abortSignal);
+        const generator = this.generateGen(
+            requestId,
+            prompt,
+            params,
+            abortSignal,
+        );
         for await (const chunk of generator) {
             if (chunk.kind === "finish") {
                 result = chunk;
             } else {
                 textParts.push(chunk.text);
             }
-        }
-
-        // Create a dummy chunk to satisfy typescript
-        if (abortSignal.aborted) {
-            result = {
-                kind: "finish",
-                text: "",
-                promptTokens: 0,
-                genTokens: 0,
-                finishReason: ReadbackFinishReason.Aborted,
-            };
         }
 
         // Fire if a finish chunk isn't found
@@ -313,7 +365,10 @@ export class Model {
         };
     }
 
-    handleReadbackFinish(finishResponse: ReadbackFinish): FinishChunk {
+    handleReadbackFinish(
+        requestId: string,
+        finishResponse: ReadbackFinish,
+    ): FinishChunk {
         switch (finishResponse.finishReason) {
             case ReadbackFinishReason.CtxExceeded:
                 throw new Error(
@@ -335,7 +390,7 @@ export class Model {
 
         const totalTime = finishResponse.promptSec + finishResponse.genSec;
         logger.info(
-            `Metrics: ` +
+            `Metrics (ID: ${requestId}): ` +
                 `${finishResponse.genTokens} tokens ` +
                 `generated in ${totalTime.toFixed(2)} seconds ` +
                 `(Prompt: ${finishResponse.promptTokens} tokens in ` +
@@ -358,6 +413,7 @@ export class Model {
     }
 
     async *generateGen(
+        requestId: string,
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
@@ -367,7 +423,7 @@ export class Model {
         // Cleanup operations
         using _cleanup = defer(() => {
             // Log generation params to console
-            logGenParams(params);
+            logGenParams(requestId, params);
 
             // Free the readback buffer from memory
             readbackBuffer.free();
@@ -529,13 +585,13 @@ export class Model {
             null,
         );
 
-        const job = new Job(jobId, readbackBuffer);
+        const job = new Job(jobId, readbackBuffer, this.processor);
 
         // Read from the read buffer
         for await (const chunk of job.stream()) {
             if (abortSignal.aborted) {
-                await this.cancelJob(job, readbackBuffer);
-                break;
+                await job.cancel();
+                abortSignal.throwIfAborted();
             }
 
             switch (chunk.kind) {
@@ -543,87 +599,10 @@ export class Model {
                     yield chunk;
                     break;
                 case "finish":
-                    yield this.handleReadbackFinish(chunk);
+                    yield this.handleReadbackFinish(requestId, chunk);
                     break;
             }
         }
-    }
-
-    async tokenize(
-        text: string,
-        addSpecial: boolean = true,
-        parseSpecial: boolean = true,
-    ) {
-        const textPtr = new TextEncoder().encode(text + "\0");
-
-        const tokensPtr = await lib.symbols.endpoint_tokenize(
-            this.model,
-            textPtr,
-            addSpecial,
-            parseSpecial,
-        );
-
-        // Always free the original pointer
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_tokens(tokensPtr);
-        });
-
-        if (tokensPtr === null) {
-            throw new Error("Tokenization failed");
-        }
-
-        // The first 4 bytes contain the length of the array
-        const ptrView = new Deno.UnsafePointerView(tokensPtr);
-        const length = new Int32Array(ptrView.getArrayBuffer(4))[0];
-
-        // Copy the actual tokens (starting after the length prefix)
-        const dataPtr = Deno.UnsafePointer.create(
-            Deno.UnsafePointer.value(tokensPtr) + 4n,
-        )!;
-        const tokenData = new Int32Array(
-            new Deno.UnsafePointerView(dataPtr).getArrayBuffer(length * 4),
-        );
-
-        // Create owned copy
-        const ownedTokens = new Int32Array(tokenData);
-
-        return [...ownedTokens];
-    }
-
-    async detokenize(
-        tokens: number[],
-        maxTextSize: number = 4096,
-        addSpecial: boolean = true,
-        parseSpecial: boolean = true,
-    ) {
-        // Create a pointer to the tokens data
-        const tokensArray = new Int32Array(tokens);
-        const tokensPtr = Deno.UnsafePointer.of(tokensArray.buffer);
-
-        // Get raw pointer from C++
-        const textPtr = await lib.symbols.endpoint_detokenize(
-            this.model,
-            tokensPtr,
-            tokens.length,
-            maxTextSize,
-            addSpecial,
-            parseSpecial,
-        );
-
-        // Always free the original pointer
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_string(textPtr);
-        });
-
-        if (textPtr === null) {
-            throw new Error("Detokenization failed");
-        }
-
-        // Copy to owned string
-        const cString = new Deno.UnsafePointerView(textPtr);
-        const text: string = cString.getCString();
-
-        return text;
     }
 
     static async getChatTemplate(model: Deno.PointerValue) {
