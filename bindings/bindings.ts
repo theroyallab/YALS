@@ -17,6 +17,7 @@ import {
 
 import { pointerArrayFromStrings } from "./utils.ts";
 import { FinishChunk, GenerationChunk } from "./types.ts";
+import { delay } from "@std/async/delay";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -167,7 +168,7 @@ export class Model {
     tokenizer: Tokenizer;
     //readbackBuffer: ReadbackBuffer;
     promptTemplate?: PromptTemplate;
-    activeJobIds: Set<string> = new Set();
+    activeJobIds: Map<string, Job | undefined> = new Map();
 
     // Concurrency
     shutdown: boolean = false;
@@ -315,14 +316,37 @@ export class Model {
         lib.symbols.ctx_clear_kv(this.context);
     }
 
-    async unload(skipQueue: boolean = false) {
-        // Tell all jobs that the model is being unloaded
-        if (skipQueue) {
-            this.shutdown = true;
+    async waitForJobs(skipWait: boolean = false) {
+        // Immediately terminate all jobs if skip is true
+        if (skipWait) {
+            logger.warn(
+                "Immediately terminating all jobs. Clients will have their requests cancelled.\n",
+            );
+
+            for (const wrappedJob of this.activeJobIds.values()) {
+                if (wrappedJob) {
+                    wrappedJob.cancel();
+                }
+            }
         }
 
+        while (true) {
+            if (this.activeJobIds.size === 0) {
+                break;
+            }
+
+            await delay(10);
+        }
+    }
+
+    async unload(skipWait: boolean = false) {
         // Wait for jobs to complete
-        using _lock = await this.generationLock.acquire();
+        await this.waitForJobs();
+
+        // Tell all incoming jobs that the model is being unloaded
+        if (skipWait) {
+            this.shutdown = true;
+        }
 
         await lib.symbols.model_free(this.model);
         await lib.symbols.ctx_free(this.context);
@@ -437,10 +461,8 @@ export class Model {
             return;
         }
 
-        // Acquire the mutex
-        //using _lock = await this.generationLock.acquire();
-
-        this.activeJobIds.add(requestId);
+        // Append the Job ID first
+        this.activeJobIds.set(requestId, undefined);
 
         const samplerBuilder = new SamplerBuilder(this.model);
         const seed = params.seed && params.seed > 0
@@ -591,6 +613,7 @@ export class Model {
         );
 
         const job = new Job(jobId, readbackBuffer, this.processor);
+        this.activeJobIds.set(requestId, job);
 
         // Read from the read buffer
         for await (const chunk of job.stream()) {
