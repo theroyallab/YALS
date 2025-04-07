@@ -56,6 +56,9 @@ extern "C" {
         llama_context* ctx,
         int num_processor_slots);
 
+    void processor_free(
+        const Processor* processor);
+
     // ~~~ Lcpp Endpoint ~~~
 
     // LEAKABLE! Ensure you use endpoint_free_tokens to clean up.

@@ -67,6 +67,14 @@ export default {
         nonblocking: true,
     },
 
+    processor_free: {
+        parameters: [
+          "pointer", // processor: Processor*
+        ],
+        result: "void",
+        nonblocking: false,
+      },
+
     // Endpoint functions
     endpoint_tokenize: {
         parameters: [
