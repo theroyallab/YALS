@@ -48,6 +48,11 @@ Processor* processor_make(llama_model* model, llama_context* ctx, const int num_
     return new Processor(model, ctx, num_processor_slots);
 }
 
+void processor_free(const Processor* processor) {
+    delete processor;
+    processor = nullptr;
+}
+
 llama_model* model_load(
     const char* model_path,
     const int32_t number_gpu_layers,
