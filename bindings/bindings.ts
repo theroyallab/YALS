@@ -166,7 +166,6 @@ export class Model {
     processor: Deno.PointerValue;
     path: Path.ParsedPath;
     tokenizer: Tokenizer;
-    //readbackBuffer: ReadbackBuffer;
     promptTemplate?: PromptTemplate;
     activeJobIds: Map<string, Job | undefined> = new Map();
 
@@ -193,7 +192,6 @@ export class Model {
         this.tokenizer = tokenizer;
         this.promptTemplate = promptTemplate;
         this.maxSeqLen = maxSeqLen;
-        //this.readbackBuffer = new ReadbackBuffer();
     }
 
     static async init(
@@ -253,9 +251,11 @@ export class Model {
             );
         }
 
-        // Only create a processor with 1 slot for now
-        // TODO: Make slots configurable for cont. batching
-        const processor = await lib.symbols.processor_make(model, context, 4);
+        const processor = await lib.symbols.processor_make(
+            model,
+            context,
+            params.num_slots,
+        );
 
         const maxSeqLen = lib.symbols.ctx_max_seq_len(context);
 
@@ -300,6 +300,8 @@ export class Model {
                     "with huggingface's jinja subset.",
             );
         }
+
+        logger.info(`Using processor with ${params.num_slots} slot(s)`);
 
         return new Model(
             model,
