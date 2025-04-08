@@ -20,6 +20,7 @@ export const ModelConfig = z.object({
     model_dir: z.string().nullish().coalesce("models"),
     model_name: z.string().nullish(),
     num_gpu_layers: z.number().nullish().coalesce(0),
+    num_slots: z.number().nullish().coalesce(1),
     gpu_split: z.array(z.number()).nullish().coalesce([]),
     max_seq_len: z.number().nullish(),
     prompt_template: z.string().nullish(),

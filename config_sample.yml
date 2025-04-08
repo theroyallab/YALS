@@ -36,6 +36,9 @@ model:
   # Fetched from the model's base sequence length in config.json by default.
   max_seq_len:
 
+  # Number of slots for continuous batching (default: 1)
+  num_slots: 1
+
   # Number of model layers to offload on the GPU (default: 0)
   # Set this to 999 to offload all layers to the GPU
   num_gpu_layers: 0
