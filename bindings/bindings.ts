@@ -171,7 +171,7 @@ export class Model {
     activeJobIds: Map<string, Job | undefined> = new Map();
 
     // Concurrency
-    shutdown: boolean = false;
+    closing: boolean = false;
     generationLock: Mutex = new Mutex();
 
     // Extra model info
@@ -340,16 +340,15 @@ export class Model {
     }
 
     async unload(skipWait: boolean = false) {
-        // Wait for jobs to complete
-        await this.waitForJobs();
+        // Tell all incoming jobs that the model is being closed
+        this.closing = true;
 
-        // Tell all incoming jobs that the model is being unloaded
-        if (skipWait) {
-            this.shutdown = true;
-        }
+        // Wait for jobs to complete
+        await this.waitForJobs(skipWait);
 
         await lib.symbols.model_free(this.model);
         await lib.symbols.ctx_free(this.context);
+        await lib.symbols.processor_free(this.processor);
     }
 
     async generate(
@@ -457,8 +456,10 @@ export class Model {
         });
 
         // Get out if the model is shutting down
-        if (this.shutdown) {
-            return;
+        if (this.closing) {
+            throw new Error(
+                "Model is being unloaded. Cannot process new generation requests.",
+            );
         }
 
         // Append the Job ID first
@@ -612,6 +613,7 @@ export class Model {
             null,
         );
 
+        // Add the new job to active jobs for cancellation if needed
         const job = new Job(jobId, readbackBuffer, this.processor);
         this.activeJobIds.set(requestId, job);
 

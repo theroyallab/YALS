@@ -69,11 +69,11 @@ export default {
 
     processor_free: {
         parameters: [
-          "pointer", // processor: Processor*
+            "pointer", // processor: Processor*
         ],
         result: "void",
-        nonblocking: false,
-      },
+        nonblocking: true,
+    },
 
     // Endpoint functions
     endpoint_tokenize: {
