@@ -36,6 +36,7 @@ export default {
             "pointer", // readback_buffer: ReadbackBuffer*
             "i32", // max_tokens: int
             "i32", // min_tokens: int
+            "u32", //max_slot_n_ctx: unsigned
             "u32", // seed: unsigned
             "buffer", // rewind_strings: const char**
             "u32", // num_rewind_strings: unsigned
@@ -61,7 +62,6 @@ export default {
         parameters: [
             "pointer", // model: llama_model*
             "pointer", // ctx: llama_context*
-            "u32", // max_seq_len: uint32_t
             "i32", // num_processor_slots: int
         ],
         result: "pointer", // Processor*
@@ -74,11 +74,6 @@ export default {
         ],
         result: "void",
         nonblocking: true,
-    },
-
-    processor_max_seq_len: {
-        parameters: ["pointer"], // processor: const Processor*
-        result: "u32", // uint32_t
     },
 
     // Endpoint functions

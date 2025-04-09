@@ -256,12 +256,11 @@ export class Model {
         const processor = await lib.symbols.processor_make(
             model,
             context,
-            params.max_seq_len ?? 0,
             params.num_slots,
         );
 
         // Max size per sequence
-        const maxSeqLen = lib.symbols.processor_max_seq_len(processor);
+        const maxSeqLen = params.max_seq_len ?? params.cache_size ?? 0xFFFFFFFF;
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = new Tokenizer(model);
@@ -613,6 +612,7 @@ export class Model {
             readbackBuffer.rawPointer(),
             params.max_tokens,
             params.min_tokens, // min_tokens
+            this.maxSeqLen,
             seed,
             rewindPtrArray.inner,
             params.banned_strings.length,
