@@ -234,7 +234,7 @@ export class Model {
         // Use 2048 for chunk size for now, need more info on what to actually use
         const context = await lib.symbols.ctx_make(
             model,
-            params.max_seq_len ?? 4096,
+            params.cache_size ?? params.max_seq_len ?? 0,
             params.num_gpu_layers,
             512,
             params.flash_attention,
@@ -251,13 +251,18 @@ export class Model {
             );
         }
 
+        // Full cache size for the model
+        const cacheSize = lib.symbols.ctx_max_seq_len(context);
+
         const processor = await lib.symbols.processor_make(
             model,
             context,
+            params.max_seq_len ?? cacheSize,
             params.num_slots,
         );
 
-        const maxSeqLen = lib.symbols.ctx_max_seq_len(context);
+        // Max size per sequence
+        const maxSeqLen = lib.symbols.processor_max_seq_len(processor);
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = new Tokenizer(model);
@@ -301,7 +306,11 @@ export class Model {
             );
         }
 
-        logger.info(`Using processor with ${params.num_slots} slot(s)`);
+        logger.info(
+            `Using processor with a cache size of ${cacheSize}, ` +
+                `max sequence length of ${maxSeqLen}, ` +
+                `and ${params.num_slots} slot(s)`,
+        );
 
         return new Model(
             model,

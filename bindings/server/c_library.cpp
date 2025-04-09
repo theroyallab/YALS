@@ -44,13 +44,22 @@ bool processor_cancel_work(Processor* processor, const int request_id_to_cancel)
     return processor->cancel_work(request_id_to_cancel);
 }
 
-Processor* processor_make(llama_model* model, llama_context* ctx, const int num_processor_slots) {
-    return new Processor(model, ctx, num_processor_slots);
+Processor* processor_make(
+    llama_model* model,
+    llama_context* ctx,
+    const uint32_t max_seq_len,
+    const int num_processor_slots) {
+    return new Processor(model, ctx, max_seq_len, num_processor_slots);
 }
 
 void processor_free(const Processor* processor) {
     delete processor;
     processor = nullptr;
+}
+
+uint32_t processor_max_seq_len(const Processor* processor)
+{
+    return processor->get_n_ctx();
 }
 
 llama_model* model_load(
@@ -127,7 +136,7 @@ const char* model_vocab_token_to_string(const llama_model* model, const llama_to
 
 llama_context* ctx_make(
     llama_model* model,
-    const unsigned context_length,
+    const unsigned cache_size,
     const int32_t number_gpu_layers,
     const unsigned num_batches,
     const bool flash_attn,
@@ -138,11 +147,13 @@ llama_context* ctx_make(
     const float kv_defrag_threshold
 ) {
     llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = context_length;
     ctx_params.n_batch = num_batches;
     ctx_params.n_ubatch = num_batches;
     ctx_params.no_perf = false;
     ctx_params.flash_attn = flash_attn;
+
+    // Set to total cache size to account for continuous batching
+    ctx_params.n_ctx = cache_size;
 
     ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
 

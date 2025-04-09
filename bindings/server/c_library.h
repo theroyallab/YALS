@@ -54,9 +54,13 @@ extern "C" {
     Processor* processor_make(
         llama_model* model,
         llama_context* ctx,
+        uint32_t max_seq_len,
         int num_processor_slots);
 
     void processor_free(
+        const Processor* processor);
+
+    uint32_t processor_max_seq_len(
         const Processor* processor);
 
     // ~~~ Lcpp Endpoint ~~~

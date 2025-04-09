@@ -19,10 +19,11 @@ export type LoggingConfig = z.infer<typeof LoggingConfig>;
 export const ModelConfig = z.object({
     model_dir: z.string().nullish().coalesce("models"),
     model_name: z.string().nullish(),
+    max_seq_len: z.number().nullish(),
     num_gpu_layers: z.number().nullish().coalesce(0),
     num_slots: z.number().nullish().coalesce(1),
+    cache_size: z.number().nullish(),
     gpu_split: z.array(z.number()).nullish().coalesce([]),
-    max_seq_len: z.number().nullish(),
     prompt_template: z.string().nullish(),
     flash_attention: z.boolean().nullish().coalesce(false),
     rope_freq_base: z.number().nullish().coalesce(0),

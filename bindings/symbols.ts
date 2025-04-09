@@ -61,6 +61,7 @@ export default {
         parameters: [
             "pointer", // model: llama_model*
             "pointer", // ctx: llama_context*
+            "u32", // max_seq_len: uint32_t
             "i32", // num_processor_slots: int
         ],
         result: "pointer", // Processor*
@@ -73,6 +74,11 @@ export default {
         ],
         result: "void",
         nonblocking: true,
+    },
+
+    processor_max_seq_len: {
+        parameters: ["pointer"], // processor: const Processor*
+        result: "u32", // uint32_t
     },
 
     // Endpoint functions

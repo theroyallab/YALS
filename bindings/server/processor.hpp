@@ -43,6 +43,7 @@ class Processor {
     llama_model* model;
     llama_context* ctx;
     llama_batch batch{};
+    uint32_t n_ctx;
     bool abort_inference = false;
 
     std::vector<Slot> slots;
@@ -106,7 +107,7 @@ class Processor {
             readback_buffer] = queue_tasks.front();
 
         // Prompt is longer than the entire ctx length.
-        if (prompt_tokens.size() > llama_n_ctx(ctx)) {
+        if (prompt_tokens.size() > this->n_ctx) {
             readback_finish(readback_buffer, make_empty_json_status_string("ContextExceeded", ""));
             return;
         }
@@ -194,6 +195,8 @@ class Processor {
 
     void defrag_kv_if_thresh_greater(const float thresh) const {
         const auto used_cells = llama_kv_self_used_cells(ctx);
+
+        // Use llama_n_ctx here since we need the length of the entire cache
         const auto total_cells = llama_n_ctx(ctx);
         if (static_cast<float>(used_cells) > thresh * static_cast<float>(total_cells) && slots.size() > 1) {
             llama_kv_self_defrag(ctx);
@@ -405,9 +408,10 @@ class Processor {
     }
 
 public:
-    Processor(llama_model* model, llama_context* ctx, const int num_slots = 4)
+    Processor(llama_model* model, llama_context* ctx, const uint32_t n_ctx_param = 0, const int num_slots = 4)
         : model(model), ctx(ctx), tokenizer(model, ctx) {
 
+        n_ctx = n_ctx_param > 0 ? n_ctx_param : llama_n_ctx(ctx);
         batch_size = llama_n_batch(ctx);
         batch = llama_batch_init(static_cast<int32_t>(batch_size), 0, 1);
 
@@ -524,6 +528,10 @@ public:
 
         cv_tasks.notify_one();
         return request_id;
+    }
+
+    uint32_t get_n_ctx() const {
+        return n_ctx;
     }
 };
 
