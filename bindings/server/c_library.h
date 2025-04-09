@@ -38,6 +38,7 @@ extern "C" {
         ReadbackBuffer* readback_buffer,
         int max_tokens,
         int min_tokens,
+        uint32_t max_slot_n_ctx,
         unsigned seed,
         const char** rewind_strings,
         unsigned num_rewind_strings,
@@ -54,13 +55,9 @@ extern "C" {
     Processor* processor_make(
         llama_model* model,
         llama_context* ctx,
-        uint32_t max_seq_len,
         int num_processor_slots);
 
     void processor_free(
-        const Processor* processor);
-
-    uint32_t processor_max_seq_len(
         const Processor* processor);
 
     // ~~~ Lcpp Endpoint ~~~

@@ -58,31 +58,32 @@ struct Slot {
         }
     };
 
-    int job_index = -1;
-    int request_id = -1;
-    int slot_id = 0;
+    int job_index{-1};
+    int request_id{-1};
+    int slot_id{0};
+    uint32_t n_ctx_max{0};
     State state = State::IDLE;
 
     std::vector<llama_token> prompt_tokens;
-    size_t prompt_tokens_processed = 0;
-    int tokens_generated = 0;
+    size_t prompt_tokens_processed{0};
+    int tokens_generated{0};
 
-    int n_past = 0;
-    int i_batch = -1;
+    int n_past{0};
+    int i_batch{-1};
 
-    double slot_start_time = 0.0;
-    double prompt_end_time = 0.0;
-    double generating_end_time = 0.0;
+    double slot_start_time{0.0};
+    double prompt_end_time{0.0};
+    double generating_end_time{0.0};
 
-    llama_token last_token = 0;
+    llama_token last_token{0};
     std::string generated_text;
 
     TokenStreamDetokenizer* detokenizer;
     SequenceStream* sequence_stream;
     MultistageSampler multi_sampler;
     SlotSnapshot rewind_snapshot;
-    ReadbackBuffer* readback_buffer = nullptr;
-    class RuleStream* rule_stream = nullptr;
+    ReadbackBuffer* readback_buffer{nullptr};
+    class RuleStream* rule_stream{nullptr};
 
     explicit Slot(const llama_model* model, llama_context* ctx): multi_sampler(model) {
         detokenizer = new TokenStreamDetokenizer(ctx);

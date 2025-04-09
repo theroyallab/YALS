@@ -19,6 +19,7 @@
 #include "sequence_stream.hpp"
 #include "json_status.hpp"
 #include "rule_stream.hpp"
+#include "yaml-rules/parser.hpp"
 
 /*
  * Primary server processor. Controls the overall flow. This processes in slot-order and does not
@@ -43,7 +44,6 @@ class Processor {
     llama_model* model;
     llama_context* ctx;
     llama_batch batch{};
-    uint32_t n_ctx;
     bool abort_inference = false;
 
     std::vector<Slot> slots;
@@ -107,8 +107,8 @@ class Processor {
             readback_buffer] = queue_tasks.front();
 
         // Prompt is longer than the entire ctx length.
-        if (prompt_tokens.size() > this->n_ctx) {
-            readback_finish(readback_buffer, make_empty_json_status_string("CtxExceeded", ""));
+        if (prompt_tokens.size() > llama_n_ctx(ctx) || prompt_tokens.size() > inference_args.max_slot_n_ctx) {
+            readback_finish(readback_buffer, make_empty_json_status_string("ContextExceeded", ""));
             return;
         }
 
@@ -175,28 +175,27 @@ class Processor {
         best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
 
         best_slot->multi_sampler.sampler = inference_args.sampler;
+        best_slot->n_ctx_max = inference_args.max_slot_n_ctx;
+
+        const YAML::Node config = YAML::LoadFile("/home/blackroot/Desktop/Llama-Agents-MCP/config.yaml");
+
+        const auto rules = parse_config(config);
+
+        for (const auto& apply_rule : rules) {
+            apply_rule(*best_slot->rule_stream, model, ctx, *best_slot);
+        }
 
         if (inference_args.min_tokens_to_gen > 0) {
             RuleEngine::rule_min_tokens(*best_slot->rule_stream, inference_args.min_tokens_to_gen, model, ctx, *best_slot);
         }
-
+        
         if (inference_args.max_tokens_to_gen > 0 && inference_args.max_tokens_to_gen >= inference_args.min_tokens_to_gen) {
             RuleEngine::rule_max_tokens(*best_slot->rule_stream, inference_args.max_tokens_to_gen, model, ctx, *best_slot);
         }
-
-        // if (inference_args.grammar) {
-        //     RuleEngine::rule_record_constrained_grammar(*best_slot->rule_stream, inference_args.grammar,
-        //         [](const std::string& str) {
-        //             std::cerr << "\nRULE TRIGGERED CONSTRAINED RECORD:\n" << str << std::endl;
-        //         },
-        //         model, ctx, *best_slot);
-        // }
     }
 
     void defrag_kv_if_thresh_greater(const float thresh) const {
         const auto used_cells = llama_kv_self_used_cells(ctx);
-
-        // Use llama_n_ctx here since we need the length of the entire cache
         const auto total_cells = llama_n_ctx(ctx);
         if (static_cast<float>(used_cells) > thresh * static_cast<float>(total_cells) && slots.size() > 1) {
             llama_kv_self_defrag(ctx);
@@ -217,6 +216,12 @@ class Processor {
 
         if (is_eos) {
             finish_reason = "StopToken";
+            stop_token = common_token_to_piece(ctx, token, true);
+        }
+
+        if (llama_kv_self_seq_pos_max(ctx, slot.slot_id) >= slot.n_ctx_max) {
+            is_complete = true;
+            finish_reason = "CtxExceeded";
             stop_token = common_token_to_piece(ctx, token, true);
         }
 
@@ -408,10 +413,9 @@ class Processor {
     }
 
 public:
-    Processor(llama_model* model, llama_context* ctx, const uint32_t n_ctx_param = 0, const int num_slots = 4)
+    Processor(llama_model* model, llama_context* ctx, const int num_slots = 4)
         : model(model), ctx(ctx), tokenizer(model, ctx) {
 
-        n_ctx = n_ctx_param > 0 ? n_ctx_param : llama_n_ctx(ctx);
         batch_size = llama_n_batch(ctx);
         batch = llama_batch_init(static_cast<int32_t>(batch_size), 0, 1);
 
@@ -528,10 +532,6 @@ public:
 
         cv_tasks.notify_one();
         return request_id;
-    }
-
-    uint32_t get_n_ctx() const {
-        return n_ctx;
     }
 };
 
