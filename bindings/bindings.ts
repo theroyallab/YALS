@@ -231,7 +231,6 @@ export class Model {
             return;
         }
 
-        // Use 2048 for chunk size for now, need more info on what to actually use
         const context = await lib.symbols.ctx_make(
             model,
             params.cache_size ?? params.max_seq_len ?? 0,
@@ -257,7 +256,7 @@ export class Model {
         const processor = await lib.symbols.processor_make(
             model,
             context,
-            params.max_seq_len ?? cacheSize,
+            params.max_seq_len ?? 0,
             params.num_slots,
         );
 
