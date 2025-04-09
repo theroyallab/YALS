@@ -19,7 +19,6 @@
 #include "sequence_stream.hpp"
 #include "json_status.hpp"
 #include "rule_stream.hpp"
-#include "yaml-rules/parser.hpp"
 
 /*
  * Primary server processor. Controls the overall flow. This processes in slot-order and does not
@@ -213,7 +212,7 @@ class Processor {
             stop_token = common_token_to_piece(ctx, token, true);
         }
 
-        if (llama_kv_self_seq_pos_max(ctx, slot.slot_id) >= slot.n_ctx_max) {
+        if (llama_kv_self_seq_pos_max(ctx, slot.slot_id) >= slot.n_ctx_max || llama_kv_self_seq_pos_max(ctx, slot.slot_id) >= llama_n_ctx(ctx)) {
             is_complete = true;
             finish_reason = "CtxExceeded";
             stop_token = common_token_to_piece(ctx, token, true);
