@@ -108,7 +108,7 @@ class Processor {
 
         // Prompt is longer than the entire ctx length.
         if (prompt_tokens.size() > this->n_ctx) {
-            readback_finish(readback_buffer, make_empty_json_status_string("ContextExceeded", ""));
+            readback_finish(readback_buffer, make_empty_json_status_string("CtxExceeded", ""));
             return;
         }
 
