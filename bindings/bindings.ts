@@ -260,7 +260,7 @@ export class Model {
         );
 
         // Max size per sequence
-        const maxSeqLen = params.max_seq_len ?? params.cache_size ?? 0xFFFFFFFF;
+        const maxSeqLen = params.max_seq_len ?? params.cache_size ?? 0;
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = new Tokenizer(model);
@@ -612,7 +612,7 @@ export class Model {
             readbackBuffer.rawPointer(),
             params.max_tokens,
             params.min_tokens, // min_tokens
-            this.maxSeqLen,
+            this.maxSeqLen === 0 ? 0xFFFFFFFF : this.maxSeqLen,
             seed,
             rewindPtrArray.inner,
             params.banned_strings.length,
