@@ -5,6 +5,8 @@
 #include <string>
 #include <llama.h>
 
+#include <iostream>
+
 /*
  *  A lightweight data struct of inference args.
  *

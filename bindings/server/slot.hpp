@@ -21,7 +21,7 @@ struct Slot {
     enum class State {
         IDLE,
         PROMPT,
-        GENERATING
+        GENERATING,
     };
 
     struct SlotSnapshot {

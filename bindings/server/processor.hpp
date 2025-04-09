@@ -11,6 +11,8 @@
 #include <cmath>
 #include <thread>
 
+#include <iostream>
+
 #include "inference_args.hpp"
 #include "llama.h"
 #include "tokenization.hpp"
@@ -57,6 +59,76 @@ class Processor {
 
     std::atomic<int> current_job_index = 0;
     Tokenizer tokenizer;
+
+        bool cancel_request(const int request_id_to_cancel, const std::string& finish_reason) {
+        std::lock_guard lock(mutex_tasks);
+        if (queue_tasks.empty()) {
+            return false;
+        }
+
+        bool found = false;
+        std::queue<Request> new_queue;
+
+        while (!queue_tasks.empty()) {
+            Request req = queue_tasks.front();
+            queue_tasks.pop();
+
+            if (req.id != request_id_to_cancel) {
+                new_queue.push(req);
+            } else {
+                if (req.readback_buffer) {
+                    readback_finish(req.readback_buffer, make_empty_json_status_string(finish_reason, "None"));
+                }
+                found = true;
+            }
+        }
+
+        queue_tasks = std::move(new_queue);
+        return found;
+    }
+
+public:
+
+    bool cancel_work(const int request_id_to_cancel, const std::string& finish_reason = "Aborted") {
+        bool found = cancel_request(request_id_to_cancel, finish_reason);
+
+        bool were_any_cancelled = false;
+
+        // Check all slots for the job just in case of a race.
+        for (auto& slot : slots) {
+            if (slot.request_id == request_id_to_cancel) {
+                if (slot.readback_buffer) {
+                    std::string last_token_piece = common_token_to_piece(ctx, slot.last_token, true);
+                    slot.generating_end_time = 1e-3 * ggml_time_us();
+                    readback_finish(slot.readback_buffer, make_json_status_string(slot, finish_reason, last_token_piece));
+                }
+                slot.end(++current_job_index, ctx);
+                found = true;
+                were_any_cancelled = true;
+            }
+        }
+
+        //We do not want to throw an abort request cancellation if nothing was cancelled in the processor
+        if (!were_any_cancelled) {
+            return false;
+        }
+
+        bool all_idle = true;
+        for (auto& slot : slots) {
+            if (slot.is_processing()) {
+                all_idle = false;
+            }
+        }
+
+        if (queue_tasks.empty() && all_idle) {
+            // Abort inference is reset via the mechanism in the lambda abort fn
+            abort_inference = true;
+        }
+
+        return found;
+    }
+
+private:
 
     // nearly eq to common_add_to_batch from lcpp server
     void add_to_batch(Slot& slot, const llama_token token, const bool compute_logits) {
@@ -107,7 +179,8 @@ class Processor {
 
         // Prompt is longer than the entire ctx length.
         if (prompt_tokens.size() > llama_n_ctx(ctx) || prompt_tokens.size() > inference_args.max_slot_n_ctx) {
-            readback_finish(readback_buffer, make_empty_json_status_string("ContextExceeded", ""));
+            std::cerr << "\n\nCancelled work!" << std::endl;
+            cancel_work(id, "ContextExceeded");
             return;
         }
 
@@ -173,6 +246,8 @@ class Processor {
 
         best_slot->multi_sampler.sampler = inference_args.sampler;
         best_slot->n_ctx_max = inference_args.max_slot_n_ctx;
+
+        std::cerr << "\n\n" << best_slot->n_ctx_max << std::endl;
 
         // for (const auto& apply_rule : rules) {
         //     apply_rule(*best_slot->rule_stream, model, ctx, *best_slot);
@@ -443,70 +518,6 @@ public:
             worker_thread.join();
         }
         llama_batch_free(batch);
-    }
-
-    bool cancel_work(const int request_id_to_cancel) {
-        bool found = false;
-
-        // Is our job pending in the request queue? If so, remove it.
-        // TODO:: @Z Does a different data structure make more sense with this operation?
-        {
-            std::lock_guard lock(mutex_tasks);
-            if (!queue_tasks.empty()) {
-                std::queue<Request> new_queue;
-
-                while (!queue_tasks.empty()) {
-                    Request req = queue_tasks.front();
-                    queue_tasks.pop();
-
-                    if (req.id != request_id_to_cancel) {
-                        new_queue.push(req);
-                    } else {
-                        if (req.readback_buffer) {
-                            readback_finish(req.readback_buffer, make_empty_json_status_string("Aborted", "None"));
-                        }
-                        found = true;
-                    }
-                }
-
-                queue_tasks = std::move(new_queue);
-            }
-        }
-
-        bool were_any_cancelled = false;
-
-        // Check all slots for the job just in case of a race.
-        for (auto& slot : slots) {
-            if (slot.request_id == request_id_to_cancel) {
-                if (slot.readback_buffer) {
-                    std::string last_token_piece = common_token_to_piece(ctx, slot.last_token, true);
-                    slot.generating_end_time = 1e-3 * ggml_time_us();
-                    readback_finish(slot.readback_buffer, make_json_status_string(slot, "Aborted", last_token_piece));
-                }
-                slot.end(++current_job_index, ctx);
-                found = true;
-                were_any_cancelled = true;
-            }
-        }
-
-        //We do not want to throw an abort request cancellation if nothing was cancelled in the processor
-        if (!were_any_cancelled) {
-          return false;
-        }
-
-        bool all_idle = true;
-        for (auto& slot : slots) {
-            if (slot.is_processing()) {
-                all_idle = false;
-            }
-        }
-
-        if (queue_tasks.empty() && all_idle) {
-            // Abort inference is reset via the mechanism in the lambda abort fn
-            abort_inference = true;
-        }
-
-        return found;
     }
 
     int submit_work(
