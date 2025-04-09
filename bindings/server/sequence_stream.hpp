@@ -1,10 +1,7 @@
 #ifndef SEQUENCE_STREAM_HPP
 #define SEQUENCE_STREAM_HPP
 #include <string>
-#include <unordered_set>
 #include <vector>
-#include <optional>
-#include "llama.h"
 #include "trie.hpp"
 
 /*

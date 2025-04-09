@@ -66,6 +66,7 @@ EMOTION: "happy" | "sad" | "angry" | "excited" | "bored" | "anxious" | "calm" | 
         readback_buffer,
         100,
         0,
+        500000,
         1337,
         nullptr,
         0,
