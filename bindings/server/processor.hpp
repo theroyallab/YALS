@@ -156,8 +156,6 @@ class Processor {
                 longest_prefix == prompt_tokens.size() ?
                 Slot::State::GENERATING :
                 Slot::State::PROMPT;
-
-            best_slot->prompt_end_time = 1e-3 * ggml_time_us();
         } else {
             llama_kv_self_seq_rm(ctx, best_slot->slot_id, 0, -1);
             best_slot->prompt_tokens_processed = 0;
@@ -177,13 +175,9 @@ class Processor {
         best_slot->multi_sampler.sampler = inference_args.sampler;
         best_slot->n_ctx_max = inference_args.max_slot_n_ctx;
 
-        const YAML::Node config = YAML::LoadFile("/home/blackroot/Desktop/Llama-Agents-MCP/config.yaml");
-
-        const auto rules = parse_config(config);
-
-        for (const auto& apply_rule : rules) {
-            apply_rule(*best_slot->rule_stream, model, ctx, *best_slot);
-        }
+        // for (const auto& apply_rule : rules) {
+        //     apply_rule(*best_slot->rule_stream, model, ctx, *best_slot);
+        // }
 
         if (inference_args.min_tokens_to_gen > 0) {
             RuleEngine::rule_min_tokens(*best_slot->rule_stream, inference_args.min_tokens_to_gen, model, ctx, *best_slot);
