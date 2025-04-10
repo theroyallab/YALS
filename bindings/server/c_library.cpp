@@ -155,7 +155,7 @@ llama_context* ctx_make(
     if (use_yarn) {
         ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_YARN;
         ctx_params.yarn_ext_factor = -1;
-    } else if (rope_freq_base > freqBaseTrain) {
+    } else if (rope_freq_base >= freqBaseTrain) {
         ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_LINEAR;
         ctx_params.rope_freq_base = rope_freq_base;
         ctx_params.rope_freq_scale = 0;
