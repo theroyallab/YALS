@@ -45,7 +45,6 @@ public:
     :   sampler(sampler),
         max_tokens_to_gen(max_tokens),
         min_tokens_to_gen(min_tokens),
-        max_slot_n_ctx(max_slot_n_ctx),
         seed(seed),
         grammar(grammar)
     {
@@ -71,6 +70,8 @@ public:
             this->stopping_tokens.assign(stopping_tokens,
                                          stopping_tokens + num_stopping_tokens);
         }
+
+        this->max_slot_n_ctx = max_slot_n_ctx == 0 ? std::numeric_limits<uint32_t>::max() : max_slot_n_ctx;
     }
 };
 

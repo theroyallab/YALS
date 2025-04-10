@@ -612,7 +612,7 @@ export class Model {
             readbackBuffer.rawPointer(),
             params.max_tokens,
             params.min_tokens, // min_tokens
-            this.maxSeqLen === 0 ? 0xFFFFFFFF : this.maxSeqLen,
+            this.maxSeqLen,
             seed,
             rewindPtrArray.inner,
             params.banned_strings.length,
