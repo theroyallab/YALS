@@ -15,7 +15,7 @@ import {
     ReadbackFinishReason,
 } from "./readbackBuffer.ts";
 
-import { pointerArrayFromStrings } from "./utils.ts";
+import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
 import { FinishChunk, GenerationChunk } from "./types.ts";
 import { delay } from "@std/async/delay";
 
@@ -231,9 +231,16 @@ export class Model {
             return;
         }
 
+        // Initialize cache size
+        let cacheSize = params.cache_size ?? params.max_seq_len ?? 0;
+        let maxSeqLen = params.max_seq_len ?? 0;
+
+        // Adjust cache size to multiple of 256
+        cacheSize = adjustCacheSize(cacheSize, maxSeqLen);
+
         const context = await lib.symbols.ctx_make(
             model,
-            params.cache_size ?? params.max_seq_len ?? 0,
+            cacheSize,
             params.num_gpu_layers,
             512,
             params.flash_attention,
@@ -251,7 +258,7 @@ export class Model {
         }
 
         // Full cache size for the model
-        const cacheSize = lib.symbols.ctx_max_seq_len(context);
+        cacheSize = lib.symbols.ctx_max_seq_len(context);
 
         const processor = await lib.symbols.processor_make(
             model,
@@ -260,7 +267,7 @@ export class Model {
         );
 
         // Max size per sequence
-        const maxSeqLen = params.max_seq_len ?? params.cache_size ?? 0;
+        maxSeqLen = params.max_seq_len ?? cacheSize ?? 0;
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = new Tokenizer(model);

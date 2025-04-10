@@ -1,3 +1,5 @@
+import { logger } from "@/common/logging.ts";
+
 export function pointerArrayFromStrings(strings: string[]): {
     inner: BigUint64Array;
     // Return the buffer so it stays alive
@@ -32,4 +34,29 @@ export function pointerArrayFromStrings(strings: string[]): {
 
     // Return both the pointer array and the buffer
     return { inner: ptrArray, buffer };
+}
+
+export function adjustCacheSize(cacheSize: number, maxSeqLen: number) {
+    if (cacheSize < maxSeqLen) {
+        logger.warn(
+            `The given cache_size (${cacheSize}) is smaller than the ` +
+                "desired context length.\n" +
+                "Overriding cache_size to max_seq_len. ",
+        );
+
+        cacheSize = maxSeqLen;
+    }
+
+    const cacheRemainder = cacheSize % 256;
+    if (cacheRemainder != 0) {
+        const roundedCacheSize = 256 *
+            Math.floor((cacheSize - cacheRemainder) / 256 + 1);
+        logger.info(
+            `Rounding cache size from ${cacheSize} to ${roundedCacheSize} ` +
+                `tokens (multiple of 256)`,
+        );
+        cacheSize = roundedCacheSize;
+    }
+
+    return cacheSize;
 }
