@@ -105,16 +105,14 @@ class Processor {
             inference_args,
             readback_buffer] = queue_tasks.front();
 
+        queue_tasks.pop();
+        lock.unlock();
+
         // Prompt is longer than the entire ctx length.
         if (prompt_tokens.size() > llama_n_ctx(ctx) || prompt_tokens.size() > inference_args.max_slot_n_ctx) {
             readback_finish(readback_buffer, make_empty_json_status_string("CtxExceeded", "None"));
-            queue_tasks.pop();
-            lock.unlock();
             return;
         }
-
-        queue_tasks.pop();
-        lock.unlock();
 
         //Check for the best slot. The best slot is the one with the longest prefix.
         Slot* best_slot = nullptr;
