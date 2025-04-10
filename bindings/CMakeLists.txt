@@ -32,6 +32,7 @@ message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "llama.cpp: build examples" FORCE)
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "llama.cpp: build tests" FORCE)
 set(LLAMA_BUILD_SERVER OFF CACHE BOOL "llama.cpp: build server" FORCE)
+set(LLAMA_CURL OFF CACHE BOOL "llama.cpp: use libcurl" FORCE)
 
 # Enable common
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "llama.cpp: build common utils library" FORCE)
