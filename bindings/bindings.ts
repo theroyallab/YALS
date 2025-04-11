@@ -11,9 +11,8 @@ import { SamplerBuilder } from "./samplers.ts";
 import { Job } from "./job.ts";
 import {
     ReadbackBuffer,
-    ReadbackFinish,
-    ReadbackFinishReason,
 } from "./readbackBuffer.ts";
+import { ReadbackFinishReason,} from "./types.ts"
 
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
 import { FinishChunk, GenerationChunk } from "./types.ts";
@@ -406,7 +405,7 @@ export class Model {
 
     handleReadbackFinish(
         requestId: string,
-        finishResponse: ReadbackFinish,
+        finishResponse: FinishChunk,
     ): FinishChunk {
         switch (finishResponse.finishReason) {
             case ReadbackFinishReason.CtxExceeded:
@@ -440,14 +439,8 @@ export class Model {
                 } tokens)`,
         );
 
-        const finishReason =
-            finishResponse.finishReason == ReadbackFinishReason.MaxNewTokens
-                ? "length"
-                : "stop";
-
         return {
             ...finishResponse,
-            finishReason,
         };
     }
 
@@ -457,15 +450,6 @@ export class Model {
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
     ): AsyncGenerator<GenerationChunk> {
-        // Cleanup operations
-        using _ = defer(() => {
-            // Log generation params to console
-            logGenParams(requestId, params);
-
-            // Remove ID from active jobs
-            this.activeJobIds.delete(requestId);
-        });
-
         // Get out if the model is shutting down
         if (this.closing) {
             throw new Error(
@@ -474,6 +458,17 @@ export class Model {
         }
 
         const readbackBuffer = new ReadbackBuffer();
+
+        await using _ = asyncDefer(async () => {
+            // Log generation params to console
+            logGenParams(requestId, params);
+
+            // Remove ID from active jobs
+            this.activeJobIds.delete(requestId);
+
+            await readbackBuffer.free();
+        });
+
         // Append the Job ID first
         this.activeJobIds.set(requestId, undefined);
 
@@ -612,7 +607,7 @@ export class Model {
             this.processor,
             promptPtr,
             sampler,
-            readbackBuffer.rawPointer(),
+            readbackBuffer.rawPtr,
             params.max_tokens,
             params.min_tokens, // min_tokens
             this.maxSeqLen,
@@ -633,11 +628,8 @@ export class Model {
         // Read from the read buffer
         for await (const chunk of job.stream()) {
             if (abortSignal.aborted) {
-                await job.cancel();
-                await readbackBuffer.free();
-                return;
+                job.cancel();
                 abortSignal.throwIfAborted();
-                return;
             }
 
             switch (chunk.kind) {
@@ -649,7 +641,6 @@ export class Model {
                     break;
             }
         }
-        await readbackBuffer.free();
     }
 
     static async getChatTemplate(model: Deno.PointerValue) {

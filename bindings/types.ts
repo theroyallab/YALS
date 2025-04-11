@@ -18,11 +18,32 @@ export interface StreamChunk {
     token: number;
 }
 
+export enum ReadbackFinishReason {
+    CtxExceeded = "CtxExceeded",
+    BatchDecode = "BatchDecode",
+    StopToken = "StopToken",
+    MaxNewTokens = "MaxNewTokens",
+    StopString = "StopString",
+    TokenEncode = "TokenEncode",
+    Aborted = "Aborted",
+}
+
 export interface FinishChunk {
-    kind: "finish";
+    kind: "finish"
     text: string;
+    slotId: number;
+    requestId: number;
+    jobIndex: number;
+
     promptTokens: number;
     genTokens: number;
-    finishReason: string;
-    stopToken?: string;
+
+    promptSec: number;
+    genSec: number;
+    totalSec: number;
+    promptTokensPerSec: number;
+    genTokensPerSec: number;
+
+    finishReason: ReadbackFinishReason;
+    stopToken: string;
 }
