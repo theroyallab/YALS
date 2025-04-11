@@ -141,7 +141,7 @@ extern "C" {
     //TODO::@Z Validate.
     //  Not leakable, owned by readback buffer ?
     char* readback_read_status(
-        const ReadbackBuffer* buffer);
+        ReadbackBuffer* buffer);
 
     void readback_reset(
         ReadbackBuffer* buffer);

@@ -41,7 +41,6 @@ export class Job {
                 return data;
             }
             const status = await this.readbackBuffer.readStatus();
-            this.readbackBuffer.reset();
             this.isComplete = true;
             return status;
         }
@@ -54,8 +53,6 @@ export class Job {
         void,
         unknown
     > {
-        this.readbackBuffer.reset();
-
         while (!this.isComplete) {
             const data = await this.readNext();
             if (data === null) {
@@ -88,8 +85,6 @@ export class Job {
         if (cancelled && this.readbackBuffer.isFinished()) {
             await this.readbackBuffer.readStatus();
         }
-
-        this.readbackBuffer.reset();
         this.isComplete = true;
     }
 }

@@ -457,8 +457,6 @@ export class Model {
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
     ): AsyncGenerator<GenerationChunk> {
-        const readbackBuffer = new ReadbackBuffer();
-
         // Cleanup operations
         using _ = defer(() => {
             // Log generation params to console
@@ -466,9 +464,6 @@ export class Model {
 
             // Remove ID from active jobs
             this.activeJobIds.delete(requestId);
-
-            // Free the readback buffer from memory
-            readbackBuffer.free();
         });
 
         // Get out if the model is shutting down
@@ -478,6 +473,7 @@ export class Model {
             );
         }
 
+        const readbackBuffer = new ReadbackBuffer();
         // Append the Job ID first
         this.activeJobIds.set(requestId, undefined);
 
@@ -638,7 +634,10 @@ export class Model {
         for await (const chunk of job.stream()) {
             if (abortSignal.aborted) {
                 await job.cancel();
+                await readbackBuffer.free();
+                return;
                 abortSignal.throwIfAborted();
+                return;
             }
 
             switch (chunk.kind) {
@@ -650,6 +649,7 @@ export class Model {
                     break;
             }
         }
+        await readbackBuffer.free();
     }
 
     static async getChatTemplate(model: Deno.PointerValue) {

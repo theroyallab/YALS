@@ -4,7 +4,8 @@
 #include <vector>
 #include <llama.h>
 #include <cstring>
-#include <atomic>
+#include <mutex>
+#include <iostream>
 
 /**
  * Owned buffer for live token and character streaming.
@@ -18,23 +19,15 @@ struct ReadbackBuffer {
     std::vector<char*>* data = new std::vector<char*>();
     std::vector<llama_token>* ids = new std::vector<llama_token>();
 
-    //Spinlock: Prevents subtle bug with push_back causing our buffer pointer to reallocate.
-    std::atomic_flag lock = ATOMIC_FLAG_INIT;
+    std::mutex readback_mutex;
 };
-
-inline void acquire_spinlock(ReadbackBuffer* buffer) {
-    while (buffer->lock.test_and_set(std::memory_order_acquire));
-}
-
-inline void release_spinlock(ReadbackBuffer* buffer) {
-    buffer->lock.clear(std::memory_order_release);
-}
 
 // C API
 bool readback_is_buffer_finished(ReadbackBuffer* buffer) {
-    acquire_spinlock(buffer);
+    std::cerr << "\n\n Buffer finished" << std::endl;
+    if (!buffer) return true;
+    std::lock_guard lock(buffer->readback_mutex);
     const auto status = buffer->buffer_finished_write && buffer->last_readback_index >= buffer->ids->size();
-    release_spinlock(buffer);
     return status;
 }
 
@@ -45,24 +38,33 @@ ReadbackBuffer* readback_create_buffer() {
 
 // C API
 bool readback_read_next(ReadbackBuffer* buffer, char** outChar, llama_token* outToken) {
-    if (buffer->last_readback_index >= buffer->ids->size() || buffer->last_readback_index >= buffer->data->size()) {
+    std::cerr << "\n\n Read next" << std::endl;
+    if (!buffer || buffer->last_readback_index >= buffer->ids->size() || buffer->last_readback_index >= buffer->data->size()) {
         return false;
     }
-    acquire_spinlock(buffer);
+    std::lock_guard lock(buffer->readback_mutex);
     *outChar = buffer->data->at(buffer->last_readback_index);
     *outToken = buffer->ids->at(buffer->last_readback_index);
     buffer->last_readback_index++;
-    release_spinlock(buffer);
     return true;
 }
 
 // C API
-char* readback_read_status(const ReadbackBuffer* buffer) {
+char* readback_read_status(ReadbackBuffer* buffer) {
+    std::cerr << "\n\n Buffer Status" << std::endl;
+    if (!buffer) return nullptr;
+    std::lock_guard lock(buffer->readback_mutex);
     return buffer->status_buffer;
 }
 
 // C API
 void readback_reset(ReadbackBuffer* buffer) {
+    std::cerr << "\n\n Buffer reset" << std::endl;
+    if (!buffer || !buffer->data || !buffer->ids)
+        return;
+
+    std::lock_guard lock(buffer->readback_mutex);
+
     for (char* str : *(buffer->data)) {
         free(str);  // memory was created via strdup which is a malloc.
     }
@@ -81,32 +83,47 @@ void readback_reset(ReadbackBuffer* buffer) {
 
 // C API
 void readback_annihilate(ReadbackBuffer* buffer) {
-    readback_reset(buffer);
+    std::cerr << "\n\n Buffer annih" << std::endl;
+    if (!buffer || !buffer->data || !buffer->ids)
+        return;
 
-    delete buffer->data;
-    delete buffer->ids;
+    {
+        std::lock_guard lock(buffer->readback_mutex);
+        for (char* str : *(buffer->data)) {
+            free(str);  // memory was created via strdup which is a malloc.
+        }
+        free(buffer->status_buffer);
+        delete buffer->data;
+        delete buffer->ids;
+    }
 
     delete buffer;
 }
 
 // Internal -- MALLOC copy -- Free all data buffers via free()
 void readback_write_to_buffer(ReadbackBuffer* buffer, const std::string& data, const llama_token token) {
+    if (!buffer || !buffer->data || !buffer->ids)
+        return;
+
     char* copy = strdup(data.c_str());
 
-    acquire_spinlock(buffer);
+    std::cerr << "\n\n Buffer write" << std::endl;
+    std::lock_guard lock(buffer->readback_mutex);
     buffer->data->push_back(copy);
     buffer->ids->push_back(token);
-    release_spinlock(buffer);
 }
 
 // Internal -- MALLOC copy -- Free status buffer via free()
 void readback_finish(ReadbackBuffer* buffer, const std::string& status) {
+    if (!buffer || !buffer->data || !buffer->ids)
+        return;
+
     char* copy = strdup(status.c_str());
 
-    acquire_spinlock(buffer);
+    std::cerr << "\n\n Buffer finish" << std::endl;
+    std::lock_guard lock(buffer->readback_mutex);
     buffer->buffer_finished_write = true;
     buffer->status_buffer = copy;
-    release_spinlock(buffer);
 }
 
 #endif // READBACK_BUFFER_HPP

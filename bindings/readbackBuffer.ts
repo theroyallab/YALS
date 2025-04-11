@@ -135,17 +135,6 @@ export class ReadbackBuffer {
         }
     }
 
-    /**
-     * Resets the buffer to its initial state
-     */
-    reset(): void {
-        lib.symbols.readback_reset(this.bufferPtr);
-    }
-
-    /**
-     * Frees the underlying native buffer
-     * After calling this method, the buffer can no longer be used
-     */
     async free() {
         await lib.symbols.readback_annihilate(this.bufferPtr);
         this.bufferPtr = null;
