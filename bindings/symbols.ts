@@ -192,12 +192,7 @@ export default {
         result: "pointer", // char*
         nonblocking: true,
     },
-
-    readback_reset: {
-        parameters: ["pointer"], // buffer: ReadbackBuffer*
-        result: "void",
-    },
-
+    
     readback_annihilate: {
         parameters: ["pointer"], // buffer: ReadbackBuffer*
         result: "void",

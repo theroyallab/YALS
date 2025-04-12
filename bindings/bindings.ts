@@ -472,7 +472,9 @@ export class Model {
 
             // Free readback buffer and sampler builder
             readbackBuffer.free();
-            samplerBuilder.free();
+
+            //TODO:: Leaking intentionally because race.
+            //samplerBuilder.free();
         });
 
         // Append the Job ID first
