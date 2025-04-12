@@ -29,7 +29,7 @@ export enum ReadbackFinishReason {
 }
 
 export interface FinishChunk {
-    kind: "finish"
+    kind: "finish";
     text: string;
     slotId: number;
     requestId: number;

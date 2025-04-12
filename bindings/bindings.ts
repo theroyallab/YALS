@@ -1,22 +1,18 @@
 import { Mutex } from "@core/asyncutil";
 import * as Path from "@std/path";
+import { delay } from "@std/async/delay";
+
 import { ModelConfig } from "@/common/configModels.ts";
 import { logGenParams, logger, logPrompt } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 import { asyncDefer, defer } from "@/common/utils.ts";
-
 import { lib } from "./lib.ts";
-import { SamplerBuilder } from "./samplers.ts";
 import { Job } from "./job.ts";
-import {
-    ReadbackBuffer,
-} from "./readbackBuffer.ts";
-import { ReadbackFinishReason,} from "./types.ts"
-
+import { ReadbackBuffer } from "./readbackBuffer.ts";
+import { SamplerBuilder } from "./samplers.ts";
+import { FinishChunk, GenerationChunk, ReadbackFinishReason } from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
-import { FinishChunk, GenerationChunk } from "./types.ts";
-import { delay } from "@std/async/delay";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -466,6 +462,7 @@ export class Model {
             // Remove ID from active jobs
             this.activeJobIds.delete(requestId);
 
+            // Free readback buffer
             await readbackBuffer.free();
         });
 

@@ -1,9 +1,5 @@
-import { delay } from "@std/async";
-
 import { lib } from "@/bindings/lib.ts";
-import {
-    ReadbackBuffer,
-} from "./readbackBuffer.ts";
+import { ReadbackBuffer } from "./readbackBuffer.ts";
 import { GenerationChunk } from "./types.ts";
 
 export class Job {
@@ -26,21 +22,23 @@ export class Job {
 
     async *stream(): AsyncGenerator<GenerationChunk> {
         for await (const { text, token } of this.readbackBuffer.read()) {
-          yield { kind: "data", text, token };
+            yield { kind: "data", text, token };
         }
-    
+
         const status = await this.readbackBuffer.readStatus();
-        if(status)
+        if (status) {
             yield status;
-      }
+        }
+    }
 
     cancel() {
         if (this.isComplete) {
             return;
         }
+
         this.isComplete = true;
 
-        const cancelled = lib.symbols.processor_cancel_work(
+        lib.symbols.processor_cancel_work(
             this.processor,
             this.id,
         );

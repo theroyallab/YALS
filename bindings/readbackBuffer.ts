@@ -1,3 +1,6 @@
+import { delay } from "@std/async/delay";
+
+import { logger } from "@/common/logging.ts";
 import { lib } from "./lib.ts";
 import { FinishChunk } from "@/bindings/types.ts";
 
@@ -8,37 +11,37 @@ import { FinishChunk } from "@/bindings/types.ts";
 export class ReadbackBuffer {
     public rawPtr: Deno.PointerValue;
     constructor() {
-      this.rawPtr = lib.symbols.readback_create_buffer();
+        this.rawPtr = lib.symbols.readback_create_buffer();
     }
 
     async *read() {
         while (!lib.symbols.readback_is_buffer_finished(this.rawPtr)) {
-          const charBuf = new Uint8Array(8);
-          const tokenBuf = new Int32Array(1);
-    
-          if (
-            !await lib.symbols.readback_read_next(
-              this.rawPtr,
-              Deno.UnsafePointer.of(charBuf),
-              Deno.UnsafePointer.of(tokenBuf),
-            )
-          ) {
-            await new Promise((resolve) => setTimeout(resolve, 2));
-            continue;
-          }
-    
-          const ptrVal = new BigUint64Array(charBuf.buffer)[0];
-          if (ptrVal === 0n) continue;
-    
-          const charPtr = Deno.UnsafePointer.create(ptrVal);
-          if (!charPtr) continue;
-    
-          yield {
-            text: new Deno.UnsafePointerView(charPtr).getCString(),
-            token: tokenBuf[0],
-          };
+            const charBuf = new Uint8Array(8);
+            const tokenBuf = new Int32Array(1);
+
+            if (
+                !await lib.symbols.readback_read_next(
+                    this.rawPtr,
+                    Deno.UnsafePointer.of(charBuf),
+                    Deno.UnsafePointer.of(tokenBuf),
+                )
+            ) {
+                await delay(2);
+                continue;
+            }
+
+            const ptrVal = new BigUint64Array(charBuf.buffer)[0];
+            if (ptrVal === 0n) continue;
+
+            const charPtr = Deno.UnsafePointer.create(ptrVal);
+            if (!charPtr) continue;
+
+            yield {
+                text: new Deno.UnsafePointerView(charPtr).getCString(),
+                token: tokenBuf[0],
+            };
         }
-      }
+    }
 
     /**
      * Reads the status information from the buffer
@@ -46,25 +49,27 @@ export class ReadbackBuffer {
      */
     async readStatus(): Promise<FinishChunk | null> {
         const statusPtr = await lib.symbols.readback_read_status(
-          this.rawPtr,
+            this.rawPtr,
         );
         if (!statusPtr) {
-          return null;
+            return null;
         }
-    
+
         const view = new Deno.UnsafePointerView(statusPtr);
         const statusStr = view.getCString();
-    
+
         try {
-          const status = JSON.parse(statusStr);
-          return {
-            ...status,
-          };
+            const status = JSON.parse(statusStr);
+            return {
+                ...status,
+                kind: "finish",
+                text: "",
+            };
         } catch (e) {
-          console.error("Failed to parse status JSON:", e);
-          return null;
+            logger.error("Failed to parse status JSON:", e);
+            return null;
         }
-      }
+    }
 
     async free() {
         await lib.symbols.readback_annihilate(this.rawPtr);
