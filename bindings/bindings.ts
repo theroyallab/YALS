@@ -1,23 +1,19 @@
 import { Mutex } from "@core/asyncutil";
 import * as Path from "@std/path";
+import { delay } from "@std/async/delay";
+
 import { ModelConfig } from "@/common/configModels.ts";
 import { logGenParams, logger, logPrompt } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 import { asyncDefer, defer } from "@/common/utils.ts";
-
 import { lib } from "./lib.ts";
-import { SamplerBuilder } from "./samplers.ts";
 import { Job } from "./job.ts";
-import {
-    ReadbackBuffer,
-    ReadbackFinish,
-    ReadbackFinishReason,
-} from "./readbackBuffer.ts";
-
+import { ReadbackBuffer } from "./readbackBuffer.ts";
+import { SamplerBuilder } from "./samplers.ts";
+import { FinishChunk, GenerationChunk, ReadbackFinishReason } from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
-import { FinishChunk, GenerationChunk } from "./types.ts";
-import { delay } from "@std/async/delay";
+import { MaybePromise } from "@/types/utils.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -97,8 +93,8 @@ class Tokenizer {
         );
 
         // Always free the original pointer
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_tokens(tokensPtr);
+        using _ = defer(() => {
+            lib.symbols.endpoint_free_tokens(tokensPtr);
         });
 
         if (tokensPtr === null) {
@@ -144,8 +140,8 @@ class Tokenizer {
         );
 
         // Always free the original pointer
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_string(textPtr);
+        using _ = defer(() => {
+            lib.symbols.endpoint_free_string(textPtr);
         });
 
         if (textPtr === null) {
@@ -271,21 +267,27 @@ export class Model {
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = new Tokenizer(model);
-        const findTemplateFunctions = [
-            Model.getChatTemplate(model),
+        const findTemplateFunctions: MaybePromise<PromptTemplate>[] = [
+            () => Model.getChatTemplate(model),
         ];
 
         let promptTemplate: PromptTemplate | undefined = undefined;
         if (params.prompt_template) {
             findTemplateFunctions.unshift(
-                PromptTemplate.fromFile(`templates/${params.prompt_template}`),
+                () =>
+                    PromptTemplate.fromFile(
+                        `templates/${params.prompt_template}`,
+                    ),
             );
         }
 
         for (const templateFunc of findTemplateFunctions) {
             try {
                 if (!promptTemplate) {
-                    promptTemplate = await templateFunc;
+                    const result = templateFunc();
+                    promptTemplate = result instanceof Promise
+                        ? await result
+                        : result;
                 }
             } catch (error) {
                 if (error instanceof Error) {
@@ -362,9 +364,9 @@ export class Model {
         // Wait for jobs to complete
         await this.waitForJobs(skipWait);
 
-        await lib.symbols.model_free(this.model);
-        await lib.symbols.ctx_free(this.context);
-        await lib.symbols.processor_free(this.processor);
+        lib.symbols.model_free(this.model);
+        lib.symbols.ctx_free(this.context);
+        lib.symbols.processor_free(this.processor);
     }
 
     async generate(
@@ -406,7 +408,7 @@ export class Model {
 
     handleReadbackFinish(
         requestId: string,
-        finishResponse: ReadbackFinish,
+        finishResponse: FinishChunk,
     ): FinishChunk {
         switch (finishResponse.finishReason) {
             case ReadbackFinishReason.CtxExceeded:
@@ -440,14 +442,8 @@ export class Model {
                 } tokens)`,
         );
 
-        const finishReason =
-            finishResponse.finishReason == ReadbackFinishReason.MaxNewTokens
-                ? "length"
-                : "stop";
-
         return {
             ...finishResponse,
-            finishReason,
         };
     }
 
@@ -457,20 +453,6 @@ export class Model {
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
     ): AsyncGenerator<GenerationChunk> {
-        const readbackBuffer = new ReadbackBuffer();
-
-        // Cleanup operations
-        using _ = defer(() => {
-            // Log generation params to console
-            logGenParams(requestId, params);
-
-            // Remove ID from active jobs
-            this.activeJobIds.delete(requestId);
-
-            // Free the readback buffer from memory
-            readbackBuffer.free();
-        });
-
         // Get out if the model is shutting down
         if (this.closing) {
             throw new Error(
@@ -478,10 +460,24 @@ export class Model {
             );
         }
 
+        const readbackBuffer = new ReadbackBuffer();
+        const samplerBuilder = new SamplerBuilder(this.model);
+
+        using _ = defer(() => {
+            // Log generation params to console
+            logGenParams(requestId, params);
+
+            // Remove ID from active jobs
+            this.activeJobIds.delete(requestId);
+
+            // Free readback buffer and sampler builder
+            readbackBuffer.free();
+            samplerBuilder.free();
+        });
+
         // Append the Job ID first
         this.activeJobIds.set(requestId, undefined);
 
-        const samplerBuilder = new SamplerBuilder(this.model);
         const seed = params.seed && params.seed > 0
             ? params.seed
             : Math.floor(Math.random() * (0xFFFFFFFF + 1));
@@ -616,7 +612,7 @@ export class Model {
             this.processor,
             promptPtr,
             sampler,
-            readbackBuffer.rawPointer(),
+            readbackBuffer.rawPtr,
             params.max_tokens,
             params.min_tokens, // min_tokens
             this.maxSeqLen,
@@ -637,7 +633,7 @@ export class Model {
         // Read from the read buffer
         for await (const chunk of job.stream()) {
             if (abortSignal.aborted) {
-                await job.cancel();
+                job.cancel();
                 abortSignal.throwIfAborted();
             }
 
@@ -652,11 +648,11 @@ export class Model {
         }
     }
 
-    static async getChatTemplate(model: Deno.PointerValue) {
+    static getChatTemplate(model: Deno.PointerValue) {
         const templatePtr = lib.symbols.model_chat_template(model);
 
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_string(templatePtr);
+        using _ = defer(() => {
+            lib.symbols.endpoint_free_string(templatePtr);
         });
 
         if (templatePtr === null) {

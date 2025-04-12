@@ -1,6 +1,7 @@
 import { SSEStreamingApi } from "hono/streaming";
 
 import {
+    convertFinishReason,
     createUsageStats,
     GenerationType,
     staticGenerate,
@@ -37,6 +38,7 @@ function createResponse(chunk: FinishChunk, modelName: string) {
 
     const choice = ChatCompletionRespChoice.parse({
         message: message,
+        finish_reason: convertFinishReason(chunk),
     });
 
     const usage = createUsageStats(chunk);

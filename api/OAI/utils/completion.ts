@@ -1,6 +1,7 @@
 import { SSEStreamingApi } from "hono/streaming";
 
 import {
+    convertFinishReason,
     createUsageStats,
     GenerationType,
     staticGenerate,
@@ -17,8 +18,12 @@ import {
 } from "../types/completions.ts";
 
 function createResponse(chunk: GenerationChunk, modelName: string) {
+    const finishReason = chunk.kind === "finish"
+        ? convertFinishReason(chunk)
+        : undefined;
     const choice = CompletionRespChoice.parse({
         text: chunk.text,
+        finish_reason: finishReason,
     });
 
     const usage = chunk.kind === "finish" ? createUsageStats(chunk) : undefined;
