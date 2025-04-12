@@ -6,8 +6,7 @@
 int processor_submit_work(
     Processor* processor,
     const char* prompt,
-    llama_sampler* sampler,
-    ReadbackBuffer* readback_buffer,
+    SharedResourceBundle* resource_bundle,
     const int max_tokens,
     const int min_tokens,
     const uint32_t max_slot_n_ctx,
@@ -22,7 +21,7 @@ int processor_submit_work(
 
     const std::string prompt_as_string(prompt);
     const InferenceArgs args(
-        sampler,
+        resource_bundle,
         max_tokens,
         min_tokens,
         max_slot_n_ctx,
@@ -38,8 +37,7 @@ int processor_submit_work(
 
     return processor->submit_work(
         prompt_as_string,
-        args,
-        readback_buffer);
+        args);
 }
 
 bool processor_cancel_work(Processor* processor, const int request_id_to_cancel) {
@@ -52,7 +50,6 @@ Processor* processor_make(llama_model* model, llama_context* ctx, const int num_
 
 void processor_free(const Processor* processor) {
     delete processor;
-    processor = nullptr;
 }
 
 llama_model* model_load(
@@ -147,7 +144,6 @@ llama_context* ctx_make(
     ctx_params.flash_attn = flash_attn;
 
     ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
-
     const float freqBaseTrain = model_get_freq_base(model);
 
     // Yarn, allegedly ext_factor -1 to default to model cfg, but it looks sussy.
@@ -155,7 +151,7 @@ llama_context* ctx_make(
     if (use_yarn) {
         ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_YARN;
         ctx_params.yarn_ext_factor = -1;
-    } else if (rope_freq_base >= freqBaseTrain) {
+    } else if (rope_freq_base > freqBaseTrain) {
         ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_LINEAR;
         ctx_params.rope_freq_base = rope_freq_base;
         ctx_params.rope_freq_scale = 0;
@@ -251,3 +247,4 @@ void endpoint_free_string(const char* str) {
 void endpoint_free_tokens(const int32_t* tokens) {
     delete[] tokens;
 }
+

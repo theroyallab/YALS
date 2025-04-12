@@ -4,11 +4,13 @@
 #include "llama.h"
 
 #ifdef __cplusplus
+
 extern "C" {
 #endif
 
     typedef struct Processor Processor;
     typedef struct ReadbackBuffer ReadbackBuffer;
+    typedef struct SharedResourceBundle SharedResourceBundle;
 
     // ~~~ Lcpp Model ~~~
 
@@ -34,18 +36,17 @@ extern "C" {
     int processor_submit_work(
         Processor* processor,
         const char* prompt,
-        llama_sampler* sampler,
-        ReadbackBuffer* readback_buffer,
-        int max_tokens,
-        int min_tokens,
-        uint32_t max_slot_n_ctx,
-        unsigned seed,
+        SharedResourceBundle* resource_bundle,
+        const int max_tokens,
+        const int min_tokens,
+        const uint32_t max_slot_n_ctx,
+        const unsigned seed,
         const char** rewind_strings,
-        unsigned num_rewind_strings,
+        const unsigned num_rewind_strings,
         const char** stopping_strings,
-        unsigned num_stopping_strings,
+        const unsigned num_stopping_strings,
         const int32_t* stopping_tokens,
-        unsigned num_stopping_tokens,
+        const unsigned num_stopping_tokens,
         const char* grammar);
 
     bool processor_cancel_work(
@@ -127,9 +128,6 @@ extern "C" {
 
     // ~~~ Readback Buffer ~~~
 
-    // LEAKABLE! Ensure you use readback_annihilate to clean up.
-    ReadbackBuffer* readback_create_buffer();
-
     bool readback_is_buffer_finished(
         ReadbackBuffer* buffer);
 
@@ -143,19 +141,10 @@ extern "C" {
     char* readback_read_status(
         ReadbackBuffer* buffer);
 
-    void readback_reset(
-        ReadbackBuffer* buffer);
-
     void readback_annihilate(
         ReadbackBuffer* buffer);
 
     // ~~~ Samplers ~~~
-
-    // LEAKABLE! Ensure you use sampler_free to clean up.
-    llama_sampler* sampler_make();
-
-    void sampler_free(
-       llama_sampler* sampler);
 
     llama_sampler* sampler_dist(
        llama_sampler* chain,
@@ -256,6 +245,14 @@ extern "C" {
         const llama_model* model,
         const char* grammar_kind,
         const char* grammar_data);
+
+    // ~~~ Shared Resource Bundle ~~~
+
+    //Leakable! Shared PTR behaviour, use release to free.
+    SharedResourceBundle* resource_bundle_make();
+
+    void resource_bundle_release(
+        SharedResourceBundle* bundle);
 
 #ifdef __cplusplus
 }

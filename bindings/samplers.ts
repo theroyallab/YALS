@@ -1,4 +1,5 @@
 import { lib } from "./lib.ts";
+import { SharedResourceBundle } from "@/bindings/sharedResources.ts";
 
 export interface LogitBias {
     token: number;
@@ -9,8 +10,8 @@ export class SamplerBuilder {
     private sampler: Deno.PointerValue;
     private readonly model: Deno.PointerValue;
 
-    constructor(model: Deno.PointerValue) {
-        this.sampler = lib.symbols.sampler_make();
+    constructor(model: Deno.PointerValue, resourceBundle: SharedResourceBundle) {
+        this.sampler = resourceBundle.samplerPtr;
         if (!this.sampler) {
             throw new Error("Failed to create sampler");
         }
@@ -329,15 +330,5 @@ export class SamplerBuilder {
      */
     build(): Deno.PointerValue {
         return this.sampler;
-    }
-
-    /**
-     * Frees
-     */
-    free() {
-        if (this.sampler) {
-            lib.symbols.sampler_free(this.sampler);
-            this.sampler = null;
-        }
     }
 }

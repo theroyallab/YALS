@@ -1,7 +1,9 @@
 #include <iostream>
 #include "common.h"
 #include "c_library.h"
+#include "json.hpp"
 #include "llama.h"
+#include "shared_resource_bundle.hpp"
 
 int main() {
     const auto idk = new float(0.0);
@@ -20,13 +22,18 @@ int main() {
 
     std::cout << "Model and context loaded successfully" << std::endl;
 
-    auto sampler = sampler_make();
-    sampler = sampler_temp(sampler, .5);
-    sampler = sampler_dist(sampler, 1337);
+    SharedResourceBundle* bundle = resource_bundle_make();
+    auto readback_buffer = bundle->readback_buffer;
 
-    const auto processor = processor_make(model, ctx, 4);
+    auto sampler = bundle->sampler;
+    sampler_temp(sampler, .5);
+    sampler_dist(sampler, 1337);
 
-    const auto readback_buffer = readback_create_buffer();
+    std::cout << "Porc s" << std::endl;
+
+    Processor *processor = processor_make(model, ctx, 1);
+
+    std::cout << "Porc up" << std::endl;
 
     const auto prompt = R"(<|im_start|>system
 Respond with *actions* *words* *thoughts* in a json format, with
@@ -42,31 +49,14 @@ Hi how are you?
 <|im_start|>assistant
 )";
 
-    auto lark_grammar = R"(
-// Define the start rule
-start: json_string
-
-// The exact JSON string with fixed format
-json_string: "{\n    \"action\" : [\"" ACTION_CONTENT "\"],\n    \"mood\" : \"" EMOTION "\",\n    \"magazine capacity\" : \"" CAPACITY_CONTENT "\"\n}"
-
-// Content restrictions
-ACTION_CONTENT: /[a-zA-Z0-9 ,]{1,15}/
-CAPACITY_CONTENT: /[0-9]+( rounds| bullets| shots)?/
-EMOTION: "happy" | "sad" | "angry" | "excited" | "bored" | "anxious" | "calm" | "confused"
-       | "curious" | "depressed" | "ecstatic" | "fearful" | "grateful" | "hopeful"
-       | "irritated" | "jealous" | "peaceful" | "proud" | "surprised" | "tired"
-)";
-
-    const char* seq[] = {"*"};
-
+    std::cout << "Inference" << std::endl;
     processor_submit_work(
         processor,
         prompt,
-        sampler,
-        readback_buffer,
+        bundle,
         100,
         0,
-        500000,
+        1024,
         1337,
         nullptr,
         0,
@@ -74,7 +64,7 @@ EMOTION: "happy" | "sad" | "angry" | "excited" | "bored" | "anxious" | "calm" | 
         0,
         nullptr,
         0,
-        lark_grammar);
+        nullptr);
 
     std::cout << "Starting model:" << std::endl;
     while (!readback_is_buffer_finished(readback_buffer)) {
@@ -88,6 +78,8 @@ EMOTION: "happy" | "sad" | "angry" | "excited" | "bored" | "anxious" | "calm" | 
 
     const char* status = readback_read_status(readback_buffer);
     std::cout << status << std::endl;
+
+    resource_bundle_release(bundle);
 
     return 0;
 }

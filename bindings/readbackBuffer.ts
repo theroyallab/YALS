@@ -9,9 +9,9 @@ import { FinishChunk } from "@/bindings/types.ts";
  * from the LLM generation process.
  */
 export class ReadbackBuffer {
-    public rawPtr: Deno.PointerValue;
-    constructor() {
-        this.rawPtr = lib.symbols.readback_create_buffer();
+    private rawPtr: Deno.PointerValue;
+    constructor(readbackPtr: Deno.PointerValue) {
+      this.rawPtr = readbackPtr;
     }
 
     async *read() {
@@ -69,10 +69,5 @@ export class ReadbackBuffer {
             logger.error("Failed to parse status JSON:", e);
             return null;
         }
-    }
-
-    free() {
-        lib.symbols.readback_annihilate(this.rawPtr);
-        this.rawPtr = null;
     }
 }

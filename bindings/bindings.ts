@@ -14,6 +14,7 @@ import { SamplerBuilder } from "./samplers.ts";
 import { FinishChunk, GenerationChunk, ReadbackFinishReason } from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
 import { MaybePromise } from "@/types/utils.ts";
+import { SharedResourceBundle } from "@/bindings/sharedResources.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -460,8 +461,7 @@ export class Model {
             );
         }
 
-        const readbackBuffer = new ReadbackBuffer();
-        const samplerBuilder = new SamplerBuilder(this.model);
+        const sharedResourceBundle = new SharedResourceBundle();
 
         using _ = defer(() => {
             // Log generation params to console
@@ -470,11 +470,7 @@ export class Model {
             // Remove ID from active jobs
             this.activeJobIds.delete(requestId);
 
-            // Free readback buffer and sampler builder
-            readbackBuffer.free();
-
-            //TODO:: Leaking intentionally because race.
-            //samplerBuilder.free();
+            sharedResourceBundle.close();
         });
 
         // Append the Job ID first
@@ -519,6 +515,7 @@ export class Model {
             logitBias.push(...eogLogitBias);
         }
 
+        const samplerBuilder = new SamplerBuilder(this.model, sharedResourceBundle);
         samplerBuilder.logitBias(logitBias);
 
         samplerBuilder.penalties(
@@ -610,11 +607,10 @@ export class Model {
         // // Convert the string to a null-terminated buffer
         // const grammarBuffer = new TextEncoder().encode(larkGrammar + "\0");
 
-        const jobId = await lib.symbols.processor_submit_work(
+        const jobId = lib.symbols.processor_submit_work(
             this.processor,
             promptPtr,
-            sampler,
-            readbackBuffer.rawPtr,
+            sharedResourceBundle.rawPtr,
             params.max_tokens,
             params.min_tokens, // min_tokens
             this.maxSeqLen,
@@ -629,7 +625,7 @@ export class Model {
         );
 
         // Add the new job to active jobs for cancellation if needed
-        const job = new Job(jobId, readbackBuffer, this.processor);
+        const job = new Job(jobId, sharedResourceBundle.readbackBuffer, this.processor);
         this.activeJobIds.set(requestId, job);
 
         // Read from the read buffer

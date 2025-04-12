@@ -12,9 +12,11 @@
  *  Automatic conversion from c-style null-terminated string arrays with length and token arrays with count to vectors
  */
 
+struct SharedResourceBundle;
+
 class InferenceArgs {
 public:
-    llama_sampler* sampler;
+    SharedResourceBundle* resource_bundle;
     int max_tokens_to_gen;
     int min_tokens_to_gen;
     uint32_t max_slot_n_ctx;
@@ -24,12 +26,12 @@ public:
     std::vector<int32_t> stopping_tokens;
     const char* grammar;
 
-    InferenceArgs(): sampler(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0), max_slot_n_ctx(std::numeric_limits<uint32_t>::max()), seed(0),
+    InferenceArgs(): resource_bundle(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0), max_slot_n_ctx(std::numeric_limits<uint32_t>::max()), seed(0),
                      grammar(nullptr) {
     };
 
     explicit InferenceArgs(
-        llama_sampler* sampler,
+        SharedResourceBundle* resource_bundle,
         const int max_tokens = 50,
         const int min_tokens = 10,
         const uint32_t max_slot_n_ctx = std::numeric_limits<uint32_t>::max(),
@@ -42,7 +44,7 @@ public:
         const unsigned num_stopping_tokens = 0,
         const char* grammar = nullptr)
 
-    :   sampler(sampler),
+    :   resource_bundle(resource_bundle),
         max_tokens_to_gen(max_tokens),
         min_tokens_to_gen(min_tokens),
         seed(seed),
