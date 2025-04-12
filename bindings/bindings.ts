@@ -13,6 +13,7 @@ import { ReadbackBuffer } from "./readbackBuffer.ts";
 import { SamplerBuilder } from "./samplers.ts";
 import { FinishChunk, GenerationChunk, ReadbackFinishReason } from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
+import { MaybePromise } from "@/types/utils.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -92,8 +93,8 @@ class Tokenizer {
         );
 
         // Always free the original pointer
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_tokens(tokensPtr);
+        using _ = defer(() => {
+            lib.symbols.endpoint_free_tokens(tokensPtr);
         });
 
         if (tokensPtr === null) {
@@ -139,8 +140,8 @@ class Tokenizer {
         );
 
         // Always free the original pointer
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_string(textPtr);
+        using _ = defer(() => {
+            lib.symbols.endpoint_free_string(textPtr);
         });
 
         if (textPtr === null) {
@@ -266,21 +267,27 @@ export class Model {
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = new Tokenizer(model);
-        const findTemplateFunctions = [
-            Model.getChatTemplate(model),
+        const findTemplateFunctions: MaybePromise<PromptTemplate>[] = [
+            () => Model.getChatTemplate(model),
         ];
 
         let promptTemplate: PromptTemplate | undefined = undefined;
         if (params.prompt_template) {
             findTemplateFunctions.unshift(
-                PromptTemplate.fromFile(`templates/${params.prompt_template}`),
+                () =>
+                    PromptTemplate.fromFile(
+                        `templates/${params.prompt_template}`,
+                    ),
             );
         }
 
         for (const templateFunc of findTemplateFunctions) {
             try {
                 if (!promptTemplate) {
-                    promptTemplate = await templateFunc;
+                    const result = templateFunc();
+                    promptTemplate = result instanceof Promise
+                        ? await result
+                        : result;
                 }
             } catch (error) {
                 if (error instanceof Error) {
@@ -357,9 +364,9 @@ export class Model {
         // Wait for jobs to complete
         await this.waitForJobs(skipWait);
 
-        await lib.symbols.model_free(this.model);
-        await lib.symbols.ctx_free(this.context);
-        await lib.symbols.processor_free(this.processor);
+        lib.symbols.model_free(this.model);
+        lib.symbols.ctx_free(this.context);
+        lib.symbols.processor_free(this.processor);
     }
 
     async generate(
@@ -454,22 +461,23 @@ export class Model {
         }
 
         const readbackBuffer = new ReadbackBuffer();
+        const samplerBuilder = new SamplerBuilder(this.model);
 
-        await using _ = asyncDefer(async () => {
+        using _ = defer(() => {
             // Log generation params to console
             logGenParams(requestId, params);
 
             // Remove ID from active jobs
             this.activeJobIds.delete(requestId);
 
-            // Free readback buffer
-            await readbackBuffer.free();
+            // Free readback buffer and sampler builder
+            readbackBuffer.free();
+            samplerBuilder.free();
         });
 
         // Append the Job ID first
         this.activeJobIds.set(requestId, undefined);
 
-        const samplerBuilder = new SamplerBuilder(this.model);
         const seed = params.seed && params.seed > 0
             ? params.seed
             : Math.floor(Math.random() * (0xFFFFFFFF + 1));
@@ -640,11 +648,11 @@ export class Model {
         }
     }
 
-    static async getChatTemplate(model: Deno.PointerValue) {
+    static getChatTemplate(model: Deno.PointerValue) {
         const templatePtr = lib.symbols.model_chat_template(model);
 
-        await using _ = asyncDefer(async () => {
-            await lib.symbols.endpoint_free_string(templatePtr);
+        using _ = defer(() => {
+            lib.symbols.endpoint_free_string(templatePtr);
         });
 
         if (templatePtr === null) {

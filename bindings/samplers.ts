@@ -334,9 +334,9 @@ export class SamplerBuilder {
     /**
      * Frees
      */
-    async free() {
+    free() {
         if (this.sampler) {
-            await lib.symbols.sampler_free(this.sampler);
+            lib.symbols.sampler_free(this.sampler);
             this.sampler = null;
         }
     }

@@ -19,7 +19,6 @@ export default {
     model_free: {
         parameters: ["pointer"], // model: llama_model*
         result: "void",
-        nonblocking: true,
     },
 
     model_chat_template: {
@@ -73,7 +72,6 @@ export default {
             "pointer", // processor: Processor*
         ],
         result: "void",
-        nonblocking: true,
     },
 
     // Endpoint functions
@@ -104,13 +102,11 @@ export default {
     endpoint_free_string: {
         parameters: ["pointer"], // str: const char*
         result: "void",
-        nonblocking: true,
     },
 
     endpoint_free_tokens: {
         parameters: ["pointer"], // tokens: const int32_t*
         result: "void",
-        nonblocking: true,
     },
 
     // Vocab functions
@@ -163,7 +159,6 @@ export default {
     ctx_free: {
         parameters: ["pointer"], // ctx: llama_context*
         result: "void",
-        nonblocking: true,
     },
 
     ctx_clear_kv: {
@@ -206,7 +201,6 @@ export default {
     readback_annihilate: {
         parameters: ["pointer"], // buffer: ReadbackBuffer*
         result: "void",
-        nonblocking: true,
     },
 
     // Sampler functions
@@ -218,7 +212,6 @@ export default {
     sampler_free: {
         parameters: ["pointer"], // sampler: llama_sampler*
         result: "void",
-        nonblocking: true,
     },
 
     sampler_dist: {

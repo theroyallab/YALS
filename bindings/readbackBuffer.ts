@@ -71,8 +71,8 @@ export class ReadbackBuffer {
         }
     }
 
-    async free() {
-        await lib.symbols.readback_annihilate(this.rawPtr);
+    free() {
+        lib.symbols.readback_annihilate(this.rawPtr);
         this.rawPtr = null;
     }
 }
