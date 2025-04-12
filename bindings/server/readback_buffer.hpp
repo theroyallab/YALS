@@ -5,7 +5,6 @@
 #include <llama.h>
 #include <cstring>
 #include <mutex>
-#include <iostream>
 
 /**
  * Owned buffer for live token and character streaming.
@@ -24,7 +23,6 @@ struct ReadbackBuffer {
 
 // C API
 bool readback_is_buffer_finished(ReadbackBuffer* buffer) {
-    std::cerr << "\n\n Buffer finished" << std::endl;
     if (!buffer) return true;
     std::lock_guard lock(buffer->readback_mutex);
     const auto status = buffer->buffer_finished_write && buffer->last_readback_index >= buffer->ids->size();
@@ -38,7 +36,6 @@ ReadbackBuffer* readback_create_buffer() {
 
 // C API
 bool readback_read_next(ReadbackBuffer* buffer, char** outChar, llama_token* outToken) {
-    std::cerr << "\n\n Read next" << std::endl;
     if (!buffer || buffer->last_readback_index >= buffer->ids->size() || buffer->last_readback_index >= buffer->data->size()) {
         return false;
     }
@@ -51,7 +48,6 @@ bool readback_read_next(ReadbackBuffer* buffer, char** outChar, llama_token* out
 
 // C API
 char* readback_read_status(ReadbackBuffer* buffer) {
-    std::cerr << "\n\n Buffer Status" << std::endl;
     if (!buffer) return nullptr;
     std::lock_guard lock(buffer->readback_mutex);
     return buffer->status_buffer;
@@ -59,7 +55,6 @@ char* readback_read_status(ReadbackBuffer* buffer) {
 
 // C API
 void readback_reset(ReadbackBuffer* buffer) {
-    std::cerr << "\n\n Buffer reset" << std::endl;
     if (!buffer || !buffer->data || !buffer->ids)
         return;
 
@@ -83,7 +78,6 @@ void readback_reset(ReadbackBuffer* buffer) {
 
 // C API
 void readback_annihilate(ReadbackBuffer* buffer) {
-    std::cerr << "\n\n Buffer annih" << std::endl;
     if (!buffer || !buffer->data || !buffer->ids)
         return;
 
@@ -107,7 +101,6 @@ void readback_write_to_buffer(ReadbackBuffer* buffer, const std::string& data, c
 
     char* copy = strdup(data.c_str());
 
-    std::cerr << "\n\n Buffer write" << std::endl;
     std::lock_guard lock(buffer->readback_mutex);
     buffer->data->push_back(copy);
     buffer->ids->push_back(token);
@@ -120,7 +113,6 @@ void readback_finish(ReadbackBuffer* buffer, const std::string& status) {
 
     char* copy = strdup(status.c_str());
 
-    std::cerr << "\n\n Buffer finish" << std::endl;
     std::lock_guard lock(buffer->readback_mutex);
     buffer->buffer_finished_write = true;
     buffer->status_buffer = copy;
