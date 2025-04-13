@@ -565,8 +565,6 @@ export class Model {
 
         samplerBuilder.dist(seed);
 
-        const sampler = samplerBuilder.build();
-
         const promptPtr = new TextEncoder().encode(prompt + "\0");
 
         // These are numbers and strings, TS doesn't understand for some reason

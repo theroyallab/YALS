@@ -165,6 +165,9 @@ class Processor {
         best_slot->request_id = id;
         best_slot->prompt_tokens = prompt_tokens;
 
+        if (best_slot->resource_bundle) {
+            resource_bundle_release(best_slot->resource_bundle);
+        }
         best_slot->resource_bundle = resource_bundle_ref_acquire(inference_args.resource_bundle);
 
         best_slot->slot_start_time = 1e-3 * ggml_time_us();

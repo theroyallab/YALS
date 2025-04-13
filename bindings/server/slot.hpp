@@ -7,8 +7,6 @@
 #include "multisampler.hpp"
 #include "tokenization.hpp"
 #include "sequence_stream.hpp"
-#include "presampler.hpp"
-#include "readback_buffer.hpp"
 #include "shared_resource_bundle.hpp"
 
 /*
@@ -133,8 +131,6 @@ struct Slot {
     void end(const int new_id, llama_context* ctx) {
         clear();
         job_index = new_id;
-        resource_bundle_release(resource_bundle);
-        resource_bundle = nullptr;
     }
 };
 
