@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <optional>
 #include <string_view>
 #include "llama.h"
 #include "common.h"

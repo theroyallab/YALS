@@ -1,4 +1,3 @@
-import { Mutex } from "@core/asyncutil";
 import * as Path from "@std/path";
 import { delay } from "@std/async/delay";
 
@@ -6,14 +5,14 @@ import { ModelConfig } from "@/common/configModels.ts";
 import { logGenParams, logger, logPrompt } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { PromptTemplate } from "@/common/templating.ts";
-import { asyncDefer, defer } from "@/common/utils.ts";
+import { defer } from "@/common/utils.ts";
+import { MaybePromise } from "@/types/utils.ts";
+import { GenerationResources } from "./generationResources.ts";
 import { lib } from "./lib.ts";
 import { Job } from "./job.ts";
-import { ReadbackBuffer } from "./readbackBuffer.ts";
 import { SamplerBuilder } from "./samplers.ts";
 import { FinishChunk, GenerationChunk, ReadbackFinishReason } from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
-import { MaybePromise } from "@/types/utils.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -35,12 +34,12 @@ interface Token {
 }
 
 class Tokenizer {
+    // Internal pointers
+    private model: Deno.PointerValue;
+
     bosToken?: Token;
     eosToken?: Token;
     eotToken?: Token;
-
-    // Private references
-    private model: Deno.PointerValue;
 
     constructor(model: Deno.PointerValue) {
         const bosTokenId = lib.symbols.model_vocab_bos(model);
@@ -157,20 +156,20 @@ class Tokenizer {
 }
 
 export class Model {
-    model: Deno.PointerValue;
-    context: Deno.PointerValue;
-    processor: Deno.PointerValue;
-    path: Path.ParsedPath;
-    tokenizer: Tokenizer;
-    promptTemplate?: PromptTemplate;
-    activeJobIds: Map<string, Job | undefined> = new Map();
+    // Internal pointers
+    private model: Deno.PointerValue;
+    private context: Deno.PointerValue;
+    private processor: Deno.PointerValue;
 
     // Concurrency
-    closing: boolean = false;
-    generationLock: Mutex = new Mutex();
+    private activeJobIds: Map<string, Job | undefined> = new Map();
+    private closing: boolean = false;
 
     // Extra model info
     maxSeqLen: number;
+    path: Path.ParsedPath;
+    tokenizer: Tokenizer;
+    promptTemplate?: PromptTemplate;
 
     private constructor(
         model: Deno.PointerValue,
@@ -460,8 +459,7 @@ export class Model {
             );
         }
 
-        const readbackBuffer = new ReadbackBuffer();
-        const samplerBuilder = new SamplerBuilder(this.model);
+        const genResources = new GenerationResources();
 
         using _ = defer(() => {
             // Log generation params to console
@@ -470,9 +468,8 @@ export class Model {
             // Remove ID from active jobs
             this.activeJobIds.delete(requestId);
 
-            // Free readback buffer and sampler builder
-            readbackBuffer.free();
-            samplerBuilder.free();
+            // Mark shared generation resources for freeing
+            genResources.close();
         });
 
         // Append the Job ID first
@@ -517,6 +514,10 @@ export class Model {
             logitBias.push(...eogLogitBias);
         }
 
+        const samplerBuilder = new SamplerBuilder(
+            this.model,
+            genResources,
+        );
         samplerBuilder.logitBias(logitBias);
 
         samplerBuilder.penalties(
@@ -566,8 +567,6 @@ export class Model {
 
         samplerBuilder.dist(seed);
 
-        const sampler = samplerBuilder.build();
-
         const promptPtr = new TextEncoder().encode(prompt + "\0");
 
         // These are numbers and strings, TS doesn't understand for some reason
@@ -608,11 +607,10 @@ export class Model {
         // // Convert the string to a null-terminated buffer
         // const grammarBuffer = new TextEncoder().encode(larkGrammar + "\0");
 
-        const jobId = await lib.symbols.processor_submit_work(
+        const jobId = lib.symbols.processor_submit_work(
             this.processor,
             promptPtr,
-            sampler,
-            readbackBuffer.rawPtr,
+            genResources.rawPtr,
             params.max_tokens,
             params.min_tokens, // min_tokens
             this.maxSeqLen,
@@ -627,7 +625,11 @@ export class Model {
         );
 
         // Add the new job to active jobs for cancellation if needed
-        const job = new Job(jobId, readbackBuffer, this.processor);
+        const job = new Job(
+            jobId,
+            genResources.readbackBuffer,
+            this.processor,
+        );
         this.activeJobIds.set(requestId, job);
 
         // Read from the read buffer

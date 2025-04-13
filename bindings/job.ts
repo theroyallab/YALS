@@ -3,12 +3,12 @@ import { ReadbackBuffer } from "./readbackBuffer.ts";
 import { GenerationChunk } from "./types.ts";
 
 export class Job {
-    isComplete = false;
-    id: number;
-
     // Private references
     private readbackBuffer: ReadbackBuffer;
     private processor: Deno.PointerValue;
+
+    isComplete = false;
+    id: number;
 
     constructor(
         id: number,

@@ -19,6 +19,7 @@ struct ReadbackBuffer {
     std::vector<llama_token>* ids = new std::vector<llama_token>();
 
     std::mutex readback_mutex;
+    std::atomic<bool> being_destroyed {false};
 };
 
 // C API
@@ -54,35 +55,13 @@ char* readback_read_status(ReadbackBuffer* buffer) {
 }
 
 // C API
-void readback_reset(ReadbackBuffer* buffer) {
-    if (!buffer || !buffer->data || !buffer->ids)
-        return;
-
-    std::lock_guard lock(buffer->readback_mutex);
-
-    for (char* str : *(buffer->data)) {
-        free(str);  // memory was created via strdup which is a malloc.
-    }
-
-    buffer->data->clear();
-    buffer->ids->clear();
-
-    if (buffer->status_buffer != nullptr) {
-        free(buffer->status_buffer);
-        buffer->status_buffer = nullptr;
-    }
-
-    buffer->last_readback_index = 0;
-    buffer->buffer_finished_write = false;
-}
-
-// C API
 void readback_annihilate(ReadbackBuffer* buffer) {
     if (!buffer || !buffer->data || !buffer->ids)
         return;
 
     {
         std::lock_guard lock(buffer->readback_mutex);
+        buffer->being_destroyed = true;
         for (char* str : *(buffer->data)) {
             free(str);  // memory was created via strdup which is a malloc.
         }
@@ -96,24 +75,28 @@ void readback_annihilate(ReadbackBuffer* buffer) {
 
 // Internal -- MALLOC copy -- Free all data buffers via free()
 void readback_write_to_buffer(ReadbackBuffer* buffer, const std::string& data, const llama_token token) {
-    if (!buffer || !buffer->data || !buffer->ids)
+    if (!buffer || buffer->being_destroyed)
+        return;
+
+    std::lock_guard lock(buffer->readback_mutex);
+    if (!buffer || buffer->being_destroyed)
         return;
 
     char* copy = strdup(data.c_str());
-
-    std::lock_guard lock(buffer->readback_mutex);
     buffer->data->push_back(copy);
     buffer->ids->push_back(token);
 }
 
 // Internal -- MALLOC copy -- Free status buffer via free()
 void readback_finish(ReadbackBuffer* buffer, const std::string& status) {
-    if (!buffer || !buffer->data || !buffer->ids)
+    if (!buffer || buffer->being_destroyed)
+        return;
+
+    std::lock_guard lock(buffer->readback_mutex);
+    if (!buffer || buffer->being_destroyed)
         return;
 
     char* copy = strdup(status.c_str());
-
-    std::lock_guard lock(buffer->readback_mutex);
     buffer->buffer_finished_write = true;
     buffer->status_buffer = copy;
 }

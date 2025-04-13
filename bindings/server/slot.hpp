@@ -7,8 +7,7 @@
 #include "multisampler.hpp"
 #include "tokenization.hpp"
 #include "sequence_stream.hpp"
-#include "presampler.hpp"
-#include "readback_buffer.hpp"
+#include "generation_resources.hpp"
 
 /*
  *  Slots are essentially just a data container holding the current inference state for a single complete inference.
@@ -22,6 +21,7 @@ struct Slot {
         IDLE,
         PROMPT,
         GENERATING,
+        SUSPENDED,
     };
 
     struct SlotSnapshot {
@@ -82,7 +82,8 @@ struct Slot {
     SequenceStream* sequence_stream;
     MultistageSampler multi_sampler;
     SlotSnapshot rewind_snapshot;
-    ReadbackBuffer* readback_buffer{nullptr};
+
+    GenerationResources* gen_resources{nullptr};
     class RuleStream* rule_stream{nullptr};
 
     explicit Slot(const llama_model* model, llama_context* ctx): multi_sampler(model) {
@@ -93,9 +94,10 @@ struct Slot {
     ~Slot() {
         delete detokenizer;
         delete sequence_stream;
+        generation_resources_release(gen_resources);
     }
 
-    [[nodiscard]] bool is_processing() const { return state != State::IDLE; }
+    [[nodiscard]] bool is_processing() const { return state == State::PROMPT || state == State::GENERATING; }
     [[nodiscard]] bool is_processing_prompt() const { return state == State::PROMPT; }
     [[nodiscard]] bool is_generating() const { return state == State::GENERATING; }
 
@@ -112,6 +114,18 @@ struct Slot {
         generating_end_time = 0.0;
         generated_text.clear();
         detokenizer->reset();
+    }
+
+    State previous_state{State::IDLE};
+    void suspend() {
+        if (state == State::SUSPENDED) return;
+        previous_state = state;
+        state = State::SUSPENDED;
+    }
+
+    void resume() {
+        if  (state != State::SUSPENDED) return;
+        state = previous_state;
     }
 
     void end(const int new_id, llama_context* ctx) {

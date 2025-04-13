@@ -31,11 +31,10 @@ export default {
         parameters: [
             "pointer", // processor: Processor*
             "buffer", // prompt: const char*
-            "pointer", // sampler: llama_sampler*
-            "pointer", // readback_buffer: ReadbackBuffer*
+            "pointer", // gen_resources: GenerationResources*
             "i32", // max_tokens: int
             "i32", // min_tokens: int
-            "u32", //max_slot_n_ctx: unsigned
+            "u32", // max_slot_n_ctx: unsigned
             "u32", // seed: unsigned
             "buffer", // rewind_strings: const char**
             "u32", // num_rewind_strings: unsigned
@@ -46,7 +45,6 @@ export default {
             "buffer", // grammar const char*
         ],
         result: "i32", // int
-        nonblocking: true,
     },
 
     processor_cancel_work: {
@@ -64,7 +62,6 @@ export default {
             "i32", // num_processor_slots: int
         ],
         result: "pointer", // Processor*
-        nonblocking: true,
     },
 
     processor_free: {
@@ -166,12 +163,6 @@ export default {
         result: "void",
     },
 
-    // Readback Buffer functions
-    readback_create_buffer: {
-        parameters: [],
-        result: "pointer", // ReadbackBuffer*
-    },
-
     readback_is_buffer_finished: {
         parameters: ["pointer"], // buffer: const ReadbackBuffer*
         result: "bool", // bool
@@ -191,27 +182,6 @@ export default {
         parameters: ["pointer"], // buffer: const ReadbackBuffer*
         result: "pointer", // char*
         nonblocking: true,
-    },
-
-    readback_reset: {
-        parameters: ["pointer"], // buffer: ReadbackBuffer*
-        result: "void",
-    },
-
-    readback_annihilate: {
-        parameters: ["pointer"], // buffer: ReadbackBuffer*
-        result: "void",
-    },
-
-    // Sampler functions
-    sampler_make: {
-        parameters: [],
-        result: "pointer", // llama_sampler*
-    },
-
-    sampler_free: {
-        parameters: ["pointer"], // sampler: llama_sampler*
-        result: "void",
     },
 
     sampler_dist: {
@@ -372,5 +342,18 @@ export default {
             "i32", // m: int
         ],
         result: "pointer", // llama_sampler*
+    },
+
+    // Generation resources functions
+    generation_resources_make: {
+        parameters: [],
+        result: "pointer",
+    },
+
+    generation_resources_release: {
+        parameters: [
+            "pointer", // GenerationResources* resources
+        ],
+        result: "void",
     },
 } as const;
