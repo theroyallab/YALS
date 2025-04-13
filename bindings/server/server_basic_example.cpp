@@ -1,5 +1,4 @@
 #include <iostream>
-#include "common.h"
 #include "c_library.h"
 #include "json.hpp"
 #include "llama.h"

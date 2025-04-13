@@ -7,8 +7,6 @@
 #include "sampling.h"
 #include <optional>
 
-#include <iostream>
-
 /*
  * Multisampler, since sampler chain doesn't work for grammar sampling.
  * It's otherwise just basically doing the same thing as sampler chain.
@@ -33,7 +31,6 @@ struct MultistageSampler {
     }
 
     std::optional<llama_token> sample(llama_context* ctx, const int index) {
-        std::cout << "SERVER:: Sampling." << std::endl;
         const float* logits = llama_get_logits_ith(ctx, index);
 
         if (candidates.size() < llama_vocab_n_tokens(vocab)) {

@@ -6,8 +6,6 @@
 #include <cstring>
 #include <mutex>
 
-#include <iostream>
-
 /**
  * Owned buffer for live token and character streaming.
  */
@@ -26,7 +24,6 @@ struct ReadbackBuffer {
 
 // C API
 bool readback_is_buffer_finished(ReadbackBuffer* buffer) {
-    std::cerr << "Server:: RB -- FIN." << std::endl;
     if (!buffer) return true;
     std::lock_guard lock(buffer->readback_mutex);
     const auto status = buffer->buffer_finished_write && buffer->last_readback_index >= buffer->ids->size();
@@ -40,7 +37,6 @@ ReadbackBuffer* readback_create_buffer() {
 
 // C API
 bool readback_read_next(ReadbackBuffer* buffer, char** outChar, llama_token* outToken) {
-    std::cerr << "Server:: RB -- READ." << std::endl;
     if (!buffer || buffer->last_readback_index >= buffer->ids->size() || buffer->last_readback_index >= buffer->data->size()) {
         return false;
     }
@@ -53,7 +49,6 @@ bool readback_read_next(ReadbackBuffer* buffer, char** outChar, llama_token* out
 
 // C API
 char* readback_read_status(ReadbackBuffer* buffer) {
-    std::cerr << "Server:: RB -- READ STAT." << std::endl;
     if (!buffer) return nullptr;
     std::lock_guard lock(buffer->readback_mutex);
     return buffer->status_buffer;
@@ -61,7 +56,6 @@ char* readback_read_status(ReadbackBuffer* buffer) {
 
 // C API
 void readback_annihilate(ReadbackBuffer* buffer) {
-    std::cerr << "Server:: RB -- ANNIH." << std::endl;
     if (!buffer || !buffer->data || !buffer->ids)
         return;
 
@@ -81,7 +75,6 @@ void readback_annihilate(ReadbackBuffer* buffer) {
 
 // Internal -- MALLOC copy -- Free all data buffers via free()
 void readback_write_to_buffer(ReadbackBuffer* buffer, const std::string& data, const llama_token token) {
-    std::cerr << "Server:: RB -- WRITE." << std::endl;
     if (!buffer || buffer->being_destroyed)
         return;
 
@@ -96,7 +89,6 @@ void readback_write_to_buffer(ReadbackBuffer* buffer, const std::string& data, c
 
 // Internal -- MALLOC copy -- Free status buffer via free()
 void readback_finish(ReadbackBuffer* buffer, const std::string& status) {
-    std::cerr << "Server:: RB -- FINISH." << std::endl;
     if (!buffer || buffer->being_destroyed)
         return;
 

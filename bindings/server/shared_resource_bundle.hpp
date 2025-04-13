@@ -4,7 +4,6 @@
 #include <atomic>
 #include "readback_buffer.hpp"
 #include "samplers.hpp"
-#include <iostream>
 
 /*
  * An atomic reference counted shared resource bundle for cooperative resources.
