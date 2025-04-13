@@ -1,4 +1,3 @@
-import { Mutex } from "@core/asyncutil";
 import * as Path from "@std/path";
 import { delay } from "@std/async/delay";
 
@@ -35,12 +34,12 @@ interface Token {
 }
 
 class Tokenizer {
+    // Internal pointers
+    private model: Deno.PointerValue;
+
     bosToken?: Token;
     eosToken?: Token;
     eotToken?: Token;
-
-    // Private references
-    private model: Deno.PointerValue;
 
     constructor(model: Deno.PointerValue) {
         const bosTokenId = lib.symbols.model_vocab_bos(model);
@@ -157,20 +156,20 @@ class Tokenizer {
 }
 
 export class Model {
-    model: Deno.PointerValue;
-    context: Deno.PointerValue;
-    processor: Deno.PointerValue;
-    path: Path.ParsedPath;
-    tokenizer: Tokenizer;
-    promptTemplate?: PromptTemplate;
-    activeJobIds: Map<string, Job | undefined> = new Map();
+    // Internal pointers
+    private model: Deno.PointerValue;
+    private context: Deno.PointerValue;
+    private processor: Deno.PointerValue;
 
     // Concurrency
-    closing: boolean = false;
-    generationLock: Mutex = new Mutex();
+    private activeJobIds: Map<string, Job | undefined> = new Map();
+    private closing: boolean = false;
 
     // Extra model info
     maxSeqLen: number;
+    path: Path.ParsedPath;
+    tokenizer: Tokenizer;
+    promptTemplate?: PromptTemplate;
 
     private constructor(
         model: Deno.PointerValue,
