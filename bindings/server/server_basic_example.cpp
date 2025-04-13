@@ -2,7 +2,7 @@
 #include "c_library.h"
 #include "json.hpp"
 #include "llama.h"
-#include "shared_resource_bundle.hpp"
+#include "generation_resources.hpp"
 
 int main() {
     const auto idk = new float(0.0);
@@ -21,10 +21,10 @@ int main() {
 
     std::cout << "Model and context loaded successfully" << std::endl;
 
-    SharedResourceBundle* bundle = resource_bundle_make();
-    auto readback_buffer = bundle->readback_buffer;
+    GenerationResources* gen_resources = generation_resources_make();
+    auto readback_buffer = gen_resources->readback_buffer;
 
-    auto sampler = bundle->sampler;
+    auto sampler = gen_resources->sampler;
     sampler_temp(sampler, .5);
     sampler_dist(sampler, 1337);
 
@@ -52,7 +52,7 @@ Hi how are you?
     processor_submit_work(
         processor,
         prompt,
-        bundle,
+        gen_resources,
         100,
         0,
         1024,
@@ -78,7 +78,7 @@ Hi how are you?
     const char* status = readback_read_status(readback_buffer);
     std::cout << status << std::endl;
 
-    resource_bundle_release(bundle);
+    generation_resources_release(gen_resources);
 
     return 0;
 }

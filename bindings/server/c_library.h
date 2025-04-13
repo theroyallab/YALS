@@ -10,7 +10,7 @@ extern "C" {
 
     typedef struct Processor Processor;
     typedef struct ReadbackBuffer ReadbackBuffer;
-    typedef struct SharedResourceBundle SharedResourceBundle;
+    typedef struct GenerationResources GenerationResources;
 
     // ~~~ Lcpp Model ~~~
 
@@ -36,7 +36,7 @@ extern "C" {
     int processor_submit_work(
         Processor* processor,
         const char* prompt,
-        SharedResourceBundle* resource_bundle,
+        GenerationResources* gen_resources,
         const int max_tokens,
         const int min_tokens,
         const uint32_t max_slot_n_ctx,
@@ -246,13 +246,13 @@ extern "C" {
         const char* grammar_kind,
         const char* grammar_data);
 
-    // ~~~ Shared Resource Bundle ~~~
+    // ~~~ Generation Resources ~~~
 
     //Leakable! Shared PTR behaviour, use release to free.
-    SharedResourceBundle* resource_bundle_make();
+    GenerationResources* generation_resources_make();
 
-    void resource_bundle_release(
-        SharedResourceBundle* bundle);
+    void generation_resources_release(
+        GenerationResources* resources);
 
 #ifdef __cplusplus
 }

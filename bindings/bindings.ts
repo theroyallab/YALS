@@ -8,10 +8,10 @@ import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 import { defer } from "@/common/utils.ts";
 import { MaybePromise } from "@/types/utils.ts";
+import { GenerationResources } from "./generationResources.ts";
 import { lib } from "./lib.ts";
 import { Job } from "./job.ts";
 import { SamplerBuilder } from "./samplers.ts";
-import { SharedResourceBundle } from "./sharedResources.ts";
 import { FinishChunk, GenerationChunk, ReadbackFinishReason } from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
 
@@ -460,7 +460,7 @@ export class Model {
             );
         }
 
-        const sharedResourceBundle = new SharedResourceBundle();
+        const genResources = new GenerationResources();
 
         using _ = defer(() => {
             // Log generation params to console
@@ -469,7 +469,8 @@ export class Model {
             // Remove ID from active jobs
             this.activeJobIds.delete(requestId);
 
-            sharedResourceBundle.close();
+            // Mark shared generation resources for freeing
+            genResources.close();
         });
 
         // Append the Job ID first
@@ -516,7 +517,7 @@ export class Model {
 
         const samplerBuilder = new SamplerBuilder(
             this.model,
-            sharedResourceBundle,
+            genResources,
         );
         samplerBuilder.logitBias(logitBias);
 
@@ -610,7 +611,7 @@ export class Model {
         const jobId = lib.symbols.processor_submit_work(
             this.processor,
             promptPtr,
-            sharedResourceBundle.rawPtr,
+            genResources.rawPtr,
             params.max_tokens,
             params.min_tokens, // min_tokens
             this.maxSeqLen,
@@ -627,7 +628,7 @@ export class Model {
         // Add the new job to active jobs for cancellation if needed
         const job = new Job(
             jobId,
-            sharedResourceBundle.readbackBuffer,
+            genResources.readbackBuffer,
             this.processor,
         );
         this.activeJobIds.set(requestId, job);

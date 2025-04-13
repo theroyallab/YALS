@@ -7,7 +7,7 @@
 #include "multisampler.hpp"
 #include "tokenization.hpp"
 #include "sequence_stream.hpp"
-#include "shared_resource_bundle.hpp"
+#include "generation_resources.hpp"
 
 /*
  *  Slots are essentially just a data container holding the current inference state for a single complete inference.
@@ -83,7 +83,7 @@ struct Slot {
     MultistageSampler multi_sampler;
     SlotSnapshot rewind_snapshot;
 
-    SharedResourceBundle* resource_bundle{nullptr};
+    GenerationResources* gen_resources{nullptr};
     class RuleStream* rule_stream{nullptr};
 
     explicit Slot(const llama_model* model, llama_context* ctx): multi_sampler(model) {
@@ -94,7 +94,7 @@ struct Slot {
     ~Slot() {
         delete detokenizer;
         delete sequence_stream;
-        resource_bundle_release(resource_bundle);
+        generation_resources_release(gen_resources);
     }
 
     [[nodiscard]] bool is_processing() const { return state == State::PROMPT || state == State::GENERATING; }

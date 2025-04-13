@@ -165,17 +165,17 @@ class Processor {
         best_slot->request_id = id;
         best_slot->prompt_tokens = prompt_tokens;
 
-        if (best_slot->resource_bundle) {
-            resource_bundle_release(best_slot->resource_bundle);
+        if (best_slot->gen_resources) {
+            generation_resources_release(best_slot->gen_resources);
         }
-        best_slot->resource_bundle = resource_bundle_ref_acquire(inference_args.resource_bundle);
+        best_slot->gen_resources = generation_resources_ref_acquire(inference_args.gen_resources);
 
         best_slot->slot_start_time = 1e-3 * ggml_time_us();
 
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
         best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
 
-        best_slot->multi_sampler.sampler = best_slot->resource_bundle->sampler;
+        best_slot->multi_sampler.sampler = best_slot->gen_resources->sampler;
         best_slot->n_ctx_max = inference_args.max_slot_n_ctx;
 
         // for (const auto& apply_rule : rules) {
@@ -273,7 +273,7 @@ class Processor {
 
         if (!is_complete) {
             if (!piece.empty()) {
-                readback_write_to_buffer(slot.resource_bundle->readback_buffer, piece, token);
+                readback_write_to_buffer(slot.gen_resources->readback_buffer, piece, token);
             }
             return !is_eos;
         }
@@ -285,12 +285,12 @@ class Processor {
         }
 
         if (yield_final && !final_piece.empty()) {
-            readback_write_to_buffer(slot.resource_bundle->readback_buffer, final_piece, token);
+            readback_write_to_buffer(slot.gen_resources->readback_buffer, final_piece, token);
         }
 
         slot.generating_end_time = 1e-3 * ggml_time_us();
         const auto status = make_json_status_string(slot, finish_reason, stop_token);
-        readback_finish(slot.resource_bundle->readback_buffer, status);
+        readback_finish(slot.gen_resources->readback_buffer, status);
         return false;
     }
 
@@ -340,7 +340,7 @@ class Processor {
                 for (auto& slot : slots) {
                     if (slot.i_batch >= 0 && slot.i_batch < batch.n_tokens) {
                         slot.generating_end_time = 1e-3 * ggml_time_us();
-                        readback_finish(slot.resource_bundle->readback_buffer, make_json_status_string(slot, "BatchDecode", ""));
+                        readback_finish(slot.gen_resources->readback_buffer, make_json_status_string(slot, "BatchDecode", ""));
                         slot.end(++current_job_index, ctx);
                     }
                 }
@@ -482,10 +482,10 @@ public:
         // Check all slots for the job just in case of a race.
         for (auto& slot : slots) {
             if (slot.request_id == request_id_to_cancel) {
-                if (slot.resource_bundle->readback_buffer) {
+                if (slot.gen_resources->readback_buffer) {
                     std::string last_token_piece = common_token_to_piece(ctx, slot.last_token, true);
                     slot.generating_end_time = 1e-3 * ggml_time_us();
-                    readback_finish(slot.resource_bundle->readback_buffer, make_json_status_string(slot, "Aborted", last_token_piece));
+                    readback_finish(slot.gen_resources->readback_buffer, make_json_status_string(slot, "Aborted", last_token_piece));
                 }
                 slot.end(++current_job_index, ctx);
                 found = true;

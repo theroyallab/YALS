@@ -6,7 +6,7 @@
 int processor_submit_work(
     Processor* processor,
     const char* prompt,
-    SharedResourceBundle* resource_bundle,
+    GenerationResources* gen_resources,
     const int max_tokens,
     const int min_tokens,
     const uint32_t max_slot_n_ctx,
@@ -21,7 +21,7 @@ int processor_submit_work(
 
     const std::string prompt_as_string(prompt);
     const InferenceArgs args(
-        resource_bundle,
+        gen_resources,
         max_tokens,
         min_tokens,
         max_slot_n_ctx,

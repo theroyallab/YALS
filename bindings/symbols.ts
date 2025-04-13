@@ -31,7 +31,7 @@ export default {
         parameters: [
             "pointer", // processor: Processor*
             "buffer", // prompt: const char*
-            "pointer", // resource_bundle: SharedResourceBundle*
+            "pointer", // gen_resources: GenerationResources*
             "i32", // max_tokens: int
             "i32", // min_tokens: int
             "u32", // max_slot_n_ctx: unsigned
@@ -344,15 +344,15 @@ export default {
         result: "pointer", // llama_sampler*
     },
 
-    // Resource bundle functions
-    resource_bundle_make: {
+    // Generation resources functions
+    generation_resources_make: {
         parameters: [],
         result: "pointer",
     },
 
-    resource_bundle_release: {
+    generation_resources_release: {
         parameters: [
-            "pointer", // SharedResourceBundle* bundle
+            "pointer", // GenerationResources* resources
         ],
         result: "void",
     },

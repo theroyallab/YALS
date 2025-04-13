@@ -12,11 +12,11 @@
  *  Automatic conversion from c-style null-terminated string arrays with length and token arrays with count to vectors
  */
 
-struct SharedResourceBundle;
+struct GenerationResources;
 
 class InferenceArgs {
 public:
-    SharedResourceBundle* resource_bundle;
+    GenerationResources* gen_resources;
     int max_tokens_to_gen;
     int min_tokens_to_gen;
     uint32_t max_slot_n_ctx;
@@ -26,12 +26,12 @@ public:
     std::vector<int32_t> stopping_tokens;
     const char* grammar;
 
-    InferenceArgs(): resource_bundle(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0), max_slot_n_ctx(std::numeric_limits<uint32_t>::max()), seed(0),
+    InferenceArgs(): gen_resources(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0), max_slot_n_ctx(std::numeric_limits<uint32_t>::max()), seed(0),
                      grammar(nullptr) {
     };
 
     explicit InferenceArgs(
-        SharedResourceBundle* resource_bundle,
+        GenerationResources* gen_resources,
         const int max_tokens = 50,
         const int min_tokens = 10,
         const uint32_t max_slot_n_ctx = std::numeric_limits<uint32_t>::max(),
@@ -44,7 +44,7 @@ public:
         const unsigned num_stopping_tokens = 0,
         const char* grammar = nullptr)
 
-    :   resource_bundle(resource_bundle),
+    :   gen_resources(gen_resources),
         max_tokens_to_gen(max_tokens),
         min_tokens_to_gen(min_tokens),
         seed(seed),

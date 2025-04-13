@@ -1,5 +1,5 @@
 import { lib } from "./lib.ts";
-import { SharedResourceBundle } from "@/bindings/sharedResources.ts";
+import { GenerationResources } from "./generationResources.ts";
 
 export interface LogitBias {
     token: number;
@@ -12,7 +12,7 @@ export class SamplerBuilder {
 
     constructor(
         model: Deno.PointerValue,
-        resourceBundle: SharedResourceBundle,
+        resourceBundle: GenerationResources,
     ) {
         this.sampler = resourceBundle.samplerPtr;
         if (!this.sampler) {
