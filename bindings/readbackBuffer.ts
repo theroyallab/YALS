@@ -11,7 +11,7 @@ import { FinishChunk } from "@/bindings/types.ts";
 export class ReadbackBuffer {
     private rawPtr: Deno.PointerValue;
     constructor(readbackPtr: Deno.PointerValue) {
-      this.rawPtr = readbackPtr;
+        this.rawPtr = readbackPtr;
     }
 
     async *read() {

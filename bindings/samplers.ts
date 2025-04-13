@@ -10,7 +10,10 @@ export class SamplerBuilder {
     private sampler: Deno.PointerValue;
     private readonly model: Deno.PointerValue;
 
-    constructor(model: Deno.PointerValue, resourceBundle: SharedResourceBundle) {
+    constructor(
+        model: Deno.PointerValue,
+        resourceBundle: SharedResourceBundle,
+    ) {
         this.sampler = resourceBundle.samplerPtr;
         if (!this.sampler) {
             throw new Error("Failed to create sampler");

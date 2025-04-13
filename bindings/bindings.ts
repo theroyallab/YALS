@@ -6,15 +6,14 @@ import { ModelConfig } from "@/common/configModels.ts";
 import { logGenParams, logger, logPrompt } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { PromptTemplate } from "@/common/templating.ts";
-import { asyncDefer, defer } from "@/common/utils.ts";
+import { defer } from "@/common/utils.ts";
+import { MaybePromise } from "@/types/utils.ts";
 import { lib } from "./lib.ts";
 import { Job } from "./job.ts";
-import { ReadbackBuffer } from "./readbackBuffer.ts";
 import { SamplerBuilder } from "./samplers.ts";
+import { SharedResourceBundle } from "./sharedResources.ts";
 import { FinishChunk, GenerationChunk, ReadbackFinishReason } from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
-import { MaybePromise } from "@/types/utils.ts";
-import { SharedResourceBundle } from "@/bindings/sharedResources.ts";
 
 // TODO: Move this somewhere else
 interface LogitBias {
@@ -515,7 +514,10 @@ export class Model {
             logitBias.push(...eogLogitBias);
         }
 
-        const samplerBuilder = new SamplerBuilder(this.model, sharedResourceBundle);
+        const samplerBuilder = new SamplerBuilder(
+            this.model,
+            sharedResourceBundle,
+        );
         samplerBuilder.logitBias(logitBias);
 
         samplerBuilder.penalties(
@@ -623,7 +625,11 @@ export class Model {
         );
 
         // Add the new job to active jobs for cancellation if needed
-        const job = new Job(jobId, sharedResourceBundle.readbackBuffer, this.processor);
+        const job = new Job(
+            jobId,
+            sharedResourceBundle.readbackBuffer,
+            this.processor,
+        );
         this.activeJobIds.set(requestId, job);
 
         // Read from the read buffer
