@@ -81,6 +81,9 @@ Then follow these steps:
 - String banning
 - Concurrent inference with Hono + async TypeScript
 - Robust validation with Zod
+- Utilizes modern TS paradigms and the Deno runtime
+- Inbuilt proxy to override client request parameters/samplers
+- Continuous slot-based batching engine with improved KV cache assignment
 
 More features will be added as the project matures. If something is missing here, PR it in!
 
