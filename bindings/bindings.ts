@@ -552,6 +552,19 @@ export class Model {
         samplerBuilder.minP(params.min_p, 1n);
         samplerBuilder.typical(params.typical, 1n);
 
+        // TODO: Add mirostat mode 1, not really used though.
+        if (params.mirostat_mode === 2) {
+            samplerBuilder.mirostatV2(
+                seed,
+                params.mirostat_tau,
+                params.mirostat_eta,
+            );
+        }
+
+        if (params.temperature_last) {
+            samplerBuilder.temp(params.temperature);
+        }
+
         if (params.xtc_probability > 0) {
             samplerBuilder.xtc(
                 params.xtc_probability,
@@ -559,10 +572,6 @@ export class Model {
                 1n,
                 seed,
             );
-        }
-
-        if (params.temperature_last) {
-            samplerBuilder.temp(params.temperature);
         }
 
         samplerBuilder.dist(seed);
