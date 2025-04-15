@@ -27,6 +27,10 @@ struct MultistageSampler {
 
     void constrain(const char* grammar_data) {
         static auto grammar_kind = "lark";
+        #if !defined(LLGUIDANCE_BUILT) || LLGUIDANCE_BUILT == 0
+                std::cout << "\n\n\033[31mYou need to build with LLGUIDANCE to support grammar sampling.\n\n \033[0m" << std::endl;
+                return;
+        #endif
         constraint_sampler = llama_sampler_init_llg(vocab, grammar_kind, grammar_data);
     }
 

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.14.0)
 project(LlamaMultiUserInference)
 set(CMAKE_CXX_STANDARD 17)
 
+option(LLGUIDANCE "Enable LLGuidance support (requires Rust)" OFF)
+
 # Set RPath for Apple and Unix systems
 if (APPLE)
     set(CMAKE_INSTALL_RPATH "@loader_path")
@@ -21,7 +23,7 @@ set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git" CACHE STRING "lla
 message(STATUS "Using llama.cpp repo ${LLAMACPP_REPO}")
 
 # Stable llama.cpp commit for bindings
-set(LLAMACPP_COMMIT "c94085df2871d2cad11f6411304d7798d7dd4cdd" CACHE STRING "llama.cpp repository commit")
+set(LLAMACPP_COMMIT "f8f820cc4dc37032d5375972ba904ce53043445d" CACHE STRING "llama.cpp repository commit")
 message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
 
 # Optional: You can also enable mixed FP16/FP32 computation for faster processing
@@ -36,14 +38,17 @@ set(LLAMA_CURL OFF CACHE BOOL "llama.cpp: use libcurl" FORCE)
 
 # Enable common
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "llama.cpp: build common utils library" FORCE)
+find_program(CARGO cargo)
 
-# OPTIONAL DEP REQUIRES RUST
-# set(LLAMA_LLGUIDANCE ON CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
-# find_program(CARGO cargo)
-# if(NOT CARGO)
-#    message(WARNING "LLGuidance needs rust. GO GET RUST. WTF R U DOING https://rustup.rs/")
-#    set(LLAMA_LLGUIDANCE OFF CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
-# endif()
+message(STATUS "Build LLGUIDANCE?: ${LLGUIDANCE}")
+if(LLGUIDANCE AND CARGO)
+    set(LLAMA_LLGUIDANCE ON CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
+else()
+    if(LLGUIDANCE AND NOT CARGO)
+        message(WARNING "LLGuidance needs rust. GO GET RUST. WTF R U DOING https://rustup.rs/")
+    endif()
+    set(LLAMA_LLGUIDANCE OFF CACHE BOOL "llama.cpp: disable LLGuidance support" FORCE)
+endif()
 
 # Fetch llama.cpp latest
 # FIXME: Maybe use a vendored llama.cpp build for stability
@@ -111,6 +116,10 @@ target_include_directories(multi_user_inference PRIVATE
 target_link_libraries(multi_user_inference PRIVATE
     c_library
 )
+
+if(LLGUIDANCE)
+    target_compile_definitions(c_library PUBLIC LLGUIDANCE_BUILT=1)
+endif()
 
 # Windows options
 if(WIN32)

@@ -178,6 +178,10 @@ class Processor {
         best_slot->multi_sampler.sampler = best_slot->gen_resources->sampler;
         best_slot->n_ctx_max = inference_args.max_slot_n_ctx;
 
+        if (inference_args.grammar) {
+            best_slot->multi_sampler.constrain(inference_args.grammar);
+        }
+
         // for (const auto& apply_rule : rules) {
         //     apply_rule(*best_slot->rule_stream, model, ctx, *best_slot);
         // }

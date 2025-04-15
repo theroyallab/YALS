@@ -3,6 +3,7 @@
 
 #include <llama-model.h>
 #include "sampling.h"
+#include <iostream>
 
 /*
  * A very minimal abstraction over lcpp samplers primarily to expose to bindings.
