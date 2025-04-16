@@ -175,16 +175,8 @@ class Processor {
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
         best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
 
-        best_slot->multi_sampler.sampler = best_slot->gen_resources->sampler;
+        best_slot->sampler = best_slot->gen_resources->sampler;
         best_slot->n_ctx_max = inference_args.max_slot_n_ctx;
-
-        if (inference_args.grammar) {
-            best_slot->multi_sampler.constrain(inference_args.grammar);
-        }
-
-        // for (const auto& apply_rule : rules) {
-        //     apply_rule(*best_slot->rule_stream, model, ctx, *best_slot);
-        // }
 
         if (inference_args.min_tokens_to_gen > 0) {
             RuleEngine::rule_min_tokens(*best_slot->rule_stream, inference_args.min_tokens_to_gen, model, ctx, *best_slot);
@@ -246,7 +238,7 @@ class Processor {
         switch (seq_res.sequence_status) {
             case SequenceStream::SequenceStatus::ACCEPT: {
                 slot.generated_text += seq_res.current_sequence;
-                slot.multi_sampler.presampler.clear_rewind_bans(model);
+                slot.presampler.clear_rewind_bans(model);
                 slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, false);
                 yield_final = true;
                 }
@@ -259,7 +251,7 @@ class Processor {
 
                 //Ban every token in the buffer.
                 const auto tokens = tokenizer.tokenize(seq_res.current_sequence, false, false);
-                slot.multi_sampler.presampler.add_rewind_bans(model, tokens);
+                slot.presampler.add_rewind_bans(model, tokens);
 
                 }
                 return true;
@@ -325,6 +317,21 @@ class Processor {
         }
     }
 
+    [[nodiscard]] llama_token sample(const Slot& slot) const {
+        if (slot.presampler.sampler) {
+            const auto pre_n = llama_sampler_chain_n(slot.presampler.sampler);
+            llama_sampler_chain_add(slot.presampler.sampler, slot.sampler);
+            const auto token = llama_sampler_sample(slot.presampler.sampler, ctx, slot.i_batch);
+
+            while (llama_sampler_chain_n(slot.presampler.sampler) > pre_n) {
+                llama_sampler_chain_remove(slot.presampler.sampler, pre_n);
+            }
+            return token;
+        }
+
+        return llama_sampler_sample(slot.sampler, ctx, slot.i_batch);
+    }
+
     void update_gen_slots() {
         if (batch.n_tokens == 0) {
             return;
@@ -363,12 +370,7 @@ class Processor {
             }
 
             if (slot.is_generating()) {
-                const auto maybe_token = slot.multi_sampler.sample(ctx, slot.i_batch);
-                if (!maybe_token.has_value()) {
-                    // TODO:: @Z Bug.
-                    break;
-                }
-                const llama_token token = maybe_token.value();
+                const llama_token token = sample(slot);
                 slot.last_token = token;
                 slot.i_batch = -1;
 

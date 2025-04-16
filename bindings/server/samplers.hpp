@@ -25,7 +25,8 @@ void sampler_free(llama_sampler* sampler) {
     llama_sampler_free(sampler);
 }
 
-llama_sampler* sampler_llguidance(llama_sampler* chain, const llama_model* model, const char* grammar_kind, const char* grammar_data) {
+llama_sampler* sampler_llguidance(llama_sampler* chain, const llama_model* model, const char* grammar_data) {
+    static constexpr auto grammar_kind = "lark";
     return add_sampler(chain, llama_sampler_init_llg(llama_model_get_vocab(model), grammar_kind, grammar_data));
 }
 

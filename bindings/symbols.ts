@@ -42,7 +42,6 @@ export default {
             "u32", // num_stopping_strings: unsigned
             "buffer", // stopping_tokens: const int32_t*
             "u32", // num_stopping_tokens: unsigned
-            "buffer", // grammar const char*
         ],
         result: "i32", // int
     },
@@ -340,6 +339,15 @@ export default {
             "f32", // tau: float
             "f32", // eta: float
             "i32", // m: int
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
+    sampler_llguidance: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "pointer", // model: const llama_model*
+            "buffer", // char*: grammar_data*
         ],
         result: "pointer", // llama_sampler*
     },

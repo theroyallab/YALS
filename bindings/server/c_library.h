@@ -46,8 +46,7 @@ extern "C" {
         const char** stopping_strings,
         const unsigned num_stopping_strings,
         const int32_t* stopping_tokens,
-        const unsigned num_stopping_tokens,
-        const char* grammar);
+        const unsigned num_stopping_tokens);
 
     bool processor_cancel_work(
         Processor* processor,
@@ -243,7 +242,6 @@ extern "C" {
     llama_sampler* sampler_llguidance(
         llama_sampler* chain,
         const llama_model* model,
-        const char* grammar_kind,
         const char* grammar_data);
 
     // ~~~ Generation Resources ~~~
