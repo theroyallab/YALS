@@ -246,3 +246,10 @@ void endpoint_free_tokens(const int32_t* tokens) {
     delete[] tokens;
 }
 
+bool has_llguidance() {
+    #if defined(LLGUIDANCE_BUILT) || LLGUIDANCE_BUILT != 0
+        return true;
+    #else
+        return false;
+    #endif
+}

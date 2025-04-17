@@ -252,6 +252,10 @@ extern "C" {
     void generation_resources_release(
         GenerationResources* resources);
 
+    // ~~~ Features ~~~
+
+    bool has_llguidance();
+
 #ifdef __cplusplus
 }
 #endif

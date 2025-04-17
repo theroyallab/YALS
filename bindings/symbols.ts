@@ -364,4 +364,9 @@ export default {
         ],
         result: "void",
     },
+
+    has_llguidance: {
+        parameters: [],
+        result: "bool",
+    },
 } as const;
