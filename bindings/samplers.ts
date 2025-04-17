@@ -52,6 +52,22 @@ export class SamplerBuilder {
     }
 
     /**
+     * Adds llguidance sampler
+     * @param grammar Grammar definition as a string
+     */
+    llguidance(grammar: string): SamplerBuilder {
+        const grammarPtr = new TextEncoder().encode(grammar + "\0");
+
+        this.sampler = lib.symbols.sampler_llguidance(
+            this.sampler,
+            this.model,
+            new Uint8Array(grammarPtr),
+        );
+
+        return this;
+    }
+
+    /**
      * Configures the sampler to always choose the most likely token (greedy sampling)
      * @returns This builder instance for chaining
      */
