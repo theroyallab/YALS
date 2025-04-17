@@ -208,8 +208,7 @@ extern "C" {
     llama_sampler* sampler_grammar(
        llama_sampler* chain,
        const llama_model* model,
-       const char* grammar,
-       const char* root);
+       const char* grammar);
 
     llama_sampler* sampler_dry(
        llama_sampler* chain,

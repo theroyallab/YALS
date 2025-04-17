@@ -1,6 +1,7 @@
 import libraryInterface from "./symbols.ts";
 
 export let lib: Deno.DynamicLibrary<typeof libraryInterface>;
+export let hasLlguidance: boolean = false;
 
 export function loadYalsBindings() {
     const libName = "c_library";
@@ -24,6 +25,7 @@ export function loadYalsBindings() {
 
     try {
         lib = Deno.dlopen(libPath, libraryInterface);
+        hasLlguidance = lib.symbols.has_llguidance();
     } catch (error: unknown) {
         console.error(
             `Failed to load YALS library: ${

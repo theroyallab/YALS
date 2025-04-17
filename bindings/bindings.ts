@@ -8,6 +8,7 @@ import { PromptTemplate } from "@/common/templating.ts";
 import { defer } from "@/common/utils.ts";
 import { MaybePromise } from "@/types/utils.ts";
 import { GenerationResources } from "./generationResources.ts";
+import { YALSGrammar } from "./grammar.ts";
 import { lib } from "./lib.ts";
 import { Job } from "./job.ts";
 import { SamplerBuilder } from "./samplers.ts";
@@ -520,37 +521,17 @@ export class Model {
         );
 
         // Grammar
-        if (lib.symbols.has_llguidance()) {
-            if (params.json_schema) {
-                const grammarArray = ["start: json_object"];
-                const schemaString = JSON.stringify(
-                    params.json_schema,
-                    null,
-                    2,
-                );
-                grammarArray.push(`json_object: %json ${schemaString}`);
-                samplerBuilder.llguidance(grammarArray.join("\n"));
-            }
+        const grammarBuilder = new YALSGrammar(samplerBuilder);
+        if (params.json_schema) {
+            grammarBuilder.jsonSchema(params.json_schema);
+        }
 
-            // Unsure if this works, but LLGuidance's docs say so
-            if (params.regex_pattern) {
-                const grammarArray = ["start: text"];
-                grammarArray.push(`text: ${params.regex_pattern}`);
-                samplerBuilder.llguidance(grammarArray.join("\n"));
-            }
+        if (params.regex_pattern) {
+            grammarBuilder.regex(params.regex_pattern);
+        }
 
-            if (params.grammar_string) {
-                samplerBuilder.llguidance(params.grammar_string);
-            }
-        } else {
-            // TODO: Fallback to GBNF
-            logger.warning(
-                "YALS was not built with LLGuidance. Using GBNF.",
-            );
-
-            if (params.grammar_string) {
-                samplerBuilder.grammar(params.grammar_string);
-            }
+        if (params.grammar_string) {
+            grammarBuilder.BNF(params.grammar_string);
         }
 
         samplerBuilder.logitBias(logitBias);
