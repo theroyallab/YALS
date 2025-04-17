@@ -44,8 +44,8 @@ export class SamplerBuilder {
         this.sampler = lib.symbols.sampler_grammar(
             this.sampler,
             this.model,
-            Deno.UnsafePointer.of(grammarPtr),
-            Deno.UnsafePointer.of(rootPtr),
+            grammarPtr,
+            rootPtr,
         );
 
         return this;
@@ -61,7 +61,7 @@ export class SamplerBuilder {
         this.sampler = lib.symbols.sampler_llguidance(
             this.sampler,
             this.model,
-            new Uint8Array(grammarPtr),
+            grammarPtr,
         );
 
         return this;

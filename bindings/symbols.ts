@@ -293,8 +293,8 @@ export default {
         parameters: [
             "pointer", // chain: llama_sampler*
             "pointer", // model: const llama_model*
-            "pointer", // grammar: const char*
-            "pointer", // root: const char*
+            "buffer", // grammar: const char*
+            "buffer", // root: const char*
         ],
         result: "pointer", // llama_sampler*
     },
