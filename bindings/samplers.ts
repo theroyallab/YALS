@@ -37,15 +37,13 @@ export class SamplerBuilder {
      * @param root Root rule name in the grammar
      * @returns This builder instance for chaining
      */
-    grammar(grammar: string, root: string): SamplerBuilder {
+    grammar(grammar: string): SamplerBuilder {
         const grammarPtr = new TextEncoder().encode(grammar + "\0");
-        const rootPtr = new TextEncoder().encode(root + "\0");
 
         this.sampler = lib.symbols.sampler_grammar(
             this.sampler,
             this.model,
             grammarPtr,
-            rootPtr,
         );
 
         return this;

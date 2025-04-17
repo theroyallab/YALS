@@ -545,8 +545,12 @@ export class Model {
         } else {
             // TODO: Fallback to GBNF
             logger.warning(
-                "YALS was not built with LLGuidance. Skipping grammar parsing.",
+                "YALS was not built with LLGuidance. Using GBNF.",
             );
+
+            if (params.grammar_string) {
+                samplerBuilder.grammar(params.grammar_string);
+            }
         }
 
         samplerBuilder.logitBias(logitBias);

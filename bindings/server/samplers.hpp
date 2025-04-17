@@ -82,8 +82,8 @@ llama_sampler* sampler_xtc(llama_sampler* chain, const float xtc_probability, co
     return add_sampler(chain, llama_sampler_init_xtc(xtc_probability, xtc_threshold, min_keep, seed));
 }
 
-llama_sampler* sampler_grammar(llama_sampler* chain, const llama_model* model,
-                               const char* grammar, const char* root) {
+llama_sampler* sampler_grammar(llama_sampler* chain, const llama_model* model, const char* grammar) {
+    static constexpr auto root = "root";
     return add_sampler(chain, llama_sampler_init_grammar(&model->vocab, grammar, root));
 }
 
