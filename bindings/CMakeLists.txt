@@ -38,15 +38,16 @@ set(LLAMA_CURL OFF CACHE BOOL "llama.cpp: use libcurl" FORCE)
 
 # Enable common
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "llama.cpp: build common utils library" FORCE)
-find_program(CARGO cargo)
 
-message(STATUS "Build LLGUIDANCE?: ${LLGUIDANCE}")
-if(LLGUIDANCE AND CARGO)
-    set(LLAMA_LLGUIDANCE ON CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
-else()
-    if(LLGUIDANCE AND NOT CARGO)
-        message(WARNING "LLGuidance needs rust. GO GET RUST. WTF R U DOING https://rustup.rs/")
+if(LLGUIDANCE)
+    find_program(CARGO cargo)
+    if(CARGO)
+        message(STATUS "Including LLGuidance in build")
+        set(LLAMA_LLGUIDANCE ON CACHE BOOL "llama.cpp: enable LLGuidance support" FORCE)
+    else()
+        message(FATAL_ERROR "LLGuidance is enabled, but requires Rust for compilation. Get it at https://rustup.rs")
     endif()
+else()
     set(LLAMA_LLGUIDANCE OFF CACHE BOOL "llama.cpp: disable LLGuidance support" FORCE)
 endif()
 
