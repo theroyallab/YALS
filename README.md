@@ -78,6 +78,7 @@ Then follow these steps:
 - OpenAI compatible API
 - Loading/unloading models
 - Flexible Jinja2 template engine for chat completions that conforms to HuggingFace
+- Fast JSON schema + Regex + EBNF support via llguidance
 - String banning
 - Concurrent inference with Hono + async TypeScript
 - Robust validation with Zod
@@ -121,5 +122,6 @@ YALS would not exist without the work of other contributors and FOSS projects:
 - [Deno](https://deno.com)
 - [Hono](https://hono.dev)
 - [Zod](https://zod.dev)
+- [llguidance](https://github.com/guidance-ai/llguidance)
 - [KoboldCpp](https://github.com/lostruins/koboldcpp)
 - [SillyTavern](https://github.com/SillyTavern/SillyTavern)

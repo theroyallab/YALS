@@ -23,6 +23,7 @@ To get started, install the following prerequisites:
 	- macOS (homebrew): `brew install ninja`
 	- Linux: `sudo apt install ninja-build`
 - [sccache](https://github.com/mozilla/sccache) (optional, but speeds up subsequent builds)
+- [Rust](https://rustup.rs)(Used for improved grammar parsing via LLGuidance)
 
 ## Building
 
@@ -33,6 +34,13 @@ cd YALS
 ```
 
 All build commands are encapsulated in Deno tasks, similar to npm scripts in NodeJS.
+
+> [!NOTE]
+> Unlike llama.cpp and its derivatives, YALS uses an extremely fast grammar tool called llguidance for JSON schemas, Regex, and lark grammars.
+> 
+> Due to an extra dependency being required for users systems, llguidance is off by default, but it is **highly recommended** to turn it on at build time for improved grammar handling.
+
+To enable it, set `LLGUIDANCE=1` in your shell before invoking the deno task.
 
 To build the C++bindings:
 
@@ -50,6 +58,7 @@ Optionally, environment variables can be set for certain architectures when buil
 - `GGML_VULKAN=1`: Enables Vulkan Support
 - `GGML_HIP=1`: Enables HIP ROCM Support (Requires specifying DAMDGPU_TARGETS, Linux only)
 - `AMDGPU_TARGETS`: Specify ROCM target (example: `gfx1030`)
+- `LLGUIDANCE=1`: (Recommended) Enable llguidance for grammars. Requires Rust on the system. (default `0`)
 
 ## Running
 
