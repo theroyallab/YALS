@@ -26,6 +26,7 @@ if [ -n "$LLAMACPP_COMMIT" ]; then
 fi
 
 if [ "$LLGUIDANCE" = "1" ]; then
+    export RUSTC_WRAPPER="sccache"
     EXTRA_CMAKE_ARGS+=("-DLLGUIDANCE=ON")
     echo "LLGuidance enabled, including in build"
 fi

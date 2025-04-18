@@ -25,6 +25,7 @@ if ($env:LLAMACPP_COMMIT) {
 }
 
 if ($env:LLGUIDANCE -eq 1) {
+    $env:RUSTC_WRAPPER="sccache"
     Write-Host "LLGuidance enabled, including in build"
     $extraCmakeArgs += "-DLLGUIDANCE=ON"
 }

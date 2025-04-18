@@ -45,13 +45,15 @@ jobs:
         if: ${{ runner.os == 'Linux' && matrix.device == 'cuda' }}
         run: |
           apt update
-          apt install -y cmake build-essential zip unzip libgomp1 git
+          apt install -y cmake build-essential zip unzip libgomp1 git curl
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.7
       - name: Configure sccache
@@ -82,6 +84,8 @@ jobs:
             export GGML_CUDA=1
             export CMAKE_CUDA_ARCHITECTURES="60;61;75;86;89;120"
           fi
+
+          export LLGUIDANCE=1
           deno task bindings
           deno task compile
           chmod +x YALS
@@ -183,6 +187,8 @@ jobs:
           deno-version: v2.x
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.7
       - name: Configure sccache
@@ -214,6 +220,8 @@ jobs:
             $env:GGML_CUDA = 1
             $env:CMAKE_CUDA_ARCHITECTURES="75;86;89;120"
           }
+
+          $env:LLGUIDANCE=1
           deno task bindings-win
           deno task compile-win
       - name: Copy vcruntime
