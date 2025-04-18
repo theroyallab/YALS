@@ -24,6 +24,12 @@ if ($env:LLAMACPP_COMMIT) {
     Write-Host "Using custom llama.cpp commit: $env:LLAMACPP_COMMIT"
 }
 
+if ($env:LLGUIDANCE -eq 1) {
+    $env:RUSTC_WRAPPER="sccache"
+    Write-Host "LLGuidance enabled, including in build"
+    $extraCmakeArgs += "-DLLGUIDANCE=ON"
+}
+
 if ($env:GGML_CUDA -eq 1) {
     Write-Host "CUDA enabled, including in build"
 

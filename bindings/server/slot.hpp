@@ -4,10 +4,10 @@
 #include <string>
 #include <vector>
 #include "llama.h"
-#include "multisampler.hpp"
 #include "tokenization.hpp"
 #include "sequence_stream.hpp"
 #include "generation_resources.hpp"
+#include "presampler.hpp"
 
 /*
  *  Slots are essentially just a data container holding the current inference state for a single complete inference.
@@ -80,13 +80,16 @@ struct Slot {
 
     TokenStreamDetokenizer* detokenizer;
     SequenceStream* sequence_stream;
-    MultistageSampler multi_sampler;
     SlotSnapshot rewind_snapshot;
+
+    llama_sampler* rule_chain{nullptr};
+    Presampler presampler;
+    llama_sampler* sampler{nullptr};
 
     GenerationResources* gen_resources{nullptr};
     class RuleStream* rule_stream{nullptr};
 
-    explicit Slot(const llama_model* model, llama_context* ctx): multi_sampler(model) {
+    explicit Slot(const llama_model* model, llama_context* ctx): presampler() {
         detokenizer = new TokenStreamDetokenizer(ctx);
         sequence_stream = new SequenceStream();
     }

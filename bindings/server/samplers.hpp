@@ -3,6 +3,7 @@
 
 #include <llama-model.h>
 #include "sampling.h"
+#include <iostream>
 
 /*
  * A very minimal abstraction over lcpp samplers primarily to expose to bindings.
@@ -24,7 +25,8 @@ void sampler_free(llama_sampler* sampler) {
     llama_sampler_free(sampler);
 }
 
-llama_sampler* sampler_llguidance(llama_sampler* chain, const llama_model* model, const char* grammar_kind, const char* grammar_data) {
+llama_sampler* sampler_llguidance(llama_sampler* chain, const llama_model* model, const char* grammar_data) {
+    static constexpr auto grammar_kind = "lark";
     return add_sampler(chain, llama_sampler_init_llg(llama_model_get_vocab(model), grammar_kind, grammar_data));
 }
 
@@ -80,8 +82,8 @@ llama_sampler* sampler_xtc(llama_sampler* chain, const float xtc_probability, co
     return add_sampler(chain, llama_sampler_init_xtc(xtc_probability, xtc_threshold, min_keep, seed));
 }
 
-llama_sampler* sampler_grammar(llama_sampler* chain, const llama_model* model,
-                               const char* grammar, const char* root) {
+llama_sampler* sampler_grammar(llama_sampler* chain, const llama_model* model, const char* grammar) {
+    static constexpr auto root = "root";
     return add_sampler(chain, llama_sampler_init_grammar(&model->vocab, grammar, root));
 }
 

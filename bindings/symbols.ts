@@ -42,7 +42,6 @@ export default {
             "u32", // num_stopping_strings: unsigned
             "buffer", // stopping_tokens: const int32_t*
             "u32", // num_stopping_tokens: unsigned
-            "buffer", // grammar const char*
         ],
         result: "i32", // int
     },
@@ -294,8 +293,7 @@ export default {
         parameters: [
             "pointer", // chain: llama_sampler*
             "pointer", // model: const llama_model*
-            "pointer", // grammar: const char*
-            "pointer", // root: const char*
+            "buffer", // grammar: const char*
         ],
         result: "pointer", // llama_sampler*
     },
@@ -344,6 +342,15 @@ export default {
         result: "pointer", // llama_sampler*
     },
 
+    sampler_llguidance: {
+        parameters: [
+            "pointer", // chain: llama_sampler*
+            "pointer", // model: const llama_model*
+            "buffer", // char*: grammar_data*
+        ],
+        result: "pointer", // llama_sampler*
+    },
+
     // Generation resources functions
     generation_resources_make: {
         parameters: [],
@@ -355,5 +362,10 @@ export default {
             "pointer", // GenerationResources* resources
         ],
         result: "void",
+    },
+
+    has_llguidance: {
+        parameters: [],
+        result: "bool",
     },
 } as const;

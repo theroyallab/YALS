@@ -24,11 +24,8 @@ public:
     std::vector<std::string> rewind_strings;
     std::vector<std::string> stopping_strings;
     std::vector<int32_t> stopping_tokens;
-    const char* grammar;
 
-    InferenceArgs(): gen_resources(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0), max_slot_n_ctx(std::numeric_limits<uint32_t>::max()), seed(0),
-                     grammar(nullptr) {
-    };
+    InferenceArgs(): gen_resources(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0), max_slot_n_ctx(std::numeric_limits<uint32_t>::max()), seed(0) {};
 
     explicit InferenceArgs(
         GenerationResources* gen_resources,
@@ -41,14 +38,12 @@ public:
         const char** stopping_strings = nullptr,
         const unsigned num_stopping_strings = 0,
         const int32_t* stopping_tokens = nullptr,
-        const unsigned num_stopping_tokens = 0,
-        const char* grammar = nullptr)
+        const unsigned num_stopping_tokens = 0)
 
     :   gen_resources(gen_resources),
         max_tokens_to_gen(max_tokens),
         min_tokens_to_gen(min_tokens),
-        seed(seed),
-        grammar(grammar)
+        seed(seed)
     {
         if (rewind_strings != nullptr && num_rewind_strings > 0) {
             this->rewind_strings.reserve(num_rewind_strings);

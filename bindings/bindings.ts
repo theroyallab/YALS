@@ -8,6 +8,7 @@ import { PromptTemplate } from "@/common/templating.ts";
 import { defer } from "@/common/utils.ts";
 import { MaybePromise } from "@/types/utils.ts";
 import { GenerationResources } from "./generationResources.ts";
+import { YALSGrammar } from "./grammar.ts";
 import { lib } from "./lib.ts";
 import { Job } from "./job.ts";
 import { SamplerBuilder } from "./samplers.ts";
@@ -518,6 +519,21 @@ export class Model {
             this.model,
             genResources,
         );
+
+        // Grammar
+        const grammarBuilder = new YALSGrammar(samplerBuilder);
+        if (params.json_schema) {
+            grammarBuilder.jsonSchema(params.json_schema);
+        }
+
+        if (params.regex_pattern) {
+            grammarBuilder.regex(params.regex_pattern);
+        }
+
+        if (params.grammar_string) {
+            grammarBuilder.BNF(params.grammar_string);
+        }
+
         samplerBuilder.logitBias(logitBias);
 
         samplerBuilder.penalties(
@@ -541,7 +557,6 @@ export class Model {
             samplerBuilder.temp(params.temperature);
         }
 
-        // TODO: Actively being changed
         // Use Aphrodite's sampler position
         if (params.nsigma > 0) {
             samplerBuilder.topNSigma(params.nsigma);
@@ -552,6 +567,19 @@ export class Model {
         samplerBuilder.minP(params.min_p, 1n);
         samplerBuilder.typical(params.typical, 1n);
 
+        // TODO: Add mirostat mode 1, not really used though.
+        if (params.mirostat_mode === 2) {
+            samplerBuilder.mirostatV2(
+                seed,
+                params.mirostat_tau,
+                params.mirostat_eta,
+            );
+        }
+
+        if (params.temperature_last) {
+            samplerBuilder.temp(params.temperature);
+        }
+
         if (params.xtc_probability > 0) {
             samplerBuilder.xtc(
                 params.xtc_probability,
@@ -559,10 +587,6 @@ export class Model {
                 1n,
                 seed,
             );
-        }
-
-        if (params.temperature_last) {
-            samplerBuilder.temp(params.temperature);
         }
 
         samplerBuilder.dist(seed);
@@ -590,23 +614,6 @@ export class Model {
             promptBosToken + prompt,
         );
 
-        //TODO::@Z
-        // const larkGrammar = `
-        // // Define the start rule
-        // start: json_string
-        // // The exact JSON string with fixed format
-        // json_string: "{\\n \\"action\\" : [\\"" ACTION_CONTENT "\\"],\\n \\"mood\\" : \\"" EMOTION "\\",\\n \\"magazine capacity\\" : \\"" CAPACITY_CONTENT "\\"\\n}"
-        // // Content restrictions
-        // ACTION_CONTENT: /[a-zA-Z0-9 ,]{1,15}/
-        // CAPACITY_CONTENT: /[0-9]+( rounds| bullets| shots)?/
-        // EMOTION: "happy" | "sad" | "angry" | "excited" | "bored" | "anxious" | "calm" | "confused"
-        //  | "curious" | "depressed" | "ecstatic" | "fearful" | "grateful" | "hopeful"
-        //  | "irritated" | "jealous" | "peaceful" | "proud" | "surprised" | "tired"
-        // `;
-
-        // // Convert the string to a null-terminated buffer
-        // const grammarBuffer = new TextEncoder().encode(larkGrammar + "\0");
-
         const jobId = lib.symbols.processor_submit_work(
             this.processor,
             promptPtr,
@@ -621,7 +628,6 @@ export class Model {
             stopStrings.length,
             stopTokensPtr,
             stopTokens.length,
-            null,
         );
 
         // Add the new job to active jobs for cancellation if needed

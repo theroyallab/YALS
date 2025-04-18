@@ -60,7 +60,7 @@ private:
     }
 
 public:
-    llama_sampler* sampler;
+    llama_sampler* sampler {nullptr};
     uint32_t seed = 1337;
     bool should_presample = false;
 

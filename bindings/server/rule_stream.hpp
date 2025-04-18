@@ -1,7 +1,6 @@
 #ifndef RULE_STREAM_HPP
 #define RULE_STREAM_HPP
 
-#include "multisampler.hpp"
 #include "slot.hpp"
 #include "sequence_stream.hpp"
 
@@ -96,12 +95,11 @@ struct ActionApplyGrammar {
     explicit ActionApplyGrammar(std::string g) : grammar(std::move(g)) {}
 
     void start(const llama_model* model, llama_context*, Slot& slot, const RuleContext* const) {
-        if (slot.multi_sampler.constraint_sampler) {
-            llama_sampler_free(slot.multi_sampler.constraint_sampler);
-            slot.multi_sampler.constraint_sampler = nullptr;
+        if (slot.rule_chain) {
+            llama_sampler_free(slot.rule_chain);
         }
 
-        slot.multi_sampler.constraint_sampler = llama_sampler_init_llg(
+        slot.rule_chain = llama_sampler_init_llg(
             llama_model_get_vocab(model),
             "lark",
             grammar.c_str()
@@ -112,9 +110,9 @@ struct ActionApplyGrammar {
     }
 
     void end(const llama_model*, llama_context*, Slot& slot, const RuleContext* const) {
-        if (slot.multi_sampler.constraint_sampler) {
-            llama_sampler_free(slot.multi_sampler.constraint_sampler);
-            slot.multi_sampler.constraint_sampler = nullptr;
+        if (slot.rule_chain) {
+            llama_sampler_free(slot.rule_chain);
+            slot.rule_chain = nullptr;
         }
     }
 };
@@ -151,14 +149,14 @@ struct ActionRecordToCallback {
 struct ActionBanStopTokens {
     void start(const llama_model* model, llama_context*, Slot& slot, const RuleContext* const) {
         const std::vector terminal_token_bans {llama_vocab_eos(llama_model_get_vocab(model)), llama_vocab_eot(llama_model_get_vocab(model))};
-        slot.multi_sampler.presampler.add_eos_ban(model, terminal_token_bans);
+        slot.presampler.add_eos_ban(model, terminal_token_bans);
     }
 
     void running(const llama_model*, llama_context*, Slot&, const RuleContext* const) {
     }
 
     void end(const llama_model* model, llama_context*, Slot& slot, const RuleContext* const&) {
-        slot.multi_sampler.presampler.clear_eos_bans(model);
+        slot.presampler.clear_eos_bans(model);
     }
 };
 

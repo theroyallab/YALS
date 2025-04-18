@@ -62,8 +62,7 @@ Hi how are you?
         nullptr,
         0,
         nullptr,
-        0,
-        nullptr);
+        0);
 
     std::cout << "Starting model:" << std::endl;
     while (!readback_is_buffer_finished(readback_buffer)) {

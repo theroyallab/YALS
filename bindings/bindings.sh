@@ -25,6 +25,12 @@ if [ -n "$LLAMACPP_COMMIT" ]; then
     echo "Using custom llama.cpp commit: ${LLAMACPP_COMMIT}"
 fi
 
+if [ "$LLGUIDANCE" = "1" ]; then
+    export RUSTC_WRAPPER="sccache"
+    EXTRA_CMAKE_ARGS+=("-DLLGUIDANCE=ON")
+    echo "LLGuidance enabled, including in build"
+fi
+
 if [ "$GGML_CUDA" = "1" ]; then
     EXTRA_CMAKE_ARGS+=("-DGGML_CUDA=ON")
     echo "CUDA enabled, including in build"
@@ -64,4 +70,4 @@ if [ "$OS" = "Darwin" ]; then
 elif [ "$OS" = "Linux" ]; then
     echo "Copying .so files"
     cp build/bin/*.so ../lib
-fi;
+fi

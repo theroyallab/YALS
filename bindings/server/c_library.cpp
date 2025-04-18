@@ -16,8 +16,7 @@ int processor_submit_work(
     const char** stopping_strings,
     const unsigned num_stopping_strings,
     const int32_t* stopping_tokens,
-    const unsigned num_stopping_tokens,
-    const char* grammar) {
+    const unsigned num_stopping_tokens) {
 
     const std::string prompt_as_string(prompt);
     const InferenceArgs args(
@@ -31,8 +30,7 @@ int processor_submit_work(
         stopping_strings,
         num_stopping_strings,
         stopping_tokens,
-        num_stopping_tokens,
-        grammar
+        num_stopping_tokens
     );
 
     return processor->submit_work(
@@ -248,3 +246,10 @@ void endpoint_free_tokens(const int32_t* tokens) {
     delete[] tokens;
 }
 
+bool has_llguidance() {
+    #if defined(LLGUIDANCE_BUILT) || LLGUIDANCE_BUILT != 0
+        return true;
+    #else
+        return false;
+    #endif
+}

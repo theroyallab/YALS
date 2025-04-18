@@ -36,6 +36,10 @@ const GenerationOptionsSchema = z.aliasedObject(
             .samplerOverride("seed"),
         logit_bias: z.record(z.string(), z.number()).nullish()
             .samplerOverride("logit_bias", {}),
+        json_schema: z.record(z.string(), z.unknown()).nullish()
+            .samplerOverride("json_schema"),
+        regex_pattern: z.string().nullish()
+            .samplerOverride("regex_pattern"),
         grammar_string: z.string().nullish()
             .samplerOverride("grammar_string"),
         banned_tokens: z.union([
