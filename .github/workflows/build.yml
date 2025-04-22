@@ -45,7 +45,7 @@ jobs:
         if: ${{ runner.os == 'Linux' && matrix.device == 'cuda' }}
         run: |
           apt update
-          apt install -y cmake build-essential zip unzip libgomp1 git curl
+          apt install -y cmake build-essential zip unzip libgomp1 git curl libssl-dev pkg-config
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
