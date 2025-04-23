@@ -1,12 +1,16 @@
 import * as z from "@/common/myZod.ts";
 import { ModelConfig } from "@/common/configModels.ts";
+import { applyLoadDefaults } from "@/common/modelContainer.ts";
 
 export const ModelLoadRequest = z.aliasedObject(
-    ModelConfig.extend({
-        model_name: z.string(),
-    }).omit({
-        model_dir: true,
-    }),
+    z.preprocess(
+        (data: unknown) => applyLoadDefaults(data),
+        ModelConfig.extend({
+            model_name: z.string(),
+        }).omit({
+            model_dir: true,
+        }),
+    ),
     [{ field: "model_name", aliases: ["name"] }],
 );
 
