@@ -39,8 +39,7 @@ interface AliasChoice {
 }
 
 export function aliasedObject<
-    O extends z.ZodObject<S>,
-    S extends z.ZodRawShape,
+    O extends z.ZodTypeAny,
 >(
     schema: O,
     aliasChoices: AliasChoice[],
