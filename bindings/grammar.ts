@@ -30,6 +30,11 @@ export class YALSGrammar {
             return;
         }
 
+        // Skip empty schemas to match behavior with TabbyAPI
+        if (Object.keys(schema).length === 0) {
+            return;
+        }
+
         const grammarArray = ["start: json_object"];
         const schemaString = JSON.stringify(
             schema,
