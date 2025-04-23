@@ -55,7 +55,10 @@ export function applyLoadDefaults(item: unknown) {
         // Iterate through use_as_default
         // TODO: Move config.model assert into ModelConfig with Zod 4
         for (const key of config.model.use_as_default) {
-            if (!data[key] && key in config.model) {
+            if (
+                (data[key] === undefined || data[key] === null) &&
+                key in config.model
+            ) {
                 data[key] = config.model[key as keyof typeof config.model];
             }
         }
