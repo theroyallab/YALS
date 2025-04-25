@@ -522,7 +522,7 @@ export class Model {
 
         // Grammar
         const grammarBuilder = new YALSGrammar(samplerBuilder);
-        if (params.json_schema) {
+        if (params.json_schema && Object.keys(params.json_schema).length > 0) {
             grammarBuilder.jsonSchema(params.json_schema);
         }
 

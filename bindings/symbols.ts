@@ -61,6 +61,7 @@ export default {
             "i32", // num_processor_slots: int
         ],
         result: "pointer", // Processor*
+        nonblocking: true,
     },
 
     processor_free: {
