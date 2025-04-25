@@ -64,18 +64,20 @@ export function createApi() {
             : 500;
 
         const logError = !(
-            err instanceof ModelNotLoadedError ||
             statusCode === 401
         );
 
         // Only log in console if the error allows it
         if (logError) {
-            const messageOnly = statusCode === 408;
+            const messageOnly = (
+                statusCode === 408 ||
+                err instanceof ModelNotLoadedError
+            );
 
             if (messageOnly) {
-                logger.error(err.message);
+                logger.error(`Sent to request: ${err.message}`);
             } else {
-                logger.error(err.stack || err.message);
+                logger.error(`Sent to request: ${err.stack || err.message}`);
             }
         }
 
