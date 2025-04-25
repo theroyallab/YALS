@@ -11,6 +11,7 @@ import { logger } from "@/common/logging.ts";
 import core from "./core/router.ts";
 import oai from "./OAI/router.ts";
 import { generateUuidHex } from "@/common/utils.ts";
+import { ModelNotLoadedError } from "@/common/errors.ts";
 
 export function createApi() {
     const app = new Hono();
@@ -62,14 +63,23 @@ export function createApi() {
             ? (currentStatus as ContentfulStatusCode)
             : 500;
 
-        // Only log the message for timeouts/cancellations
-        // Don't log the stack for unauthorized errors
-        if (statusCode === 408) {
-            logger.error(err.message);
-        } else if (statusCode !== 401) {
-            logger.error(err.stack || err.message);
+        const logError = !(
+            err instanceof ModelNotLoadedError ||
+            statusCode === 401
+        );
+
+        // Only log in console if the error allows it
+        if (logError) {
+            const messageOnly = statusCode === 408;
+
+            if (messageOnly) {
+                logger.error(err.message);
+            } else {
+                logger.error(err.stack || err.message);
+            }
         }
 
+        // Always send error + message to client
         return c.json({
             detail: err.message,
         }, statusCode);

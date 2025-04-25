@@ -1,7 +1,8 @@
-import { HTTPException } from "hono/http-exception";
 import { createMiddleware } from "hono/factory";
-import { model } from "@/common/modelContainer.ts";
+
 import { Model } from "@/bindings/bindings.ts";
+import { ModelNotLoadedError } from "@/common/errors.ts";
+import { model } from "@/common/modelContainer.ts";
 
 // Extra vars for context
 interface CtxOptions {
@@ -15,7 +16,7 @@ interface CtxOptions {
 const checkModelMiddleware = createMiddleware<CtxOptions>(
     async (c, next) => {
         if (!model) {
-            throw new HTTPException(401, { message: "A model is not loaded." });
+            throw new ModelNotLoadedError();
         }
 
         // Validated reference
