@@ -1,7 +1,7 @@
 #ifndef SAMPLERS_HPP
 #define SAMPLERS_HPP
 
-#include <llama-model.h>
+#include "llama-model.h"
 #include "sampling.h"
 #include <iostream>
 

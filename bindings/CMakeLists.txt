@@ -69,6 +69,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Make llama.cpp available
 FetchContent_MakeAvailable(llama)
 
+message(STATUS "llama source dir: ${llama_SOURCE_DIR}")
+
 # Apple build changes
 # From llama-cpp-python
 if (APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
@@ -93,6 +95,7 @@ add_library(c_library SHARED
 target_include_directories(c_library PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/server
+    ${llama_SOURCE_DIR}/src
 )
 
 # Link llama libraries to our c_library
