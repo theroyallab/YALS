@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { describeRoute } from "hono-openapi";
 import { validator as zValidator } from "hono-openapi/zod";
 import { AuthPermissionResponse } from "@/api/core/types/auth.ts";
+import { HealthSchema } from "@/api/core/types/health.ts";
 import { applyChatTemplate } from "@/api/OAI/utils/chatCompletion.ts";
 import {
     ModelCard,
@@ -31,6 +32,21 @@ import authMiddleware from "../middleware/authMiddleware.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 
 const router = new Hono();
+
+const healthRoute = describeRoute({
+    responses: {
+        200: jsonContent(HealthSchema, "Health status of server"),
+    },
+});
+
+router.get(
+    "/health",
+    healthRoute,
+    checkModelMiddleware,
+    (c) => {
+        return c.json(HealthSchema.parse({ health: "ok" }));
+    },
+);
 
 const modelsRoute = describeRoute({
     responses: {
