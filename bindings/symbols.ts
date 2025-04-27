@@ -3,7 +3,7 @@ export default {
     model_load: {
         parameters: [
             "buffer", // model_path: const char*
-            "i32", // number_gpu_layers: int32_t
+            "i32", // num_gpu_layers: int32_t
             "buffer", // tensor_split: const float*
             "pointer", // callback: llama_progress_callback
         ],
@@ -134,9 +134,10 @@ export default {
     ctx_make: {
         parameters: [
             "pointer", // model: llama_model*
-            "u32", // context_length: unsigned
-            "i32", // number_gpu_layers: int32_t
+            "u32", // cache_size: unsigned
             "u32", // num_batches: unsigned
+            "i32", // num_gpu_layers: int32_t
+            "i32", // num_threads: int32_t
             "bool", // flash_attn: bool
             "f32", // rope_freq_base: float
             "bool", // use_yarn: bool

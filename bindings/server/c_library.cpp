@@ -52,12 +52,12 @@ void processor_free(const Processor* processor) {
 
 llama_model* model_load(
     const char* model_path,
-    const int32_t number_gpu_layers,
+    const int32_t num_gpu_layers,
     const float* tensor_split,
     const llama_progress_callback callback)
 {
     llama_model_params model_params = llama_model_default_params();
-    model_params.n_gpu_layers = number_gpu_layers;
+    model_params.n_gpu_layers = num_gpu_layers;
     model_params.progress_callback = callback;
 
     model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
@@ -125,8 +125,9 @@ const char* model_vocab_token_to_string(const llama_model* model, const llama_to
 llama_context* ctx_make(
     llama_model* model,
     const unsigned context_length,
-    const int32_t number_gpu_layers,
     const unsigned num_batches,
+    const int32_t num_gpu_layers,
+    const int32_t num_threads,
     const bool flash_attn,
     const float rope_freq_base,
     const bool use_yarn,
@@ -155,10 +156,13 @@ llama_context* ctx_make(
         ctx_params.rope_freq_scale = 0;
     }
 
-    // Decrease CPU threads if model is fully offloaded on GPU
-    if (number_gpu_layers >= llama_model_n_layer(model) || number_gpu_layers == -1) {
+    // Use only one thread if model is fully offloaded on GPU
+    if (num_gpu_layers >= llama_model_n_layer(model) || num_gpu_layers == -1) {
         ctx_params.n_threads = 1;
         ctx_params.n_threads_batch = 1;
+    } else {
+        ctx_params.n_threads = num_threads;
+        ctx_params.n_threads_batch = num_threads;
     }
 
     ctx_params.type_k = static_cast<ggml_type>(k_cache_quant_type);

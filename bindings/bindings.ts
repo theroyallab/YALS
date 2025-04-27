@@ -237,8 +237,9 @@ export class Model {
         const context = await lib.symbols.ctx_make(
             model,
             cacheSize,
+            params.chunk_size,
             params.num_gpu_layers,
-            512,
+            params.num_threads,
             params.flash_attention,
             params.rope_freq_base,
             params.enable_yarn, // Use yarn

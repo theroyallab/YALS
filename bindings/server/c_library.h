@@ -17,7 +17,7 @@ extern "C" {
     // LEAKABLE! Ensure you use model_free to clean up.
     llama_model* model_load(
         const char* model_path,
-        int32_t number_gpu_layers,
+        int32_t num_gpu_layers,
         const float* tensor_split,
         llama_progress_callback callback);
 
@@ -106,8 +106,9 @@ extern "C" {
     llama_context* ctx_make(
         llama_model* model,
         unsigned context_length,
-        int32_t number_gpu_layers,
         unsigned num_batches,
+        int32_t num_gpu_layers,
+        int32_t num_threads,
         bool flash_attn,
         float rope_freq_base,
         bool use_yarn,

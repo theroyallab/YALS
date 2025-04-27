@@ -48,6 +48,12 @@ model:
   # At maximum, should be the max_seq_len * num_slots.
   cache_size:
 
+  # Chunk size for prompt ingestion (default: 512).
+  # A lower value reduces VRAM usage but decreases ingestion speed.
+  # NOTE: Effects vary depending on the model.
+  # An ideal value is between 512 and 4096.
+  chunk_size: 512
+
   # Number of model layers to offload on the GPU (default: 0)
   # Set this to 999 to offload all layers to the GPU
   num_gpu_layers: 0
@@ -55,6 +61,10 @@ model:
   # An integer array of GBs of VRAM to split between GPUs (default: []).
   # Going over the max amount of GPUs will crash when loading the model
   gpu_split: []
+
+  # Number of CPU threads to use during processing/generation (default: -1)
+  # NOTE: Does not apply if model is fully offloaded to GPU
+  num_threads: -1
 
   # Prompt template to use for chat completions (default: None)
   prompt_template:
