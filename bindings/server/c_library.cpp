@@ -1,4 +1,7 @@
 #include "c_library.h"
+
+#include <map>
+
 #include "processor.hpp"
 #include <sstream>
 
@@ -50,11 +53,47 @@ void processor_free(const Processor* processor) {
     delete processor;
 }
 
+// Simplified version from common args.cpp
+std::vector<llama_model_tensor_buft_override> tensor_type_split(const std::string& value, std::vector<char*>& leaked_strings) {
+    std::vector<llama_model_tensor_buft_override> tensor_buft_overrides;
+
+    std::map<std::string, ggml_backend_buffer_type_t> buft_list;
+    if (buft_list.empty()) {
+        for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+            auto* dev = ggml_backend_dev_get(i);
+            if (auto* buft = ggml_backend_dev_buffer_type(dev)) {
+                buft_list[ggml_backend_buft_name(buft)] = buft;
+            }
+        }
+    }
+
+    for (const auto & override : string_split<std::string>(value, ',')) {
+        const std::string::size_type pos = override.find('=');
+        if (pos == std::string::npos) {
+            throw std::invalid_argument("invalid value");
+        }
+        std::string tensor_name = override.substr(0, pos);
+        std::string buffer_type = override.substr(pos + 1);
+
+        if (buft_list.find(buffer_type) == buft_list.end()) {
+            printf("Available buffer types:\n");
+            for (const auto &[name, type] : buft_list) {
+                printf("  %s\n", ggml_backend_buft_name(type));
+            }
+            throw std::invalid_argument("unknown buffer type");
+        }
+        leaked_strings.push_back(strdup(tensor_name.c_str()));
+        tensor_buft_overrides.push_back({leaked_strings.back(), buft_list.at(buffer_type)});
+    }
+    return tensor_buft_overrides;
+}
+
 llama_model* model_load(
     const char* model_path,
     const int32_t num_gpu_layers,
     const float* tensor_split,
-    const llama_progress_callback callback)
+    const llama_progress_callback callback,
+    const char* tensor_type_split_regex)
 {
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = num_gpu_layers;
@@ -63,8 +102,18 @@ llama_model* model_load(
     model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
     model_params.tensor_split = tensor_split;
 
-    llama_model* model = llama_model_load_from_file(model_path, model_params);
+    if (tensor_type_split_regex != nullptr) {
+        std::vector<char*> leaked_c_strings;
+        const auto overrides = tensor_type_split(std::string(tensor_type_split_regex), leaked_c_strings);
+        model_params.tensor_buft_overrides = overrides.data();
+        llama_model* model = llama_model_load_from_file(model_path, model_params);
+        for (char* ptr : leaked_c_strings) {
+            free(ptr);
+        }
+        return model;
+    }
 
+    llama_model* model = llama_model_load_from_file(model_path, model_params);
     return model;
 }
 

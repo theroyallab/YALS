@@ -6,6 +6,7 @@ export default {
             "i32", // num_gpu_layers: int32_t
             "buffer", // tensor_split: const float*
             "pointer", // callback: llama_progress_callback
+            "buffer", // tensor_type_split_regex: const char*
         ],
         result: "pointer", // llama_model*
         nonblocking: true,

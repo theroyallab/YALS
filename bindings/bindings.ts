@@ -214,12 +214,16 @@ export class Model {
             callback?.close();
         });
 
+        const testSplitRegex = ".*\.ffn_.*_exps\.=CPU"
+        const testSplitRegexPtr = new TextEncoder().encode(testSplitRegex + "\0");
+
         const tensorSplitPtr = new Float32Array(params.gpu_split);
         const model = await lib.symbols.model_load(
             modelPathPtr,
             params.num_gpu_layers,
             tensorSplitPtr,
             callback?.pointer ?? null,
+            testSplitRegexPtr
         );
 
         // Was the load aborted?
