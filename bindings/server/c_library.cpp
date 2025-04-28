@@ -95,12 +95,6 @@ std::vector<llama_model_tensor_buft_override> tensor_type_split(const std::strin
     return tensor_buft_overrides;
 }
 
-void llama_log_callback_noop(ggml_log_level level, const char * text, void * user_data) {
-    (void) level;
-    (void) text;
-    (void) user_data;
-}
-
 llama_model* model_load(
     const char* model_path,
     const int32_t num_gpu_layers,
