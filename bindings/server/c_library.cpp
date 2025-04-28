@@ -70,7 +70,6 @@ std::vector<llama_model_tensor_buft_override> tensor_type_split(const std::strin
     }
 
     for (const auto & override : string_split<std::string>(value, ',')) {
-        std::cout << "!!! " << override << std::endl;
         const std::string::size_type pos = override.find('=');
         if (pos == std::string::npos) {
             throw std::invalid_argument("invalid value");
@@ -82,15 +81,15 @@ std::vector<llama_model_tensor_buft_override> tensor_type_split(const std::strin
             for (const auto &[name, type] : buft_list) {
                 printf("  %s\n", ggml_backend_buft_name(type));
             }
-            std::cout << "Empty. " << std::endl;
+            throw std::invalid_argument("Attempted to use an invalid buffer override type. Exiting. ");
         }
 
-        std::cout << "Writing override." << std::endl;
         leaked_strings.push_back(strdup(tensor_name.c_str()));
         tensor_buft_overrides.push_back({leaked_strings.back(), buft_list.at(buffer_type)});
     }
 
     if (!tensor_buft_overrides.empty()) {
+        //Yes this is some nightmare garbage where it needs a null terminator don't ask me man, this does need to be here.
         tensor_buft_overrides.push_back({nullptr, nullptr});
     }
     return tensor_buft_overrides;
@@ -109,7 +108,6 @@ llama_model* model_load(
     const llama_progress_callback callback,
     const char* tensor_type_split_regex)
 {
-    llama_log_set(llama_log_callback_noop, nullptr);
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = num_gpu_layers;
     model_params.progress_callback = callback;
@@ -117,22 +115,17 @@ llama_model* model_load(
     model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
     model_params.tensor_split = tensor_split;
 
-    std::cerr << "\n\n\nDid thing model...\n\n\n" << std::endl;
     if (tensor_type_split_regex != nullptr) {
         std::vector<char*> leaked_c_strings;
         const auto overrides = tensor_type_split(std::string(tensor_type_split_regex), leaked_c_strings);
 
         if (!overrides.empty()) {
             model_params.tensor_buft_overrides = overrides.data();
-        } else {
-            std::cerr << "Overrides were empty." << std::endl;
         }
-        std::cerr << "\n\n\nCalling load model...\n\n\n" << std::endl;
         llama_model* model = llama_model_load_from_file(model_path, model_params);
-        std::cerr << "\n\n\nLoaded model...\n\n\n" << std::endl;
-        // for (char* ptr : leaked_c_strings) {
-        //     free(ptr);
-        // }
+        for (char* ptr : leaked_c_strings) {
+            free(ptr);
+        }
         return model;
     }
 
