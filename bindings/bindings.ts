@@ -215,9 +215,9 @@ export class Model {
         });
 
         const tensorSplitPtr = new Float32Array(params.gpu_split);
-        const overrideTensor = new TextEncoder().encode(
-            params.override_tensor + "\0",
-        );
+        const overrideTensor = params.override_tensor
+            ? new TextEncoder().encode(params.override_tensor + "\0")
+            : null;
 
         const model = await lib.symbols.model_load(
             modelPathPtr,
