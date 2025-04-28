@@ -88,6 +88,10 @@ model:
   # Possible values - f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0
   cache_mode_v: f16
 
+  # Override tensors to different devices (default: None)
+  # Takes in a regex string. Recommended to set num_threads
+  override_tensor: 
+
 # Options for Sampling
 sampling:
   # Select a sampler override preset (default: None).
