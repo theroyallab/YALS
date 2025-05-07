@@ -634,6 +634,8 @@ export class Model {
             stopStrings.length,
             stopTokensPtr,
             stopTokens.length,
+            true,
+            true
         );
 
         // Add the new job to active jobs for cancellation if needed

@@ -47,7 +47,9 @@ extern "C" {
         const char** stopping_strings,
         const unsigned num_stopping_strings,
         const int32_t* stopping_tokens,
-        const unsigned num_stopping_tokens);
+        const unsigned num_stopping_tokens,
+        const bool add_special,
+        const bool parse_special);
 
     bool processor_cancel_work(
         Processor* processor,

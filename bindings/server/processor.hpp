@@ -522,7 +522,7 @@ public:
     int submit_work(
         const std::string& prompt,
         const InferenceArgs& args) {
-        const std::vector<llama_token>& prompt_tokens = tokenizer.tokenize(prompt);
+        const std::vector<llama_token>& prompt_tokens = tokenizer.tokenize(prompt, args.parse_special, args.add_special);
         static int next_id = 1;
         const int request_id = next_id++;
 

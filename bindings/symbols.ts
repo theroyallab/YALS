@@ -43,6 +43,8 @@ export default {
             "u32", // num_stopping_strings: unsigned
             "buffer", // stopping_tokens: const int32_t*
             "u32", // num_stopping_tokens: unsigned
+            "bool", // add_special: bool
+            "bool" // parse_special: bool
         ],
         result: "i32", // int
     },

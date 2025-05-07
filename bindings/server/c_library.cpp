@@ -21,7 +21,9 @@ int processor_submit_work(
     const char** stopping_strings,
     const unsigned num_stopping_strings,
     const int32_t* stopping_tokens,
-    const unsigned num_stopping_tokens) {
+    const unsigned num_stopping_tokens,
+    const bool add_special,
+    const bool parse_special) {
 
     const std::string prompt_as_string(prompt);
     const InferenceArgs args(
@@ -35,7 +37,9 @@ int processor_submit_work(
         stopping_strings,
         num_stopping_strings,
         stopping_tokens,
-        num_stopping_tokens
+        num_stopping_tokens,
+        add_special,
+        parse_special
     );
 
     return processor->submit_work(
