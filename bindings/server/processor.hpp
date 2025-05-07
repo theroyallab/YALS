@@ -164,6 +164,7 @@ class Processor {
 
         best_slot->request_id = id;
         best_slot->prompt_tokens = prompt_tokens;
+        best_slot->intentionally_break_model = !inference_args.add_special;
 
         if (best_slot->gen_resources) {
             generation_resources_release(best_slot->gen_resources);
@@ -197,7 +198,7 @@ class Processor {
 
     // Processes the next sequence token. Finalizes the request if gen is finished.
     bool process_token(Slot& slot, const llama_token token) const {
-        auto piece = slot.detokenizer->process_token(token, true);
+        auto piece = slot.detokenizer->process_token(token, !slot.intentionally_break_model);
         const bool is_eos = tokenizer.is_end_of_generation_token(token);
         bool is_complete = is_eos;
         bool yield_final = false;

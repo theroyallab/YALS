@@ -85,6 +85,7 @@ struct Slot {
     llama_sampler* rule_chain{nullptr};
     Presampler presampler;
     llama_sampler* sampler{nullptr};
+    bool intentionally_break_model = false;
 
     GenerationResources* gen_resources{nullptr};
     class RuleStream* rule_stream{nullptr};
@@ -115,6 +116,7 @@ struct Slot {
         slot_start_time = 0;
         prompt_end_time = 0.0;
         generating_end_time = 0.0;
+        intentionally_break_model = false;
         generated_text.clear();
         detokenizer->reset();
     }
