@@ -20,16 +20,17 @@ z.ZodType.prototype.coalesce = function (defaultValue) {
 // Sampler overrides
 
 // Store the sampler override default function to prevent circular import
-let samplerOverrideResolver = <T>(_key: string, fallback?: T) => fallback as T;
+let samplerOverrideResolver = <T>(_key: string): T | null | undefined =>
+    undefined;
 
 export function registerSamplerOverrideResolver(
-    resolver: <T>(key: string, fallback?: T) => T,
+    resolver: <T>(key: string) => T | null | undefined,
 ) {
     samplerOverrideResolver = resolver;
 }
 
-z.ZodType.prototype.samplerOverride = function <T>(key: string, fallback?: T) {
-    return this.coalesce(() => samplerOverrideResolver(key, fallback));
+z.ZodType.prototype.samplerOverride = function <T>(key: string) {
+    return this.transform((_value) => samplerOverrideResolver<T>(key));
 };
 
 // Alias support
@@ -83,9 +84,6 @@ declare module "zod" {
             defaultValue: NonNullable<Output> | (() => NonNullable<Output>),
         ): z.ZodEffects<this, NonNullable<Output>>;
 
-        samplerOverride<T>(
-            key: string,
-            fallback?: T,
-        ): z.ZodEffects<this, NonNullable<Output>>;
+        samplerOverride<_T>(key: string): z.ZodEffects<this, Output>;
     }
 }

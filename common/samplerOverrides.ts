@@ -96,9 +96,12 @@ export function forcedSamplerOverrides(params: BaseSamplerRequest) {
     return params;
 }
 
-export function getSamplerDefault<T>(key: string, fallback?: T): T {
-    const defaultValue = overridesContainer.overrides[key]?.override ??
-        fallback;
+export function getSamplerDefault<T>(key: string): T | null | undefined {
+    const defaultValue = overridesContainer.overrides[key]?.override;
+
+    if (defaultValue === undefined || defaultValue === null) {
+        return defaultValue;
+    }
 
     return defaultValue as T;
 }

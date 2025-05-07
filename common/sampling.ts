@@ -5,12 +5,14 @@ import { forcedSamplerOverrides } from "@/common/samplerOverrides.ts";
 const GenerationOptionsSchema = z.aliasedObject(
     z.object({
         max_tokens: z.number().gte(0).nullish()
-            .samplerOverride("max_tokens", 0)
+            .samplerOverride("max_tokens")
+            .coalesce(0)
             .openapi({
                 description: "Aliases: max_length",
             }),
         min_tokens: z.number().gte(0).nullish()
-            .samplerOverride("min_tokens", 0)
+            .samplerOverride("min_tokens")
+            .coalesce(0)
             .openapi({
                 description: "Aliases: min_length",
             }),
@@ -19,23 +21,28 @@ const GenerationOptionsSchema = z.aliasedObject(
             z.array(z.union([z.string(), z.number()])),
         ])
             .nullish()
-            .samplerOverride("stop", [])
+            .samplerOverride("stop")
+            .coalesce([])
             .openapi({
                 description: "Aliases: stop_sequence",
             }),
         add_bos_token: z.boolean().nullish()
-            .samplerOverride("add_bos_token", true),
+            .samplerOverride("add_bos_token")
+            .coalesce(true),
         ban_eos_token: z.boolean().nullish()
-            .samplerOverride("ban_eos_token", false)
+            .samplerOverride("ban_eos_token")
+            .coalesce(false)
             .openapi({
                 description: "Aliases: ignore_eos",
             }),
         skip_special_tokens: z.boolean().nullish()
-            .samplerOverride("skip_special_tokens", false),
+            .samplerOverride("skip_special_tokens")
+            .coalesce(false),
         seed: z.number().nullish()
             .samplerOverride("seed"),
         logit_bias: z.record(z.string(), z.number()).nullish()
-            .samplerOverride("logit_bias", {}),
+            .samplerOverride("logit_bias")
+            .coalesce({}),
         json_schema: z.record(z.string(), z.unknown()).nullish()
             .samplerOverride("json_schema"),
         regex_pattern: z.string().nullish()
@@ -53,7 +60,8 @@ const GenerationOptionsSchema = z.aliasedObject(
                 ),
         ])
             .nullish()
-            .samplerOverride("banned_tokens", [])
+            .samplerOverride("banned_tokens")
+            .coalesce([])
             .openapi({
                 description: "Aliases: custom_token_bans",
             }),
@@ -62,7 +70,8 @@ const GenerationOptionsSchema = z.aliasedObject(
             z.array(z.string()),
         ])
             .nullish()
-            .samplerOverride("banned_strings", []),
+            .samplerOverride("banned_strings")
+            .coalesce([]),
     }),
     [
         { field: "max_tokens", aliases: ["max_length"] },
@@ -78,9 +87,11 @@ const GenerationOptionsSchema = z.aliasedObject(
 
 const TemperatureSamplerSchema = z.object({
     temperature: z.number().gte(0).nullish()
-        .samplerOverride("temperature", 1),
+        .samplerOverride("temperature")
+        .coalesce(1),
     temperature_last: z.boolean().nullish()
-        .samplerOverride("temperature_last", false),
+        .samplerOverride("temperature_last")
+        .coalesce(false),
 })
     .openapi({
         description: "Temperature options",
@@ -88,17 +99,23 @@ const TemperatureSamplerSchema = z.object({
 
 const AlphabetSamplerSchema = z.aliasedObject(
     z.object({
-        top_k: z.number().gte(-1).transform((top_k) => top_k == -1 ? 0 : top_k)
+        top_k: z.number().gte(-1)
+            .transform((top_k) => top_k == -1 ? 0 : top_k)
             .nullish()
-            .samplerOverride("top_k", 0),
+            .samplerOverride("top_k")
+            .coalesce(0),
         top_p: z.number().gte(0).lte(1).nullish()
-            .samplerOverride("top_p", 1),
+            .samplerOverride("top_p")
+            .coalesce(1),
         min_p: z.number().gte(0).lte(1).nullish()
-            .samplerOverride("min_p", 0),
+            .samplerOverride("min_p")
+            .coalesce(0),
         typical: z.number().gt(0).lte(1).nullish()
-            .samplerOverride("typical", 1),
+            .samplerOverride("typical")
+            .coalesce(1),
         nsigma: z.number().gte(0).nullish()
-            .samplerOverride("nsigma", 0),
+            .samplerOverride("nsigma")
+            .coalesce(0),
     }),
     [{ field: "typical", aliases: ["typical_p"] }],
 )
@@ -109,16 +126,20 @@ const AlphabetSamplerSchema = z.aliasedObject(
 const PenaltySamplerSchema = z.aliasedObject(
     z.object({
         frequency_penalty: z.number().gte(0).nullish()
-            .samplerOverride("frequency_penalty", 0),
+            .samplerOverride("frequency_penalty")
+            .coalesce(0),
         presence_penalty: z.number().gte(0).nullish()
-            .samplerOverride("presence_penalty", 0),
+            .samplerOverride("presence_penalty")
+            .coalesce(0),
         repetition_penalty: z.number().gt(0).nullish()
-            .samplerOverride("repetition_penalty", 1)
+            .samplerOverride("repetition_penalty")
+            .coalesce(1)
             .openapi({
                 description: "Aliases: rep_pen",
             }),
         penalty_range: z.number().nullish()
-            .samplerOverride("penalty_range", -1)
+            .samplerOverride("penalty_range")
+            .coalesce(-1)
             .openapi({
                 description:
                     "Aliases: repetition_range, repetition_penalty_range, rep_pen_range",
@@ -143,11 +164,14 @@ const PenaltySamplerSchema = z.aliasedObject(
 const DrySchema = z.aliasedObject(
     z.object({
         dry_multiplier: z.number().nullish()
-            .samplerOverride("dry_multiplier", 0),
+            .samplerOverride("dry_multiplier")
+            .coalesce(0),
         dry_base: z.number().nullish()
-            .samplerOverride("dry_base", 0),
+            .samplerOverride("dry_base")
+            .coalesce(0),
         dry_allowed_length: z.number().nullish()
-            .samplerOverride("dry_allowed_length", 0),
+            .samplerOverride("dry_allowed_length")
+            .coalesce(0),
         dry_sequence_breakers: z.union([
             z.string()
                 .transform((str) => {
@@ -165,9 +189,11 @@ const DrySchema = z.aliasedObject(
             z.array(z.string()),
         ])
             .nullish()
-            .samplerOverride("dry_sequence_breakers", []),
+            .samplerOverride("dry_sequence_breakers")
+            .coalesce([]),
         dry_range: z.number().nullish()
-            .samplerOverride("dry_range", 0)
+            .samplerOverride("dry_range")
+            .coalesce(0)
             .openapi({
                 description: "Aliases: dry_penalty_last_n",
             }),
@@ -180,9 +206,11 @@ const DrySchema = z.aliasedObject(
 
 const XtcSchema = z.object({
     xtc_probability: z.number().nullish()
-        .samplerOverride("xtc_probability", 0),
+        .samplerOverride("xtc_probability")
+        .coalesce(0),
     xtc_threshold: z.number().nullish()
-        .samplerOverride("xtc_threshold", 0.1),
+        .samplerOverride("xtc_threshold")
+        .coalesce(0.1),
 })
     .openapi({
         description: "XTC options",
@@ -191,17 +219,20 @@ const XtcSchema = z.object({
 const DynatempSchema = z.aliasedObject(
     z.object({
         max_temp: z.number().gte(0).nullish()
-            .samplerOverride("max_temp", 1)
+            .samplerOverride("max_temp")
+            .coalesce(1)
             .openapi({
                 description: "Aliases: dynatemp_high",
             }),
         min_temp: z.number().gte(0).nullish()
-            .samplerOverride("min_temp", 1)
+            .samplerOverride("min_temp")
+            .coalesce(1)
             .openapi({
                 description: "Aliases: dynatemp_low",
             }),
         temp_exponent: z.number().gte(0).nullish()
-            .samplerOverride("temp_exponent", 1)
+            .samplerOverride("temp_exponent")
+            .coalesce(1)
             .openapi({
                 description: "Aliases: dynatemp_exponent",
             }),
@@ -218,11 +249,14 @@ const DynatempSchema = z.aliasedObject(
 
 const MirostatSchema = z.object({
     mirostat_mode: z.number().nullish()
-        .samplerOverride("mirostat_mode", 0),
+        .samplerOverride("mirostat_mode")
+        .coalesce(0),
     mirostat_tau: z.number().nullish()
-        .samplerOverride("mirostat_tau", 1),
+        .samplerOverride("mirostat_tau")
+        .coalesce(1),
     mirostat_eta: z.number().nullish()
-        .samplerOverride("mirostat_eta", 0),
+        .samplerOverride("mirostat_eta")
+        .coalesce(0),
 })
     .openapi({
         description: "Mirostat options",
