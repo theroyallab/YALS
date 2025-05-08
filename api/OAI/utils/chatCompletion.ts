@@ -96,8 +96,6 @@ export function applyChatTemplate(
     options: TemplateFormatOptions = {},
 ): string {
     const {
-        addBosToken = true,
-        banEosToken = false,
         addGenerationPrompt = true,
         templateVars = {},
     } = options;
@@ -111,20 +109,13 @@ export function applyChatTemplate(
         }
     });
 
-    const bosToken = model.tokenizer.bosToken;
-    let prompt = promptTemplate.render({
+    const prompt = promptTemplate.render({
         ...templateVars,
         messages: messages,
-        bos_token: addBosToken ? bosToken?.piece : "",
-        eos_token: banEosToken ? "" : model.tokenizer.eosToken?.piece,
+        bos_token: model.tokenizer.bosToken?.piece,
+        eos_token: model.tokenizer.eosToken?.piece,
         add_generation_prompt: addGenerationPrompt,
     });
-
-    // Remove extra BOS token at start of prompt if present
-    // Better to do this since a template can add BOS anywhere
-    if (bosToken && prompt.startsWith(bosToken.piece)) {
-        prompt = prompt.slice(bosToken.piece.length);
-    }
 
     return prompt;
 }
@@ -172,8 +163,6 @@ export async function streamChatCompletion(
         promptTemplate,
         params.messages,
         {
-            addBosToken: params.add_bos_token,
-            banEosToken: params.ban_eos_token,
             addGenerationPrompt: params.add_generation_prompt,
             templateVars: params.template_vars,
         },
@@ -240,8 +229,6 @@ export async function generateChatCompletion(
         promptTemplate,
         params.messages,
         {
-            addBosToken: params.add_bos_token,
-            banEosToken: params.ban_eos_token,
             addGenerationPrompt: params.add_generation_prompt,
             templateVars: params.template_vars,
         },

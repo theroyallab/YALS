@@ -47,7 +47,12 @@ export const ChatCompletionRequest = z.object({
     template_vars: z.record(z.unknown()).nullish().coalesce({}),
 })
     .merge(CommonCompletionRequest)
-    .and(BaseSamplerRequest);
+    .and(BaseSamplerRequest)
+    .transform((obj) => {
+        // Always unset add_bos_token
+        obj.add_bos_token = undefined;
+        return obj;
+    });
 
 export type ChatCompletionRequest = z.infer<typeof ChatCompletionRequest>;
 

@@ -27,8 +27,7 @@ const GenerationOptionsSchema = z.aliasedObject(
                 description: "Aliases: stop_sequence",
             }),
         add_bos_token: z.boolean().nullish()
-            .samplerOverride("add_bos_token")
-            .coalesce(true),
+            .samplerOverride("add_bos_token"),
         ban_eos_token: z.boolean().nullish()
             .samplerOverride("ban_eos_token")
             .coalesce(false)
