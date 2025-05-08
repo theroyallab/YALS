@@ -29,8 +29,9 @@ export function registerSamplerOverrideResolver(
     samplerOverrideResolver = resolver;
 }
 
+// Coalesce except can return a nullable value
 z.ZodType.prototype.samplerOverride = function <T>(key: string) {
-    return this.transform((_value) => samplerOverrideResolver<T>(key));
+    return this.transform((value) => value ?? samplerOverrideResolver<T>(key));
 };
 
 // Alias support
