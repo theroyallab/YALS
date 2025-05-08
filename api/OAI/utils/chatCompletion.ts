@@ -109,13 +109,24 @@ export function applyChatTemplate(
         }
     });
 
-    const prompt = promptTemplate.render({
+    const bosToken = model.tokenizer.bosToken;
+    let prompt = promptTemplate.render({
         ...templateVars,
         messages: messages,
-        bos_token: model.tokenizer.bosToken?.piece ?? "",
+        bos_token: bosToken?.piece ?? "",
         eos_token: model.tokenizer.eosToken?.piece ?? "",
         add_generation_prompt: addGenerationPrompt,
     });
+
+    // Remove extra BOS token at start of prompt if present
+    // Some model templates don't respect their own add_bos_token setting
+    // Better to do this since a template can add BOS anywhere
+    if (
+        bosToken && model.tokenizer.addBosToken &&
+        prompt.startsWith(bosToken.piece)
+    ) {
+        prompt = prompt.slice(bosToken.piece.length);
+    }
 
     return prompt;
 }
