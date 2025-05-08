@@ -164,7 +164,7 @@ class Processor {
 
         best_slot->request_id = id;
         best_slot->prompt_tokens = prompt_tokens;
-        best_slot->intentionally_break_model = !inference_args.add_special;
+        best_slot->decode_special = inference_args.decode_special;
 
         if (best_slot->gen_resources) {
             generation_resources_release(best_slot->gen_resources);
@@ -198,7 +198,9 @@ class Processor {
 
     // Processes the next sequence token. Finalizes the request if gen is finished.
     bool process_token(Slot& slot, const llama_token token) const {
-        auto piece = slot.detokenizer->process_token(token, !slot.intentionally_break_model);
+
+        // Decode special sets parse_special for decoding ONLY
+        auto piece = slot.detokenizer->process_token(token, slot.decode_special);
         const bool is_eos = tokenizer.is_end_of_generation_token(token);
         bool is_complete = is_eos;
         bool yield_final = false;
@@ -523,7 +525,10 @@ public:
     int submit_work(
         const std::string& prompt,
         const InferenceArgs& args) {
-        const std::vector<llama_token>& prompt_tokens = tokenizer.tokenize(prompt, args.parse_special, args.add_special);
+
+        // Always encode special tokens
+        // This should really be changed once backend devs understand these params aren't needed
+        const std::vector<llama_token>& prompt_tokens = tokenizer.tokenize(prompt, args.add_special, true);
         static int next_id = 1;
         const int request_id = next_id++;
 

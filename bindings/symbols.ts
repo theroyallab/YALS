@@ -44,7 +44,7 @@ export default {
             "buffer", // stopping_tokens: const int32_t*
             "u32", // num_stopping_tokens: unsigned
             "bool", // add_special: bool
-            "bool" // parse_special: bool
+            "bool", // parse_special: bool
         ],
         result: "i32", // int
     },
@@ -123,6 +123,11 @@ export default {
     model_vocab_eot: {
         parameters: ["pointer"], // model: const llama_model*
         result: "i32", // llama_token
+    },
+
+    model_vocab_add_bos: {
+        parameters: ["pointer"], // model: const llama_model*
+        result: "bool", // bool
     },
 
     model_vocab_token_to_string: {

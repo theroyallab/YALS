@@ -98,6 +98,9 @@ extern "C" {
     llama_token model_vocab_eot(
         const llama_model* model);
 
+    bool model_vocab_add_bos(
+        const llama_model* model);
+
     // LEAKABLE! Ensure you use endpoint_free_string to clean up.
     const char* model_vocab_token_to_string(
         const llama_model* model,

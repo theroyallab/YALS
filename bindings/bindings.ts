@@ -41,6 +41,7 @@ class Tokenizer {
     bosToken?: Token;
     eosToken?: Token;
     eotToken?: Token;
+    addBosToken: boolean = true;
 
     constructor(model: Deno.PointerValue) {
         const bosTokenId = lib.symbols.model_vocab_bos(model);
@@ -50,6 +51,7 @@ class Tokenizer {
         this.bosToken = Tokenizer.createTokenPair(model, bosTokenId);
         this.eosToken = Tokenizer.createTokenPair(model, eosTokenId);
         this.eotToken = Tokenizer.createTokenPair(model, eotTokenId);
+        this.addBosToken = lib.symbols.model_vocab_add_bos(model);
 
         this.model = model;
     }
@@ -612,7 +614,10 @@ export class Model {
         const stopTokensPtr = new Int32Array(stopTokens);
         const stopStringsPtr = pointerArrayFromStrings(stopStrings);
 
-        const promptBosToken = params.add_bos_token
+        // Fallback to the model's preference
+        // Ideally, this shouldn't be exposed, but frontends want it.
+        const addBosToken = params.add_bos_token ?? this.tokenizer.addBosToken;
+        const promptBosToken = addBosToken
             ? this.tokenizer.bosToken?.piece
             : "";
 
@@ -634,8 +639,8 @@ export class Model {
             stopStrings.length,
             stopTokensPtr,
             stopTokens.length,
-            true,
-            true
+            addBosToken,
+            !params.skip_special_tokens,
         );
 
         // Add the new job to active jobs for cancellation if needed

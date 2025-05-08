@@ -181,6 +181,11 @@ llama_token model_vocab_eot(const llama_model* model)
     return llama_vocab_eot(&model->vocab);
 }
 
+bool model_vocab_add_bos(const llama_model* model)
+{
+    return llama_vocab_get_add_bos(&model->vocab);
+}
+
 const char* model_vocab_token_to_string(const llama_model* model, const llama_token token) {
     return llama_vocab_get_text(&model->vocab, token);
 }
