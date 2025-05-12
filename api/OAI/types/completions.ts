@@ -33,6 +33,8 @@ export const CommonCompletionRequest = z.object({
                 "type": "object",
             };
         }
+
+        return obj;
     });
 
 export const CompletionRequest = z.object({
