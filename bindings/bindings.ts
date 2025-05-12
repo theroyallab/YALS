@@ -640,7 +640,6 @@ export class Model {
             stopTokensPtr,
             stopTokens.length,
             addBosToken,
-            !params.skip_special_tokens,
         );
 
         // Add the new job to active jobs for cancellation if needed

@@ -25,11 +25,10 @@ public:
     std::vector<std::string> stopping_strings;
     std::vector<int32_t> stopping_tokens;
     bool add_special;
-    bool decode_special;
 
     InferenceArgs(): gen_resources(nullptr), max_tokens_to_gen(0), min_tokens_to_gen(0),
-                     max_slot_n_ctx(std::numeric_limits<uint32_t>::max()), seed(0), add_special(true),
-                     decode_special(true) {
+                     max_slot_n_ctx(std::numeric_limits<uint32_t>::max()), seed(0),
+                     add_special(true) {
     };
 
     explicit InferenceArgs(
@@ -44,15 +43,13 @@ public:
         const unsigned num_stopping_strings = 0,
         const int32_t* stopping_tokens = nullptr,
         const unsigned num_stopping_tokens = 0,
-        const bool add_special = true,
-        const bool decode_special = true)
+        const bool add_special = true)
 
     :   gen_resources(gen_resources),
         max_tokens_to_gen(max_tokens),
         min_tokens_to_gen(min_tokens),
         seed(seed),
-        add_special(add_special),
-        decode_special(decode_special)
+        add_special(add_special)
     {
         if (rewind_strings != nullptr && num_rewind_strings > 0) {
             this->rewind_strings.reserve(num_rewind_strings);
