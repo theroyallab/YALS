@@ -28,33 +28,23 @@ export const ChatCompletionMessage = z.object({
 
 export type ChatCompletionMessage = z.infer<typeof ChatCompletionMessage>;
 
-const ChatCompletionResponseFormat = z.object({
-    type: z.string().default("text"),
-});
-
 const ChatCompletionStreamOptions = z.object({
     include_usage: z.boolean().nullish().coalesce(false),
 });
 
-// TODO: Merge together with Zod 4
-const ChatCompletionBaseRequest = z.object({
-    messages: z.array(ChatCompletionMessage).nullish().coalesce([]),
-    response_format: ChatCompletionResponseFormat.nullish().coalesce(
-        ChatCompletionResponseFormat.parse({}),
-    ),
-    stream_options: ChatCompletionStreamOptions.nullish(),
-    add_generation_prompt: z.boolean().nullish().coalesce(true),
-    prompt_template: z.string().nullish(),
-    template_vars: z.record(z.unknown()).nullish().coalesce({}),
-})
-    .merge(CommonCompletionRequest);
-
 export const ChatCompletionRequest = z.aliasedObject(
-    ChatCompletionBaseRequest,
+    z.object({
+        messages: z.array(ChatCompletionMessage).nullish().coalesce([]),
+        stream_options: ChatCompletionStreamOptions.nullish(),
+        add_generation_prompt: z.boolean().nullish().coalesce(true),
+        prompt_template: z.string().nullish(),
+        template_vars: z.record(z.unknown()).nullish().coalesce({}),
+    }),
     [
         { field: "template_vars", aliases: ["chat_template_kwargs"] },
     ],
 )
+    .and(CommonCompletionRequest)
     .and(BaseSamplerRequest)
     .transform((obj) => {
         // Always unset add_bos_token

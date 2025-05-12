@@ -25,7 +25,15 @@ export const CommonCompletionRequest = z.object({
     echo: z.boolean().nullish().coalesce(false),
     suffix: z.string().nullish(),
     user: z.string().nullish(),
-});
+})
+    .and(BaseSamplerRequest)
+    .transform((obj) => {
+        if (obj.response_format.type === "json") {
+            obj.json_schema = {
+                "type": "object",
+            };
+        }
+    });
 
 export const CompletionRequest = z.object({
     prompt: z.union([
@@ -33,8 +41,7 @@ export const CompletionRequest = z.object({
         z.array(z.string()).transform((arr) => arr.join("\n")),
     ]),
 })
-    .merge(CommonCompletionRequest)
-    .and(BaseSamplerRequest)
+    .and(CommonCompletionRequest)
     .openapi({
         description: "Completion Request parameters",
     });
