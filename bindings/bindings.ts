@@ -221,15 +221,18 @@ export class Model {
             callback?.close();
         });
 
+        // Set GPU split mode
+        let gpu_split_mode = GGMLTensorSplitMode.none;
         if (params.gpu_split.length > 1) {
-            logger.info("Loading with a manual GPU split");
-
-            if (params.gpu_split_mode == GGMLTensorSplitMode.none) {
-                params.gpu_split_mode = GGMLTensorSplitMode.layer;
+            if (params.tensor_parallel) {
+                logger.info("Loading with tensor parallelism (row split)");
+                gpu_split_mode = GGMLTensorSplitMode.row;
+            } else {
+                logger.info("Loading with a manual GPU split");
+                gpu_split_mode = GGMLTensorSplitMode.layer;
             }
         } else {
             logger.info("Loading with a single GPU setup");
-            params.gpu_split_mode = GGMLTensorSplitMode.none;
         }
 
         const tensorSplitPtr = new Float32Array(params.gpu_split);
@@ -240,7 +243,7 @@ export class Model {
         const model = await lib.symbols.model_load(
             modelPathPtr,
             params.num_gpu_layers,
-            params.gpu_split_mode,
+            gpu_split_mode,
             tensorSplitPtr,
             callback?.pointer ?? null,
             overrideTensor,

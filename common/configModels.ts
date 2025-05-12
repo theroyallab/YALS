@@ -25,15 +25,8 @@ export const ModelConfig = z.object({
     cache_size: z.number().nullish(),
     chunk_size: z.number().nullish().coalesce(512),
     num_gpu_layers: z.number().nullish().coalesce(0),
-    gpu_split_mode: z.string()
-        .transform((str) =>
-            GGMLTensorSplitMode[
-                str.toLowerCase() as keyof typeof GGMLTensorSplitMode
-            ]
-        )
-        .nullish()
-        .coalesce(GGMLTensorSplitMode.layer),
     gpu_split: z.array(z.number()).nullish().coalesce([]),
+    tensor_parallel: z.boolean().nullish().coalesce(false),
     num_threads: z.number().nullish().coalesce(-1),
     prompt_template: z.string().nullish(),
     flash_attention: z.boolean().nullish().coalesce(false),
