@@ -4,6 +4,7 @@ export default {
         parameters: [
             "buffer", // model_path: const char*
             "i32", // num_gpu_layers: int32_t
+            "i32", // const int tensor_split_mode,
             "buffer", // tensor_split: const float*
             "pointer", // callback: llama_progress_callback
             "buffer", // tensor_type_split_regex: const char*

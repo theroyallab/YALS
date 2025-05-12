@@ -100,6 +100,7 @@ std::vector<llama_model_tensor_buft_override> tensor_type_split(const std::strin
 llama_model* model_load(
     const char* model_path,
     const int32_t num_gpu_layers,
+    const int tensor_split_mode,
     const float* tensor_split,
     const llama_progress_callback callback,
     const char* tensor_type_split_regex,
@@ -109,7 +110,7 @@ llama_model* model_load(
     model_params.n_gpu_layers = num_gpu_layers;
     model_params.progress_callback = callback;
 
-    model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
+    model_params.split_mode = static_cast<llama_split_mode>(tensor_split_mode);
     model_params.tensor_split = tensor_split;
     model_params.use_mmap = use_mmap;
 

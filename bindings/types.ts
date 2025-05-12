@@ -10,6 +10,12 @@ export enum GGMLType {
     q8_0 = 8,
 }
 
+export enum GGMLTensorSplitMode {
+    none = 0,
+    layer = 1,
+    row = 2,
+}
+
 export type GenerationChunk = StreamChunk | FinishChunk;
 
 export interface StreamChunk {

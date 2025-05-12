@@ -12,7 +12,12 @@ import { YALSGrammar } from "./grammar.ts";
 import { lib } from "./lib.ts";
 import { Job } from "./job.ts";
 import { SamplerBuilder } from "./samplers.ts";
-import { FinishChunk, GenerationChunk, ReadbackFinishReason } from "./types.ts";
+import {
+    FinishChunk,
+    GenerationChunk,
+    GGMLTensorSplitMode,
+    ReadbackFinishReason,
+} from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
 
 // TODO: Move this somewhere else
@@ -216,6 +221,17 @@ export class Model {
             callback?.close();
         });
 
+        if (params.gpu_split.length > 1) {
+            logger.info("Loading with a manual GPU split");
+
+            if (params.gpu_split_mode == GGMLTensorSplitMode.none) {
+                params.gpu_split_mode = GGMLTensorSplitMode.layer;
+            }
+        } else {
+            logger.info("Loading with a single GPU setup");
+            params.gpu_split_mode = GGMLTensorSplitMode.none;
+        }
+
         const tensorSplitPtr = new Float32Array(params.gpu_split);
         const overrideTensor = params.override_tensor
             ? new TextEncoder().encode(params.override_tensor + "\0")
@@ -224,6 +240,7 @@ export class Model {
         const model = await lib.symbols.model_load(
             modelPathPtr,
             params.num_gpu_layers,
+            params.gpu_split_mode,
             tensorSplitPtr,
             callback?.pointer ?? null,
             overrideTensor,

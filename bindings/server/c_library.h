@@ -18,6 +18,7 @@ extern "C" {
     llama_model* model_load(
         const char* model_path,
         int32_t num_gpu_layers,
+        const int tensor_split_mode,
         const float* tensor_split,
         llama_progress_callback callback,
         const char* tensor_type_split_regex,
