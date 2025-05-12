@@ -1,5 +1,5 @@
 import * as z from "@/common/myZod.ts";
-import { GGMLTensorSplitMode, GGMLType } from "@/bindings/types.ts";
+import { GGMLType } from "@/bindings/types.ts";
 
 export const NetworkConfig = z.object({
     host: z.string().nullish().coalesce("127.0.0.1"),
@@ -32,16 +32,20 @@ export const ModelConfig = z.object({
     flash_attention: z.boolean().nullish().coalesce(false),
     rope_freq_base: z.number().nullish().coalesce(0),
     enable_yarn: z.boolean().nullish().coalesce(false),
-    cache_mode_k: z.string()
-        .transform((str) =>
+    cache_mode_k: z.union([
+        z.string().transform((str) =>
             GGMLType[str.toLowerCase() as keyof typeof GGMLType]
-        )
+        ),
+        z.number(),
+    ])
         .nullish()
         .coalesce(GGMLType.f16),
-    cache_mode_v: z.string()
-        .transform((str) =>
+    cache_mode_v: z.union([
+        z.string().transform((str) =>
             GGMLType[str.toLowerCase() as keyof typeof GGMLType]
-        )
+        ),
+        z.number(),
+    ])
         .nullish()
         .coalesce(GGMLType.f16),
     override_tensor: z.string().nullish(),
