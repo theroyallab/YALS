@@ -46,6 +46,7 @@ export const ModelConfig = z.object({
     ])
         .nullish().coalesce(GGMLType.f16),
     override_tensor: z.string().nullish(),
+    mmap: z.boolean().nullish().coalesce(true),
 });
 
 export type ModelConfig = z.infer<typeof ModelConfig>;

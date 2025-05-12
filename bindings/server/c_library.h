@@ -20,7 +20,8 @@ extern "C" {
         int32_t num_gpu_layers,
         const float* tensor_split,
         llama_progress_callback callback,
-        const char* tensor_type_split_regex);
+        const char* tensor_type_split_regex,
+        const bool use_mmap);
 
     float model_get_freq_base(
         const llama_model* model);

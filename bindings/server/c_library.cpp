@@ -102,7 +102,8 @@ llama_model* model_load(
     const int32_t num_gpu_layers,
     const float* tensor_split,
     const llama_progress_callback callback,
-    const char* tensor_type_split_regex)
+    const char* tensor_type_split_regex,
+    const bool use_mmap)
 {
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = num_gpu_layers;
@@ -110,6 +111,7 @@ llama_model* model_load(
 
     model_params.split_mode = LLAMA_SPLIT_MODE_LAYER;
     model_params.tensor_split = tensor_split;
+    model_params.use_mmap = use_mmap;
 
     if (tensor_type_split_regex != nullptr) {
         std::vector<char*> leaked_c_strings;

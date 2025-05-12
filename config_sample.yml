@@ -92,6 +92,11 @@ model:
   # Takes in a regex string. Recommended to set num_threads
   override_tensor: 
 
+  # Lazily load the model into virtual memory. This is fast and efficient (default: true)
+  # Turning mmap off will take longer to load, but will reduce the risk of pageouts
+  # WARNING: Do not adjust this parameter unless you know what you're doing!
+  mmap: true
+
 # Options for Sampling
 sampling:
   # Select a sampler override preset (default: None).

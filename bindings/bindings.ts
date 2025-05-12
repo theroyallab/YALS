@@ -227,6 +227,7 @@ export class Model {
             tensorSplitPtr,
             callback?.pointer ?? null,
             overrideTensor,
+            params.mmap,
         );
 
         // Was the load aborted?

@@ -7,6 +7,7 @@ export default {
             "buffer", // tensor_split: const float*
             "pointer", // callback: llama_progress_callback
             "buffer", // tensor_type_split_regex: const char*
+            "bool", // use_mmap: const bool
         ],
         result: "pointer", // llama_model*
         nonblocking: true,
