@@ -36,7 +36,8 @@ const ChatCompletionStreamOptions = z.object({
     include_usage: z.boolean().nullish().coalesce(false),
 });
 
-export const ChatCompletionRequest = z.object({
+// TODO: Merge together with Zod 4
+const ChatCompletionBaseRequest = z.object({
     messages: z.array(ChatCompletionMessage).nullish().coalesce([]),
     response_format: ChatCompletionResponseFormat.nullish().coalesce(
         ChatCompletionResponseFormat.parse({}),
@@ -46,7 +47,14 @@ export const ChatCompletionRequest = z.object({
     prompt_template: z.string().nullish(),
     template_vars: z.record(z.unknown()).nullish().coalesce({}),
 })
-    .merge(CommonCompletionRequest)
+    .merge(CommonCompletionRequest);
+
+export const ChatCompletionRequest = z.aliasedObject(
+    ChatCompletionBaseRequest,
+    [
+        { field: "template_vars", aliases: ["chat_template_kwargs"] },
+    ],
+)
     .and(BaseSamplerRequest)
     .transform((obj) => {
         // Always unset add_bos_token
