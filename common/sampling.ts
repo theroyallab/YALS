@@ -34,9 +34,6 @@ const GenerationOptionsSchema = z.aliasedObject(
             .openapi({
                 description: "Aliases: ignore_eos",
             }),
-        skip_special_tokens: z.boolean().nullish()
-            .samplerOverride("skip_special_tokens")
-            .coalesce(false),
         seed: z.number().nullish()
             .samplerOverride("seed"),
         logit_bias: z.record(z.string(), z.number()).nullish()
