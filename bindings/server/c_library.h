@@ -22,7 +22,8 @@ extern "C" {
         const float* tensor_split,
         llama_progress_callback callback,
         const char* tensor_type_split_regex,
-        const bool use_mmap);
+        const bool use_mmap,
+        const bool realtime_process_priority);
 
     float model_get_freq_base(
         const llama_model* model);

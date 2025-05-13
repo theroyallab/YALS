@@ -1,3 +1,6 @@
+import os from "node:os";
+import { logger } from "./logging.ts";
+
 export function defer(callback: () => void): Disposable {
     return {
         [Symbol.dispose]: () => callback(),
@@ -44,4 +47,24 @@ export function generateUuidHex() {
         .join("");
 
     return token;
+}
+
+// Sets the process priority to realtime
+export function elevateProcessPriority() {
+    try {
+        os.setPriority(os.constants.priority.PRIORITY_HIGHEST);
+        logger.warn("EXPERIMENTAL: Process priority set to Realtime.");
+
+        if (Deno.build.os === "windows") {
+            logger.warn(
+                "If you're not running YALS as administrator," +
+                    "the priority is set to high.",
+            );
+        }
+    } catch {
+        logger.warn(
+            "Cannot set the process priority to realtime. " +
+                "Restart the program with sudo permissions.",
+        );
+    }
 }

@@ -4,6 +4,7 @@
 
 #include "processor.hpp"
 #include <sstream>
+#include <iostream>
 
 #include "log.h"
 
@@ -104,7 +105,8 @@ llama_model* model_load(
     const float* tensor_split,
     const llama_progress_callback callback,
     const char* tensor_type_split_regex,
-    const bool use_mmap)
+    const bool use_mmap,
+    const bool realtime_process_priority)
 {
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = num_gpu_layers;
@@ -113,6 +115,12 @@ llama_model* model_load(
     model_params.split_mode = static_cast<llama_split_mode>(tensor_split_mode);
     model_params.tensor_split = tensor_split;
     model_params.use_mmap = use_mmap;
+
+    // Requires sudo on unix systems
+    // Requires admin for realtime on Windows
+    if (realtime_process_priority) {
+        set_process_priority(GGML_SCHED_PRIO_REALTIME);
+    }
 
     if (tensor_type_split_regex != nullptr) {
         std::vector<char*> leaked_c_strings;

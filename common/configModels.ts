@@ -60,11 +60,16 @@ export const SamplingConfig = z.object({
 
 export type SamplingConfig = z.infer<typeof SamplingConfig>;
 
+export const DeveloperConfig = z.object({
+    realtime_process_priority: z.boolean().nullish().coalesce(true),
+});
+
 export const ConfigSchema = z.object({
     network: NetworkConfig,
     logging: LoggingConfig,
     model: ModelConfig,
     sampling: SamplingConfig,
+    developer: DeveloperConfig,
 });
 
 export type ConfigSchema = z.infer<typeof ConfigSchema>;

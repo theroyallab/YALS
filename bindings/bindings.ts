@@ -1,6 +1,7 @@
 import * as Path from "@std/path";
 import { delay } from "@std/async/delay";
 
+import { config } from "@/common/config.ts";
 import { ModelConfig } from "@/common/configModels.ts";
 import { logGenParams, logger, logPrompt } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
@@ -248,6 +249,7 @@ export class Model {
             callback?.pointer ?? null,
             overrideTensor,
             params.mmap,
+            config.developer.realtime_process_priority,
         );
 
         // Was the load aborted?

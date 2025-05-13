@@ -1,5 +1,5 @@
 {
-  "version": "4",
+  "version": "5",
   "specifiers": {
     "jsr:@core/asyncutil@^1.2.0": "1.2.0",
     "jsr:@std/async@^1.0.11": "1.0.11",
@@ -13,6 +13,7 @@
     "npm:@types/command-line-args@^5.2.3": "5.2.3",
     "npm:@types/command-line-usage@*": "5.0.4",
     "npm:@types/command-line-usage@^5.0.4": "5.0.4",
+    "npm:@types/node@*": "22.10.2",
     "npm:@types/strftime@~0.9.8": "0.9.8",
     "npm:command-line-args@^6.0.1": "6.0.1",
     "npm:command-line-usage@^7.0.3": "7.0.3",
@@ -96,6 +97,12 @@
     },
     "@types/json-schema@7.0.15": {
       "integrity": "sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA=="
+    },
+    "@types/node@22.10.2": {
+      "integrity": "sha512-Xxr6BBRCAOQixvonOye19wnzyDiUtTeqldOOmj3CkeblonbccA12PFwlufvRdrpjXxqnmUaeiU5EOA+7s5diUQ==",
+      "dependencies": [
+        "undici-types"
+      ]
     },
     "@types/strftime@0.9.8": {
       "integrity": "sha512-QIvDlGAKyF3YJbT3QZnfC+RIvV5noyDbi+ZJ5rkaSRqxCGrYJefgXm3leZAjtoQOutZe1hCXbAg+p89/Vj4HlQ=="
@@ -221,6 +228,12 @@
         "json-schema-walker",
         "zod",
         "zod-openapi"
+      ],
+      "optionalPeers": [
+        "@hono/zod-validator",
+        "hono",
+        "zod",
+        "zod-openapi"
       ]
     },
     "hono@4.7.4": {
@@ -242,7 +255,8 @@
       "integrity": "sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA==",
       "dependencies": [
         "argparse"
-      ]
+      ],
+      "bin": true
     },
     "json-schema-walker@2.0.0": {
       "integrity": "sha512-nXN2cMky0Iw7Af28w061hmxaPDaML5/bQD9nwm1lOoIKEGjHcRGxqWe4MfrkYThYAPjSUhmsp4bJNoLAyVn9Xw==",
@@ -330,6 +344,9 @@
     },
     "typical@7.3.0": {
       "integrity": "sha512-ya4mg/30vm+DOWfBg4YK3j2WD6TWtRkCbasOJr40CseYENzCUby/7rIvXA99JGsQHeNxLbnXdyLLxKSv3tauFw=="
+    },
+    "undici-types@6.20.0": {
+      "integrity": "sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg=="
     },
     "util-deprecate@1.0.2": {
       "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw=="

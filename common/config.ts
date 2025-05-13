@@ -2,6 +2,7 @@ import * as YAML from "@std/yaml";
 
 import {
     ConfigSchema,
+    DeveloperConfig,
     LoggingConfig,
     ModelConfig,
     NetworkConfig,
@@ -15,6 +16,7 @@ export let config: ConfigSchema = ConfigSchema.parse({
     logging: LoggingConfig.parse({}),
     model: ModelConfig.parse({}),
     sampling: SamplingConfig.parse({}),
+    developer: DeveloperConfig.parse({}),
 });
 
 export async function loadConfig(args: Record<string, unknown>) {
