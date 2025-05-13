@@ -54,7 +54,7 @@ The currently supported builds via CI are:
 
 - **macOS**: Metal 
 - **Windows/Linux**: CPU 
-- **Windows/Linux**: CUDA (built for Turing architectures and newer)
+- **Windows/Linux**: CUDA (built for Pascal and newer consumer architectures)
 
 > [!NOTE]
 > 

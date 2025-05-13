@@ -268,5 +268,5 @@ jobs:
 
             Builds:
             - **CPU**: Compiled with AVX1 and AVX2 support.
-            - **CUDA** - Built for CUDA 12, optimized for Turing and newer consumer GPUs.
+            - **CUDA** - Built for CUDA 12, optimized for Pascal and newer consumer GPUs.
             - **Metal** - Includes both Metal and CPU support for macOS.
