@@ -4,7 +4,6 @@
 
 #include "processor.hpp"
 #include <sstream>
-#include <iostream>
 
 #include "log.h"
 
