@@ -74,8 +74,9 @@ model:
   # Prompt template to use for chat completions (default: None)
   prompt_template:
 
-  # Enable flash attention (default: false)
-  flash_attention: false
+  # Enable flash attention (default: true)
+  # Disable if problems arise with the model's architecture
+  flash_attention: true
 
   # Rope freq base. 0 = model default (default: 0)
   # Adjust this value for NTK scaling

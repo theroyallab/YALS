@@ -29,7 +29,7 @@ export const ModelConfig = z.object({
     tensor_parallel: z.boolean().nullish().coalesce(false),
     num_threads: z.number().nullish().coalesce(-1),
     prompt_template: z.string().nullish(),
-    flash_attention: z.boolean().nullish().coalesce(false),
+    flash_attention: z.boolean().nullish().coalesce(true),
     rope_freq_base: z.number().nullish().coalesce(0),
     enable_yarn: z.boolean().nullish().coalesce(false),
     cache_mode_k: z.union([
