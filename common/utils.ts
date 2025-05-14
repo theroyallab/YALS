@@ -28,10 +28,12 @@ export async function getCommitSha() {
     }
 }
 
-export async function getYalsVersion() {
+export async function getYalsVersion(root?: string) {
+    const shaPath = root ? `${root}/gitSha.txt` : "gitSha.txt";
+
     try {
-        return Deno.readTextFileSync(`${import.meta.dirname}/gitSha.txt`)
-            .trim();
+        const cachedSha = await Deno.readTextFile(shaPath);
+        return cachedSha.trim();
     } catch {
         return await getCommitSha();
     }

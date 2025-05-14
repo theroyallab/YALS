@@ -10,7 +10,7 @@ import { loadYalsBindings } from "@/bindings/lib.ts";
 
 if (import.meta.main) {
     // Use Promise resolution to avoid nested try/catch
-    const version = await getYalsVersion();
+    const version = await getYalsVersion(import.meta.dirname);
 
     if (version) {
         logger.info(`Using YALS commit ${version}`);
