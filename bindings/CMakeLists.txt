@@ -19,11 +19,12 @@ if (DEFINED LLAMACPP_REPO OR DEFINED LLAMACPP_COMMIT)
     message(STATUS "Using a custom commit or repo for llama.cpp. Build might not work as expected. Here be dragons!")
 endif()
 
-set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git" CACHE STRING "llama.cpp repository URL")
+# Do not cache these variables with subsequent builds
+set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git")
 message(STATUS "Using llama.cpp repo ${LLAMACPP_REPO}")
 
 # Stable llama.cpp commit for bindings
-set(LLAMACPP_COMMIT "e5c834f718a32b7584f142799bbf508fddb9021c" CACHE STRING "llama.cpp repository commit")
+set(LLAMACPP_COMMIT "e5c834f718a32b7584f142799bbf508fddb9021c")
 message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
 
 # Optional: You can also enable mixed FP16/FP32 computation for faster processing
