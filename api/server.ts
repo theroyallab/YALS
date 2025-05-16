@@ -12,6 +12,7 @@ import core from "./core/router.ts";
 import oai from "./OAI/router.ts";
 import { generateUuidHex } from "@/common/utils.ts";
 import { ModelNotLoadedError } from "@/common/errors.ts";
+import requestLogMiddleware from "./middleware/requestLogMiddleware.ts";
 
 export function createApi() {
     const app = new Hono();
@@ -25,6 +26,10 @@ export function createApi() {
     app.use(loggerMiddleware(printToLogger));
     app.use("*", cors());
     app.use(requestId({ limitLength: 16, generator: generateUuidHex }));
+
+    if (config.logging.log_requests) {
+        app.use(requestLogMiddleware);
+    }
 
     // Add routers
     app.route("/", core);

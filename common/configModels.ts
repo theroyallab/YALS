@@ -12,6 +12,7 @@ export type NetworkConfig = z.infer<typeof NetworkConfig>;
 export const LoggingConfig = z.object({
     log_prompt: z.boolean().nullish().coalesce(false),
     log_generation_params: z.boolean().nullish().coalesce(false),
+    log_requests: z.boolean().nullish().coalesce(false),
 });
 
 export type LoggingConfig = z.infer<typeof LoggingConfig>;

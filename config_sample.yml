@@ -21,6 +21,10 @@ logging:
   # Enable generation parameter logging (default: False)
   log_generation_params: false
 
+  # Enable request logging (default: False).
+  # NOTE: Only use this for debugging!
+  log_requests: false
+
 # Options for model overrides and loading
 model:
   # Directory to look for models (default: models).
