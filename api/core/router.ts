@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { describeRoute } from "hono-openapi";
-import { validator as zValidator } from "hono-openapi/zod";
+import { validator as sValidator } from "hono-openapi";
 import { AuthPermissionResponse } from "@/api/core/types/auth.ts";
 import { HealthSchema } from "@/api/core/types/health.ts";
 import { applyChatTemplate } from "@/api/OAI/utils/chatCompletion.ts";
@@ -117,7 +117,7 @@ router.post(
     "/v1/model/load",
     loadModelRoute,
     authMiddleware(AuthKeyPermission.Admin),
-    zValidator("json", ModelLoadRequest),
+    sValidator("json", ModelLoadRequest),
     async (c) => {
         const params = c.req.valid("json");
         const loadParams = ModelConfig.parse({
@@ -224,7 +224,7 @@ router.post(
     templateSwitchRoute,
     authMiddleware(AuthKeyPermission.API),
     checkModelMiddleware,
-    zValidator("json", TemplateSwitchRequest),
+    sValidator("json", TemplateSwitchRequest),
     async (c) => {
         const params = c.req.valid("json");
 
@@ -273,7 +273,7 @@ router.post(
     tokenEncodeRoute,
     authMiddleware(AuthKeyPermission.API),
     checkModelMiddleware,
-    zValidator("json", TokenEncodeRequest),
+    sValidator("json", TokenEncodeRequest),
     async (c) => {
         const params = c.req.valid("json");
 
@@ -330,7 +330,7 @@ router.post(
     tokenDecodeRoute,
     authMiddleware(AuthKeyPermission.API),
     checkModelMiddleware,
-    zValidator("json", TokenDecodeRequest),
+    sValidator("json", TokenDecodeRequest),
     async (c) => {
         const params = c.req.valid("json");
 

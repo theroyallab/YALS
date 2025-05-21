@@ -22,15 +22,15 @@ if (import.meta.main) {
     loadYalsBindings();
 
     // Parse CLI args
-    const { args, usage } = parseArgs();
+    // const { args, usage } = parseArgs();
 
-    // Display help message if needed
-    if (args.support.help) {
-        console.log(usage);
-        Deno.exit();
-    }
+    // // Display help message if needed
+    // if (args.support.help) {
+    //     console.log(usage);
+    //     Deno.exit();
+    // }
 
-    await loadConfig(args);
+    await loadConfig({});
 
     // Load model if present
     if (config.model.model_name) {

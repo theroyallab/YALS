@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { streamSSE } from "hono/streaming";
 import { describeRoute } from "hono-openapi";
-import { validator as zValidator } from "hono-openapi/zod";
+import { validator as sValidator } from "hono-openapi";
 import {
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -33,7 +33,7 @@ router.post(
     completionsRoute,
     authMiddleware(AuthKeyPermission.API),
     checkModelMiddleware,
-    zValidator("json", CompletionRequest),
+    sValidator("json", CompletionRequest),
     async (c) => {
         const params = c.req.valid("json");
 
@@ -74,7 +74,7 @@ router.post(
     chatCompletionsRoute,
     authMiddleware(AuthKeyPermission.API),
     checkModelMiddleware,
-    zValidator("json", ChatCompletionRequest),
+    sValidator("json", ChatCompletionRequest),
     async (c) => {
         const params = c.req.valid("json");
 

@@ -1,13 +1,13 @@
-import type { ZodSchema } from "zod";
+import * as z from "@/common/myZod.ts";
 import { HTTPException } from "hono/http-exception";
 import { ContentfulStatusCode } from "hono/utils/http-status";
-import { resolver } from "hono-openapi/zod";
+import { resolver } from "hono-openapi";
 
 import { CancellationError } from "@/common/errors.ts";
 import { logger } from "@/common/logging.ts";
 
 // Originally from Stoker adopted for hono-openapi
-export const jsonContent = <T extends ZodSchema>(
+export const jsonContent = <T extends z.ZodType>(
     schema: T,
     description: string,
 ) => {
