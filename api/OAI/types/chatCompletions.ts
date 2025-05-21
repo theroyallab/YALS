@@ -10,9 +10,7 @@ const ChatCompletionImageUrl = z.object({
 });
 
 const ChatCompletionMessagePart = z.object({
-    type: z.string().nullish().coalesce("text").openapi({
-        effectType: "input",
-    }),
+    type: z.string().nullish().coalesce("text"),
     text: z.string().nullish(),
     image_url: ChatCompletionImageUrl.nullish(),
 });
@@ -38,7 +36,7 @@ export const ChatCompletionRequest = z.aliasedObject(
         stream_options: ChatCompletionStreamOptions.nullish(),
         add_generation_prompt: z.boolean().nullish().coalesce(true),
         prompt_template: z.string().nullish(),
-        template_vars: z.record(z.unknown()).nullish().coalesce({}),
+        template_vars: z.record(z.string(), z.unknown()).nullish().coalesce({}),
     }),
     [
         { field: "template_vars", aliases: ["chat_template_kwargs"] },
@@ -74,7 +72,7 @@ export const ChatCompletionResponse = z.object({
 export const ChatCompletionStreamChoice = z.object({
     index: z.number().default(0),
     finish_reason: z.string().optional(),
-    delta: z.union([ChatCompletionMessage, z.record(z.unknown())]),
+    delta: z.union([ChatCompletionMessage, z.record(z.string(), z.unknown())]),
 });
 
 export const ChatCompletionStreamChunk = z.object({

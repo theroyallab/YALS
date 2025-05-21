@@ -48,7 +48,7 @@ export async function unloadModel(skipQueue: boolean = false) {
 // Agnostic due to passing of ModelLoadRequest and ModelConfig
 // TODO: Add inline loading defaults
 export function applyLoadDefaults(item: unknown) {
-    const obj = z.record(z.unknown()).safeParse(item);
+    const obj = z.record(z.string(), z.unknown()).safeParse(item);
     if (obj.success) {
         const data = { ...obj.data };
 

@@ -44,9 +44,7 @@ export const CompletionRequest = z.object({
     ]),
 })
     .and(CommonCompletionRequest)
-    .openapi({
-        description: "Completion Request parameters",
-    });
+    .describe("Completion Request parameters");
 
 export type CompletionRequest = z.infer<typeof CompletionRequest>;
 

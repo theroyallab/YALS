@@ -1,38 +1,43 @@
-import * as z from "zod";
-import "zod-openapi/extend";
+import * as z from "zod/v4";
 
-// Extend ZodType
+// Coalesce function
 
-// Coalesce to handle nullish values
-// If the default is a function, call it and return
-z.ZodType.prototype.coalesce = function (defaultValue) {
-    return this.transform((value) => {
-        if (value != null) {
-            return value;
-        } else if (typeof defaultValue === "function") {
-            return defaultValue();
-        } else {
-            return defaultValue;
-        }
-    });
-};
+function coalesce<T extends z.ZodType, D>(this: T, defaultValue: D) {
+    return this
+        .transform((val) => val ?? defaultValue)
+        .refine((val) => val !== undefined && val !== null, {
+            error: "Coalesced value cannot be undefined or null",
+        });
+}
+
+z.ZodType.prototype.coalesce = coalesce;
 
 // Sampler overrides
 
 // Store the sampler override default function to prevent circular import
-let samplerOverrideResolver = <T>(_key: string): T | null | undefined =>
+let samplerOverrideResolver = (_key: string): unknown | null | undefined =>
     undefined;
 
 export function registerSamplerOverrideResolver(
-    resolver: <T>(key: string) => T | null | undefined,
+    resolver: (key: string) => unknown | null | undefined,
 ) {
     samplerOverrideResolver = resolver;
 }
 
-// Coalesce except can return a nullable value
-z.ZodType.prototype.samplerOverride = function <T>(key: string) {
-    return this.transform((value) => value ?? samplerOverrideResolver<T>(key));
+const samplerOverride = function <T extends z.ZodType>(this: T, key: string) {
+    return this.transform((value) => {
+        if (value !== undefined && value !== null) {
+            return value;
+        }
+
+        const defaultValue = samplerOverrideResolver(key);
+
+        // Make sure the default value adheres to the type
+        return this.parse(defaultValue);
+    });
 };
+
+z.ZodType.prototype.samplerOverride = samplerOverride;
 
 // Alias support
 interface AliasChoice {
@@ -47,7 +52,7 @@ export function aliasedObject<
     aliasChoices: AliasChoice[],
 ) {
     return z.preprocess((item: unknown) => {
-        const obj = z.record(z.unknown()).safeParse(item);
+        const obj = z.record(z.string(), z.unknown()).safeParse(item);
         if (obj.success) {
             for (const choice of aliasChoices) {
                 // If the field contains a value, skip
@@ -72,19 +77,19 @@ export function aliasedObject<
     }, schema);
 }
 
-export * from "zod";
+// Export all types
+export * from "zod/v4";
 
-// Export type as part of the package
-declare module "zod" {
-    interface ZodType<
-        Output,
-        Def extends z.ZodTypeDef = z.ZodTypeDef,
-        Input = Output,
-    > {
-        coalesce(
-            defaultValue: NonNullable<Output> | (() => NonNullable<Output>),
-        ): z.ZodEffects<this, NonNullable<Output>>;
+declare module "zod/v4" {
+    interface ZodType {
+        coalesce<T extends ZodType, D>(
+            this: T,
+            defaultValue: D,
+        ): ReturnType<typeof coalesce<T, D>>;
 
-        samplerOverride<_T>(key: string): z.ZodEffects<this, Output>;
+        samplerOverride<T extends ZodType>(
+            this: T,
+            key: string,
+        ): ReturnType<typeof samplerOverride<T>>;
     }
 }

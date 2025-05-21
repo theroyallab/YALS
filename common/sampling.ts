@@ -7,15 +7,11 @@ const GenerationOptionsSchema = z.aliasedObject(
         max_tokens: z.number().gte(0).nullish()
             .samplerOverride("max_tokens")
             .coalesce(0)
-            .openapi({
-                description: "Aliases: max_length",
-            }),
+            .describe("Aliases: max_length"),
         min_tokens: z.number().gte(0).nullish()
             .samplerOverride("min_tokens")
             .coalesce(0)
-            .openapi({
-                description: "Aliases: min_length",
-            }),
+            .describe("Aliases: min_length"),
         stop: z.union([
             z.string().transform((str) => [str]),
             z.array(z.union([z.string(), z.number()])),
@@ -23,17 +19,13 @@ const GenerationOptionsSchema = z.aliasedObject(
             .nullish()
             .samplerOverride("stop")
             .coalesce([])
-            .openapi({
-                description: "Aliases: stop_sequence",
-            }),
+            .describe("Aliases: stop_sequence"),
         add_bos_token: z.boolean().nullish()
             .samplerOverride("add_bos_token"),
         ban_eos_token: z.boolean().nullish()
             .samplerOverride("ban_eos_token")
             .coalesce(false)
-            .openapi({
-                description: "Aliases: ignore_eos",
-            }),
+            .describe("Aliases: ignore_eos"),
         seed: z.number().nullish()
             .samplerOverride("seed"),
         logit_bias: z.record(z.string(), z.number()).nullish()
@@ -58,9 +50,7 @@ const GenerationOptionsSchema = z.aliasedObject(
             .nullish()
             .samplerOverride("banned_tokens")
             .coalesce([])
-            .openapi({
-                description: "Aliases: custom_token_bans",
-            }),
+            .describe("Aliases: custom_token_bans"),
         banned_strings: z.union([
             z.string().transform((str) => [str]),
             z.array(z.string()),
@@ -77,9 +67,7 @@ const GenerationOptionsSchema = z.aliasedObject(
         { field: "banned_tokens", aliases: ["custom_token_bans"] },
     ],
 )
-    .openapi({
-        description: "Generation options",
-    });
+    .describe("Generation options");
 
 const TemperatureSamplerSchema = z.object({
     temperature: z.number().gte(0).nullish()
@@ -89,9 +77,7 @@ const TemperatureSamplerSchema = z.object({
         .samplerOverride("temperature_last")
         .coalesce(false),
 })
-    .openapi({
-        description: "Temperature options",
-    });
+    .describe("Temperature options");
 
 const AlphabetSamplerSchema = z.aliasedObject(
     z.object({
@@ -115,9 +101,7 @@ const AlphabetSamplerSchema = z.aliasedObject(
     }),
     [{ field: "typical", aliases: ["typical_p"] }],
 )
-    .openapi({
-        description: "Alphabet samplers",
-    });
+    .describe("Alphabet samplers");
 
 const PenaltySamplerSchema = z.aliasedObject(
     z.object({
@@ -130,16 +114,13 @@ const PenaltySamplerSchema = z.aliasedObject(
         repetition_penalty: z.number().gt(0).nullish()
             .samplerOverride("repetition_penalty")
             .coalesce(1)
-            .openapi({
-                description: "Aliases: rep_pen",
-            }),
+            .describe("Aliases: rep_pen"),
         penalty_range: z.number().nullish()
             .samplerOverride("penalty_range")
             .coalesce(-1)
-            .openapi({
-                description:
-                    "Aliases: repetition_range, repetition_penalty_range, rep_pen_range",
-            }),
+            .describe(
+                "Aliases: repetition_range, repetition_penalty_range, rep_pen_range",
+            ),
     }),
     [
         { field: "repetition_penalty", aliases: ["rep_pen"] },
@@ -153,9 +134,7 @@ const PenaltySamplerSchema = z.aliasedObject(
         },
     ],
 )
-    .openapi({
-        description: "Penalty samplers",
-    });
+    .describe("Penalty samplers");
 
 const DrySchema = z.aliasedObject(
     z.object({
@@ -190,15 +169,11 @@ const DrySchema = z.aliasedObject(
         dry_range: z.number().nullish()
             .samplerOverride("dry_range")
             .coalesce(0)
-            .openapi({
-                description: "Aliases: dry_penalty_last_n",
-            }),
+            .describe("Aliases: dry_penalty_last_n"),
     }),
     [{ field: "dry_range", aliases: ["dry_penalty_last_n"] }],
 )
-    .openapi({
-        description: "DRY options",
-    });
+    .describe("DRY options");
 
 const XtcSchema = z.object({
     xtc_probability: z.number().nullish()
@@ -208,30 +183,22 @@ const XtcSchema = z.object({
         .samplerOverride("xtc_threshold")
         .coalesce(0.1),
 })
-    .openapi({
-        description: "XTC options",
-    });
+    .describe("XTC options");
 
 const DynatempSchema = z.aliasedObject(
     z.object({
         max_temp: z.number().gte(0).nullish()
             .samplerOverride("max_temp")
             .coalesce(1)
-            .openapi({
-                description: "Aliases: dynatemp_high",
-            }),
+            .describe("Aliases: dynatemp_high"),
         min_temp: z.number().gte(0).nullish()
             .samplerOverride("min_temp")
             .coalesce(1)
-            .openapi({
-                description: "Aliases: dynatemp_low",
-            }),
+            .describe("Aliases: dynatemp_low"),
         temp_exponent: z.number().gte(0).nullish()
             .samplerOverride("temp_exponent")
             .coalesce(1)
-            .openapi({
-                description: "Aliases: dynatemp_exponent",
-            }),
+            .describe("Aliases: dynatemp_exponent"),
     }),
     [
         { field: "max_temp", aliases: ["dynatemp_high"] },
@@ -239,9 +206,7 @@ const DynatempSchema = z.aliasedObject(
         { field: "temp_exponent", aliases: ["dynatemp_exponent"] },
     ],
 )
-    .openapi({
-        description: "DynaTemp options",
-    });
+    .describe("DynaTemp options");
 
 const MirostatSchema = z.object({
     mirostat_mode: z.number().nullish()
@@ -254,9 +219,7 @@ const MirostatSchema = z.object({
         .samplerOverride("mirostat_eta")
         .coalesce(0),
 })
-    .openapi({
-        description: "Mirostat options",
-    });
+    .describe("Mirostat options");
 
 // Define the schema
 const BaseSamplerRequestSchema = GenerationOptionsSchema

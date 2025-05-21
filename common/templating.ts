@@ -29,7 +29,7 @@ export function range(start: number, stop?: number, step = 1): number[] {
 }
 
 const TemplateMetadataSchema = z.object({
-    stop_strings: z.array(z.string()).default([]).optional(),
+    stop_strings: z.array(z.string()).default([]),
     tool_start: z.string().optional(),
     tool_start_token: z.number().optional(),
 });
@@ -82,6 +82,14 @@ export class PromptTemplate {
         return response.value as string;
     }
 
+    private assignMetadataValue<K extends keyof TemplateMetadata>(
+        metadata: TemplateMetadata,
+        key: K,
+        value: unknown,
+    ) {
+        metadata[key] = value as TemplateMetadata[K];
+    }
+
     private extractMetadata(template: Template) {
         const metadata: TemplateMetadata = TemplateMetadataSchema.parse({});
 
@@ -115,8 +123,11 @@ export class PromptTemplate {
 
                     const parsedValue = fieldSchema.safeParse(result);
                     if (parsedValue.success) {
-                        // deno-lint-ignore no-explicit-any
-                        metadata[foundMetaKey] = parsedValue.data as any;
+                        this.assignMetadataValue(
+                            metadata,
+                            foundMetaKey,
+                            parsedValue.data,
+                        );
                     }
                 }
             }

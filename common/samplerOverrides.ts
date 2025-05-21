@@ -5,7 +5,7 @@ import { BaseSamplerRequest } from "@/common/sampling.ts";
 
 export const SamplerOverride = z.object({
     override: z.unknown().refine((val) => val !== undefined && val !== null, {
-        message: "Override value cannot be undefined or null",
+        error: "Override value cannot be undefined or null",
     }),
     force: z.boolean().optional().default(false),
     additive: z.boolean().optional().default(false),
@@ -43,7 +43,7 @@ export function overridesFromDict(newOverrides: Record<string, unknown>) {
             if (error instanceof Error) {
                 logger.error(error.stack);
                 logger.warn(
-                    `Skipped override with key "${key}"` +
+                    `Skipped assignment of override with key "${key}" ` +
                         "due to the above error.",
                 );
             }
@@ -96,14 +96,14 @@ export function forcedSamplerOverrides(params: BaseSamplerRequest) {
     return params;
 }
 
-export function getSamplerDefault<T>(key: string): T | null | undefined {
+export function getSamplerDefault(key: string) {
     const defaultValue = overridesContainer.overrides[key]?.override;
 
     if (defaultValue === undefined || defaultValue === null) {
         return defaultValue;
     }
 
-    return defaultValue as T;
+    return defaultValue;
 }
 
 // Link resolver to Zod
