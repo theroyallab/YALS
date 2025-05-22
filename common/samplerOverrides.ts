@@ -43,7 +43,7 @@ export function overridesFromDict(newOverrides: Record<string, unknown>) {
             if (error instanceof Error) {
                 logger.error(error.stack);
                 logger.warn(
-                    `Skipped override with key "${key}"` +
+                    `Skipped override with key "${key}" ` +
                         "due to the above error.",
                 );
             }
