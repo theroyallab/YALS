@@ -5,12 +5,10 @@ import "zod-openapi/extend";
 
 // Coalesce to handle nullish values
 // If the default is a function, call it and return
-z.ZodType.prototype.coalesce = function (defaultValue) {
-    return this.transform((value) => value ?? defaultValue)
-    .refine((value) => value !== null && value !== undefined, {
-        message: "Coalesced value cannot be undefined or null",
-        path: ["coalesce"],
-    });
+z.ZodType.prototype.coalesce = function <T extends NonNullable<unknown>>(
+    defaultValue: T,
+) {
+    return this.transform((value) => value ?? defaultValue);
 };
 
 // Sampler overrides
@@ -29,7 +27,7 @@ export function registerSamplerOverrideResolver(
 z.ZodType.prototype.samplerOverride = function <T>(key: string) {
     return this
         .transform((value) => value ?? samplerOverrideResolver<T>(key))
-        .refine((value) => this.safeParse(value), {
+        .refine((value) => this.safeParse(value).success, {
             message: "Sampler override must be equal to the input type",
             path: ["samplerOverride"],
         });
@@ -82,7 +80,9 @@ declare module "zod" {
         Def extends z.ZodTypeDef = z.ZodTypeDef,
         Input = Output,
     > {
-        coalesce(defaultValue: Output): z.ZodEffects<this, NonNullable<Output>>;
+        coalesce<T extends NonNullable<Output>>(
+            defaultValue: T,
+        ): z.ZodEffects<this, NonNullable<Output>>;
 
         samplerOverride<_T>(key: string): z.ZodEffects<this, Output>;
     }
