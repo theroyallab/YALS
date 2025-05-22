@@ -49,6 +49,7 @@ if(LLGUIDANCE)
         message(FATAL_ERROR "LLGuidance is enabled, but requires Rust for compilation. Get it at https://rustup.rs")
     endif()
 else()
+    message(STATUS "LLGuidance support is disabled. Enable with -DLLGUIDANCE=ON for grammar, JSON schema, and regex support.")
     set(LLAMA_LLGUIDANCE OFF CACHE BOOL "llama.cpp: disable LLGuidance support" FORCE)
 endif()
 
