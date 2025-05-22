@@ -273,10 +273,8 @@ export type BaseSamplerRequest = z.infer<typeof BaseSamplerRequestSchema>;
 
 // Apply transforms and expose the type
 export const BaseSamplerRequest = BaseSamplerRequestSchema
-    .transform((obj) => {
-        return forcedSamplerOverrides(obj);
-    })
-    .refine((obj) => BaseSamplerRequestSchema.safeParse(obj), {
+    .transform((obj) => forcedSamplerOverrides(obj))
+    .refine((obj) => BaseSamplerRequestSchema.safeParse(obj).success, {
         message: "Forced sampler overrides must match the input type",
         path: ["forcedOverrides"],
     });
