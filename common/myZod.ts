@@ -14,19 +14,19 @@ z.ZodType.prototype.coalesce = function <T extends NonNullable<unknown>>(
 // Sampler overrides
 
 // Store the sampler override default function to prevent circular import
-let samplerOverrideResolver = <T>(_key: string): T | null | undefined =>
+let samplerOverrideResolver = (_key: string): unknown | null | undefined =>
     undefined;
 
 export function registerSamplerOverrideResolver(
-    resolver: <T>(key: string) => T | null | undefined,
+    resolver: (key: string) => unknown | null | undefined,
 ) {
     samplerOverrideResolver = resolver;
 }
 
 // Coalesce except can return a nullable value
-z.ZodType.prototype.samplerOverride = function <T>(key: string) {
+z.ZodType.prototype.samplerOverride = function(key: string) {
     return this
-        .transform((value) => value ?? samplerOverrideResolver<T>(key))
+        .transform((value) => value ?? samplerOverrideResolver(key))
         .refine((value) => this.safeParse(value).success, {
             message: "Sampler override must be equal to the input type",
             path: ["samplerOverride"],
@@ -84,6 +84,6 @@ declare module "zod" {
             defaultValue: T,
         ): z.ZodEffects<this, NonNullable<Output>>;
 
-        samplerOverride<_T>(key: string): z.ZodEffects<this, Output>;
+        samplerOverride(key: string): z.ZodEffects<this, Output>;
     }
 }

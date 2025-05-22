@@ -96,14 +96,14 @@ export function forcedSamplerOverrides(params: BaseSamplerRequest) {
     return params;
 }
 
-export function getSamplerDefault<T>(key: string): T | null | undefined {
+export function getSamplerDefault(key: string) {
     const defaultValue = overridesContainer.overrides[key]?.override;
 
     if (defaultValue === undefined || defaultValue === null) {
         return defaultValue;
     }
 
-    return defaultValue as T;
+    return defaultValue;
 }
 
 // Link resolver to Zod
