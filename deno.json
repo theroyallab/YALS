@@ -26,7 +26,7 @@
     "strftime": "npm:strftime@^0.10.3",
     "winston": "npm:winston@^3.17.0",
     "yoctocolors": "npm:yoctocolors@^2.1.1",
-    "zod": "npm:zod@^3.24.4",
+    "zod": "npm:zod@^3.25.0",
     "zod-openapi": "npm:zod-openapi@^4.2.4",
     "@types/command-line-args": "npm:@types/command-line-args@^5.2.3",
     "@types/command-line-usage": "npm:@types/command-line-usage@^5.0.4",
