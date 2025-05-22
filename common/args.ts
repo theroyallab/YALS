@@ -47,51 +47,52 @@ function createGroupOptions(groupName: string, shape: z.ZodRawShape) {
 }
 
 // Converts a Zod schema type to a command-line-args type
+// Drills down recursively until primitive types are found
 function setArgType(
     option: commandLineUsage.OptionDefinition,
-    zodType: z.ZodTypeAny,
+    zodType: z.core.$ZodType,
 ) {
-    // Get constructor name for switch
-    const typeName = zodType.constructor.name;
+    // Use _zod for fetching the underlying type
+    const typeName = zodType._zod.def.type;
 
     switch (typeName) {
-        case "ZodString":
+        case "string":
             option["type"] = String;
             break;
-        case "ZodNumber":
+        case "number":
             option["type"] = Number;
             break;
-        case "ZodBoolean":
+        case "boolean":
             option["type"] = strToBool;
             break;
-        case "ZodOptional":
+        case "optional":
             setArgType(
                 option,
-                (zodType as z.ZodOptional<z.ZodTypeAny>).unwrap(),
+                (zodType as z.ZodOptional<z.ZodType>).unwrap(),
             );
             break;
-        case "ZodNullable":
+        case "nullable":
             setArgType(
                 option,
-                (zodType as z.ZodNullable<z.ZodTypeAny>).unwrap(),
+                (zodType as z.ZodNullable<z.ZodType>).unwrap(),
             );
             break;
-        case "ZodUnion":
+        case "union":
             setArgType(
                 option,
-                (zodType as z.ZodUnion<[z.ZodTypeAny, ...z.ZodTypeAny[]]>)._def
+                (zodType as z.ZodUnion<[z.ZodType, ...z.ZodType[]]>).def
                     .options[0],
             );
             break;
-        case "ZodEffects":
+        case "pipe":
             setArgType(
                 option,
-                (zodType as z.ZodEffects<z.ZodTypeAny>).innerType(),
+                (zodType as z.ZodPipe<z.ZodType>).def.in,
             );
             break;
-        case "ZodArray":
+        case "array":
             option["multiple"] = true;
-            setArgType(option, (zodType as z.ZodArray<z.ZodTypeAny>).element);
+            setArgType(option, (zodType as z.ZodArray<z.ZodType>).element);
             break;
     }
 }
