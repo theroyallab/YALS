@@ -76,6 +76,7 @@ export async function overridesFromFile(presetName: string) {
 }
 
 export function forcedSamplerOverrides(params: BaseSamplerRequest) {
+    const forcedKeys: string[] = [];
     const castParams = params as Record<string, unknown>;
 
     for (
@@ -83,6 +84,7 @@ export function forcedSamplerOverrides(params: BaseSamplerRequest) {
     ) {
         if (value.force) {
             castParams[key] = value.override;
+            forcedKeys.push(key);
         } else if (
             value.additive && Array.isArray(value.override) &&
             Array.isArray(castParams[key])
@@ -90,10 +92,12 @@ export function forcedSamplerOverrides(params: BaseSamplerRequest) {
             castParams[key] = Array.from(
                 new Set([...castParams[key], ...value.override]),
             );
+
+            forcedKeys.push(key);
         }
     }
 
-    return params;
+    return { params, forcedKeys };
 }
 
 export function getSamplerDefault(key: string) {

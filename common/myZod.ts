@@ -2,12 +2,11 @@ import * as z from "zod/v4";
 
 // Coalesce function
 
-function coalesce<T extends z.ZodType, D>(this: T, defaultValue: D) {
-    return this
-        .transform((val) => val ?? defaultValue)
-        .refine((val) => val !== undefined && val !== null, {
-            error: "Coalesced value cannot be undefined or null",
-        });
+function coalesce<T extends z.ZodType, D extends NonNullable<z.input<T>>>(
+    this: T,
+    defaultValue: D,
+) {
+    return this.transform((val) => val ?? defaultValue);
 }
 
 z.ZodType.prototype.coalesce = coalesce;
@@ -25,16 +24,36 @@ export function registerSamplerOverrideResolver(
 }
 
 const samplerOverride = function <T extends z.ZodType>(this: T, key: string) {
-    return this.transform((value) => {
-        if (value !== undefined && value !== null) {
-            return value;
+    return z.preprocess((data, ctx) => {
+        if (data !== undefined && data !== null) {
+            return data;
         }
 
         const defaultValue = samplerOverrideResolver(key);
 
-        // Make sure the default value adheres to the type
-        return this.parse(defaultValue);
-    });
+        const result = this.safeParse(defaultValue);
+        if (result.success) {
+            return defaultValue;
+        } else {
+            let expectedType = "";
+
+            const issues = result.error.issues;
+            if (issues.length > 0 && issues[0].code === "invalid_type") {
+                const issue = issues[0] as z.core.$ZodIssueInvalidType;
+                expectedType = issue.expected;
+            }
+
+            ctx.addIssue({
+                code: "custom",
+                message: `Sampler override for ${key} must match ` +
+                    `the input type ${expectedType}`,
+                input: defaultValue,
+                path: ["samplerOverride"],
+            });
+
+            return z.NEVER;
+        }
+    }, this);
 };
 
 z.ZodType.prototype.samplerOverride = samplerOverride;
@@ -82,14 +101,12 @@ export * from "zod/v4";
 
 declare module "zod/v4" {
     interface ZodType {
-        coalesce<T extends ZodType, D>(
-            this: T,
+        coalesce<D extends NonNullable<z.input<this>>>(
             defaultValue: D,
-        ): ReturnType<typeof coalesce<T, D>>;
+        ): ReturnType<typeof coalesce<this, D>>;
 
-        samplerOverride<T extends ZodType>(
-            this: T,
+        samplerOverride(
             key: string,
-        ): ReturnType<typeof samplerOverride<T>>;
+        ): ReturnType<typeof samplerOverride<this>>;
     }
 }
