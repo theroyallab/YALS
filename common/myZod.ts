@@ -25,12 +25,35 @@ export function registerSamplerOverrideResolver(
 
 // Coalesce except can return a nullable value
 z.ZodType.prototype.samplerOverride = function (key: string) {
-    return this
-        .transform((value) => value ?? samplerOverrideResolver(key))
-        .refine((value) => this.safeParse(value).success, {
-            message: "Sampler override must be equal to the input type",
-            path: ["samplerOverride"],
-        });
+    return z.preprocess((data, ctx) => {
+        if (data !== undefined && data !== null) {
+            return data;
+        }
+
+        const defaultValue = samplerOverrideResolver(key);
+
+        const result = this.safeParse(defaultValue);
+        if (result.success) {
+            return defaultValue;
+        } else {
+            let expectedType = "";
+
+            const issues = result.error.issues;
+            if (issues.length > 0 && issues[0].code === "invalid_type") {
+                const issue = issues[0] as z.ZodInvalidTypeIssue;
+                expectedType = issue.expected;
+            }
+
+            ctx.addIssue({
+                code: "custom",
+                message: `Sampler override for ${key} must match ` +
+                    `the input type ${expectedType}`,
+                path: ["samplerOverride"],
+            });
+
+            return z.NEVER;
+        }
+    }, this);
 };
 
 // Alias support
