@@ -74,3 +74,10 @@ export const ConfigSchema = z.object({
 });
 
 export type ConfigSchema = z.infer<typeof ConfigSchema>;
+
+// Config shim for inline overrides
+export const InlineConfigSchema = z.object({
+    model: z.record(z.string(), z.unknown()),
+});
+
+export type InlineConfigSchema = z.infer<typeof InlineConfigSchema>;

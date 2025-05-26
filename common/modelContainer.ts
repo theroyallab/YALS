@@ -1,9 +1,11 @@
 import { Mutex } from "@core/asyncutil";
+import * as Path from "@std/path";
+import * as YAML from "@std/yaml";
 
 import * as z from "./myZod.ts";
 import { Model } from "@/bindings/bindings.ts";
 import { config } from "./config.ts";
-import { ModelConfig } from "./configModels.ts";
+import { InlineConfigSchema, ModelConfig } from "./configModels.ts";
 import { logger } from "./logging.ts";
 
 export let model: Model | undefined = undefined;
@@ -46,26 +48,52 @@ export async function unloadModel(skipQueue: boolean = false) {
 
 // Applies model load overrides. Sources are inline and model config
 // Agnostic due to passing of ModelLoadRequest and ModelConfig
-// TODO: Add inline loading defaults
-export function applyLoadDefaults(item: unknown) {
+export async function applyLoadDefaults(item: unknown) {
     const obj = z.record(z.unknown()).safeParse(item);
-    if (obj.success) {
-        const data = { ...obj.data };
 
-        // Iterate through use_as_default
-        // TODO: Move config.model assert into ModelConfig with Zod 4
-        for (const key of config.model.use_as_default) {
-            if (
-                (data[key] === undefined || data[key] === null) &&
-                key in config.model
-            ) {
-                data[key] = config.model[key as keyof typeof config.model];
-            }
-        }
-
-        return data;
+    // Silently return since further validation will fail
+    if (!obj.success) {
+        return item;
     }
 
-    // Silently return item if obj parse fails
-    return item;
+    const data = { ...obj.data };
+    const modelOverrides: Record<string, unknown> = {};
+
+    if (typeof data["model_name"] === "string") {
+        const modelName = data["model_name"] as string;
+        const inlineConfigPath = Path.join(
+            config.model.model_dir,
+            `${modelName.replace(".gguf", "")}.yml`,
+        );
+
+        const fileInfo = await Deno.stat(inlineConfigPath).catch(() => null);
+        if (fileInfo?.isFile) {
+            const rawInlineConfig = await Deno.readTextFile(inlineConfigPath);
+            const inlineYaml = YAML.parse(rawInlineConfig) as Record<
+                string,
+                unknown
+            >;
+
+            const inlineResult = InlineConfigSchema.safeParse(inlineYaml);
+            if (inlineResult.success) {
+                Object.assign(modelOverrides, inlineResult.data.model);
+            } else {
+                logger.warn(
+                    `Invalid inline config for ${modelName}: ` +
+                        inlineResult.error.message,
+                );
+            }
+        }
+    }
+
+    // Iterate through defaults
+    for (const key of config.model.use_as_default) {
+        if (key in config.model) {
+            modelOverrides[key] =
+                config.model[key as keyof typeof config.model];
+        }
+    }
+
+    // Apply modelOverrides first then overlay data
+    return { ...modelOverrides, ...data };
 }
