@@ -2,11 +2,14 @@ import * as z from "zod/v4";
 
 // Coalesce function
 
-function coalesce<T extends z.ZodType, D extends NonNullable<z.input<T>>>(
+function coalesce<T extends z.ZodType, D extends NonNullable<z.output<T>>>(
     this: T,
     defaultValue: D,
 ) {
-    return this.transform((val) => val ?? defaultValue);
+    // Needs a second assertion to satisfy arrays
+    return this.transform((val) =>
+        val ?? (defaultValue as NonNullable<z.output<T>>)
+    );
 }
 
 z.ZodType.prototype.coalesce = coalesce;
@@ -24,16 +27,15 @@ export function registerSamplerOverrideResolver(
 }
 
 const samplerOverride = function <T extends z.ZodType>(this: T, key: string) {
-    return z.preprocess((data, ctx) => {
-        if (data !== undefined && data !== null) {
-            return data;
+    return this.transform((value, ctx) => {
+        if (value !== undefined && value !== null) {
+            return value;
         }
 
         const defaultValue = samplerOverrideResolver(key);
-
         const result = this.safeParse(defaultValue);
         if (result.success) {
-            return defaultValue;
+            return defaultValue as z.output<T>;
         } else {
             let expectedType = "";
 
@@ -53,7 +55,7 @@ const samplerOverride = function <T extends z.ZodType>(this: T, key: string) {
 
             return z.NEVER;
         }
-    }, this);
+    });
 };
 
 z.ZodType.prototype.samplerOverride = samplerOverride;
@@ -101,7 +103,7 @@ export * from "zod/v4";
 
 declare module "zod/v4" {
     interface ZodType {
-        coalesce<D extends NonNullable<z.input<this>>>(
+        coalesce<D extends NonNullable<z.output<this>>>(
             defaultValue: D,
         ): ReturnType<typeof coalesce<this, D>>;
 
