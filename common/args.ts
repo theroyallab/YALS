@@ -8,16 +8,7 @@ import { ConfigSchema } from "@/common/configModels.ts";
 
 // Replicates Python's strtobool for handling boolean values
 function strToBool(value: string): boolean {
-    const truthyValues = ["true", "1", "yes", "y"];
-    const falsyValues = ["false", "0", "no", "n"];
-
-    if (truthyValues.includes(value.toLowerCase())) {
-        return true;
-    } else if (falsyValues.includes(value.toLowerCase())) {
-        return false;
-    } else {
-        throw new Error(`Invalid boolean value: ${value}`);
-    }
+    return z.stringbool().parse(value);
 }
 
 // Converts the ConfigSchema to CLI arguments
