@@ -61,8 +61,9 @@ export async function applyLoadDefaults(item: unknown) {
 
     if (typeof data["model_name"] === "string") {
         const modelName = data["model_name"] as string;
+        const modelDir = data["model_dir"] as string ?? config.model.model_dir;
         const inlineConfigPath = Path.join(
-            config.model.model_dir,
+            modelDir,
             `${modelName.replace(".gguf", "")}.yml`,
         );
 

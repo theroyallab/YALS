@@ -3,11 +3,10 @@ import { loadAuthKeys } from "@/common/auth.ts";
 import { parseArgs } from "@/common/args.ts";
 import { config, loadConfig } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
-import { applyLoadDefaults, loadModel } from "@/common/modelContainer.ts";
+import { loadModel } from "@/common/modelContainer.ts";
 import { elevateProcessPriority, getYalsVersion } from "@/common/utils.ts";
 import { overridesFromFile } from "@/common/samplerOverrides.ts";
 import { loadYalsBindings } from "@/bindings/lib.ts";
-import { ModelConfig } from "./common/configModels.ts";
 
 if (import.meta.main) {
     // Use Promise resolution to avoid nested try/catch
@@ -33,16 +32,11 @@ if (import.meta.main) {
 
     await loadConfig(args);
 
+    // console.log(config.model)
     // Load model if present
     if (config.model.model_name) {
-        // Apply load defaults
-        // NOTE: inline overrides do not persist across loads
-        const initialParams = ModelConfig.parse(
-            await applyLoadDefaults(config.model),
-        );
-
         // Load model in bindings
-        await loadModel(initialParams);
+        await loadModel(config.model);
     }
 
     // Attempt to set RT process priority

@@ -8,7 +8,8 @@ import {
     NetworkConfig,
     SamplingConfig,
 } from "./configModels.ts";
-import { logger } from "@/common/logging.ts";
+import { logger } from "./logging.ts";
+import { applyLoadDefaults } from "./modelContainer.ts";
 
 // Initialize with an empty config
 export let config: ConfigSchema = ConfigSchema.parse({
@@ -37,12 +38,14 @@ export async function loadConfig(args: Record<string, unknown>) {
     // Single loop to merge default config, file config, and args
     for (const key of Object.keys(config) as Array<keyof typeof config>) {
         mergedConfig[key] = {
-            ...config[key],
             ...(parsedConfig[key] as Record<string, unknown> || {}),
             ...(args[key] as Record<string, unknown> || {}),
         };
     }
 
-    // Parse merged config
+    if (mergedConfig["model"]) {
+        mergedConfig["model"] = await applyLoadDefaults(mergedConfig["model"]);
+    }
+
     config = ConfigSchema.parse(mergedConfig);
 }
