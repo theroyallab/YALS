@@ -11,9 +11,6 @@ import {
 import * as z from "@/common/myZod.ts";
 import * as Path from "@std/path";
 
-// ts-types="@types/strftime"
-import strftime from "strftime";
-
 // From @huggingface/jinja
 export function range(start: number, stop?: number, step = 1): number[] {
     if (stop === undefined) {
@@ -63,9 +60,6 @@ export class PromptTemplate {
         // Function vars
         env.set("raise_exception", (args: string) => {
             throw new Error(args);
-        });
-        env.set("strftime_now", (format: string) => {
-            return strftime(format);
         });
         env.set("range", range);
 

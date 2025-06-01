@@ -20,19 +20,17 @@
     "command-line-args": "npm:command-line-args@^6.0.1",
     "command-line-usage": "npm:command-line-usage@^7.0.3",
     "hono": "npm:hono@^4.7.9",
-    "@huggingface/jinja": "npm:@huggingface/jinja@^0.3.4",
+    "@huggingface/jinja": "npm:@huggingface/jinja@^0.5.0",
     "@scalar/hono-api-reference": "npm:@scalar/hono-api-reference@0.5.172",
     "@std/async": "jsr:@std/async@^1.0.13",
     "@std/path": "jsr:@std/path@^1.0.9",
     "@std/yaml": "jsr:@std/yaml@^1.0.6",
-    "json-schema-walker": "npm:json-schema-walker@^2.0.0",
-    "strftime": "npm:strftime@^0.10.3",
+    "json-schema-walker": "npm:json-schema-walker@^3.0.0",
     "winston": "npm:winston@^3.17.0",
     "yoctocolors": "npm:yoctocolors@^2.1.1",
     "zod": "npm:zod@^3.25.41",
     "@types/command-line-args": "npm:@types/command-line-args@^5.2.3",
-    "@types/command-line-usage": "npm:@types/command-line-usage@^5.0.4",
-    "@types/strftime": "npm:@types/strftime@^0.9.8"
+    "@types/command-line-usage": "npm:@types/command-line-usage@^5.0.4"
   },
   "fmt": {
     "indentWidth": 4,
