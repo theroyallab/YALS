@@ -257,12 +257,14 @@ export class Model {
             return;
         }
 
+        // let maxSeqLen = params.max_seq_len === -1
+        //     ? 0
+        //     : params.max_seq_len ?? 4096;
         // Initialize cache size
-        let cacheSize = params.cache_size ?? params.max_seq_len ?? 0;
-        let maxSeqLen = params.max_seq_len ?? 0;
+        let cacheSize = params.cache_size ?? params.max_seq_len;
 
-        // Adjust cache size to multiple of 256
-        cacheSize = adjustCacheSize(cacheSize, maxSeqLen);
+        // Adjust cache size param to multiple of 256
+        cacheSize = adjustCacheSize(cacheSize, params.max_seq_len);
 
         const context = await lib.symbols.ctx_make(
             model,
@@ -284,7 +286,7 @@ export class Model {
             );
         }
 
-        // Full cache size for the model
+        // Model-defined cache size
         cacheSize = lib.symbols.ctx_max_seq_len(context);
 
         const processor = await lib.symbols.processor_make(
@@ -293,8 +295,14 @@ export class Model {
             params.num_slots,
         );
 
-        // Max size per sequence
-        maxSeqLen = params.max_seq_len ?? cacheSize ?? 0;
+        // Max seq len is the max context size per sequence
+        // 0 means entire model in llama.cpp, this was already cast by Zod
+        const maxSeqLen = params.max_seq_len == 0
+            ? cacheSize
+            : params.max_seq_len;
+
+        logger.info(cacheSize);
+        logger.info(maxSeqLen);
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = new Tokenizer(model);

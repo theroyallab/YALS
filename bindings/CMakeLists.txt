@@ -24,7 +24,7 @@ set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git")
 message(STATUS "Using llama.cpp repo ${LLAMACPP_REPO}")
 
 # Stable llama.cpp commit for bindings
-set(LLAMACPP_COMMIT "c6a2c9e7411f54b0770b319740561bbd6a2ebd27")
+set(LLAMACPP_COMMIT "a4e8912dfd4604be1e39bc86ba4c0b02969967ef")
 message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
 
 # Optional: You can also enable mixed FP16/FP32 computation for faster processing
@@ -49,6 +49,7 @@ if(LLGUIDANCE)
         message(FATAL_ERROR "LLGuidance is enabled, but requires Rust for compilation. Get it at https://rustup.rs")
     endif()
 else()
+    message(STATUS "LLGuidance support is disabled. Enable with -DLLGUIDANCE=ON for grammar, JSON schema, and regex support.")
     set(LLAMA_LLGUIDANCE OFF CACHE BOOL "llama.cpp: disable LLGuidance support" FORCE)
 endif()
 
