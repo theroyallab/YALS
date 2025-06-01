@@ -10,9 +10,13 @@
     "npm:@kingbri1/hono-openapi@~0.5.0-pre6": "0.5.0-pre6_@hono+standard-validator@0.1.2__@standard-schema+spec@1.0.0__hono@4.7.11_@kingbri1+standard-openapi@0.1.2-pre14__@kingbri1+standard-json@0.2.1-pre8___zod@3.25.46__json-schema-walker@2.0.0__zod@3.25.46_hono@4.7.11_openapi-types@12.1.3_@kingbri1+standard-json@0.2.1-pre8__zod@3.25.46_json-schema-walker@2.0.0_zod@3.25.46",
     "npm:@kingbri1/standard-json@~0.2.1-pre8": "0.2.1-pre8_zod@3.25.46",
     "npm:@kingbri1/standard-openapi@~0.1.2-pre14": "0.1.2-pre14_@kingbri1+standard-json@0.2.1-pre8__zod@3.25.46_json-schema-walker@2.0.0_zod@3.25.46",
+    "npm:@kingbri1/standard-openapi@~0.1.3-pre1": "0.1.3-pre1_@kingbri1+standard-json@0.2.1-pre8__zod@3.25.46_json-schema-walker@2.0.0_zod@3.25.46",
     "npm:@scalar/hono-api-reference@0.5.172": "0.5.172_hono@4.7.11",
+    "npm:@types/command-line-args@*": "5.2.3",
     "npm:@types/command-line-args@^5.2.3": "5.2.3",
+    "npm:@types/command-line-usage@*": "5.0.4",
     "npm:@types/command-line-usage@^5.0.4": "5.0.4",
+    "npm:@types/node@*": "22.15.15",
     "npm:@types/strftime@~0.9.8": "0.9.8",
     "npm:command-line-args@^6.0.1": "6.0.1",
     "npm:command-line-usage@^7.0.3": "7.0.3",
@@ -74,7 +78,7 @@
       "integrity": "sha512-vhmnJyIl9ApVsIkkvEq0On+REYagvCmox9kUlZkGklPF49i+qH6nEJBQA/+o0rtyLWBj0DKXBrN0QB1guupktQ==",
       "dependencies": [
         "@hono/standard-validator",
-        "@kingbri1/standard-openapi",
+        "@kingbri1/standard-openapi@0.1.2-pre14_@kingbri1+standard-json@0.2.1-pre8__zod@3.25.46_json-schema-walker@2.0.0_zod@3.25.46",
         "hono",
         "openapi-types"
       ],
@@ -94,6 +98,16 @@
     },
     "@kingbri1/standard-openapi@0.1.2-pre14_@kingbri1+standard-json@0.2.1-pre8__zod@3.25.46_json-schema-walker@2.0.0_zod@3.25.46": {
       "integrity": "sha512-6S48o5GyHHAYBbJ9UaZvx78l1tKA2kyl0YGQ2Db8jD5j2h3/6RPOvjA9nJ2ykFDawE5gpF6JoZGeP5ICUvF3VA==",
+      "dependencies": [
+        "@kingbri1/standard-json",
+        "json-schema-walker"
+      ],
+      "optionalPeers": [
+        "json-schema-walker"
+      ]
+    },
+    "@kingbri1/standard-openapi@0.1.3-pre1_@kingbri1+standard-json@0.2.1-pre8__zod@3.25.46_json-schema-walker@2.0.0_zod@3.25.46": {
+      "integrity": "sha512-O5Z6nHcmFhx/hDXTvcv520Q+pN2WTknO/0L1wt6uBFxS+C1ZijFuzLczrHeb+oEs18TGJpONaz6fBCyUSI2PhA==",
       "dependencies": [
         "@kingbri1/standard-json",
         "json-schema-walker"
@@ -130,6 +144,12 @@
     },
     "@types/json-schema@7.0.15": {
       "integrity": "sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA=="
+    },
+    "@types/node@22.15.15": {
+      "integrity": "sha512-R5muMcZob3/Jjchn5LcO8jdKwSCbzqmPB6ruBxMcf9kbxtniZHP327s6C37iOfuw8mbKK3cAQa7sEl7afLrQ8A==",
+      "dependencies": [
+        "undici-types"
+      ]
     },
     "@types/strftime@0.9.8": {
       "integrity": "sha512-QIvDlGAKyF3YJbT3QZnfC+RIvV5noyDbi+ZJ5rkaSRqxCGrYJefgXm3leZAjtoQOutZe1hCXbAg+p89/Vj4HlQ=="
@@ -359,6 +379,9 @@
     "typical@7.3.0": {
       "integrity": "sha512-ya4mg/30vm+DOWfBg4YK3j2WD6TWtRkCbasOJr40CseYENzCUby/7rIvXA99JGsQHeNxLbnXdyLLxKSv3tauFw=="
     },
+    "undici-types@6.21.0": {
+      "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="
+    },
     "util-deprecate@1.0.2": {
       "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw=="
     },
@@ -409,7 +432,7 @@
       "npm:@huggingface/jinja@~0.3.4",
       "npm:@kingbri1/hono-openapi@~0.5.0-pre6",
       "npm:@kingbri1/standard-json@~0.2.1-pre8",
-      "npm:@kingbri1/standard-openapi@~0.1.2-pre14",
+      "npm:@kingbri1/standard-openapi@~0.1.3-pre1",
       "npm:@scalar/hono-api-reference@0.5.172",
       "npm:@types/command-line-args@^5.2.3",
       "npm:@types/command-line-usage@^5.0.4",

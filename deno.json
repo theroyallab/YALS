@@ -16,7 +16,7 @@
     "@hono/standard-validator": "npm:@hono/standard-validator@^0.1.2",
     "@kingbri1/standard-json": "npm:@kingbri1/standard-json@^0.2.1-pre8",
     "hono-openapi": "npm:@kingbri1/hono-openapi@^0.5.0-pre6",
-    "@kingbri1/standard-openapi": "npm:@kingbri1/standard-openapi@^0.1.2-pre14",
+    "@kingbri1/standard-openapi": "npm:@kingbri1/standard-openapi@^0.1.3-pre1",
     "command-line-args": "npm:command-line-args@^6.0.1",
     "command-line-usage": "npm:command-line-usage@^7.0.3",
     "hono": "npm:hono@^4.7.9",
