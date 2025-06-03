@@ -1,6 +1,5 @@
 #include <iostream>
 #include "c_library.h"
-#include "json.hpp"
 #include "llama.h"
 #include "generation_resources.hpp"
 
@@ -9,11 +8,15 @@ int main() {
     const auto model = model_load(
         "/home/blackroot/Desktop/YALS/YALS/models/PocketDoc_Dans-PersonalityEngine-V1.2.0-24b-Q6_K_L.gguf",
         999,
+        2,
         idk,
-        nullptr
+        nullptr,
+        nullptr,
+        true,
+        true
         );
 
-    const auto ctx = ctx_make(model, 1024, 999, 512, false, -1, false, 0, 0, 0.0f);
+    const auto ctx = ctx_make(model, 1024, 999, 10, 512, false, -1, false, 0, 0, 0.0f);
     if (!model || !ctx) {
         std::cerr << "Failed to load model" << std::endl;
         return 1;
@@ -62,7 +65,8 @@ Hi how are you?
         nullptr,
         0,
         nullptr,
-        0);
+        0,
+        true);
 
     std::cout << "Starting model:" << std::endl;
     while (!readback_is_buffer_finished(readback_buffer)) {

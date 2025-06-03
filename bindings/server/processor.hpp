@@ -72,6 +72,10 @@ class Processor {
         slot.n_past++;
     }
 
+    static double readable_ggml_time() {
+        return static_cast<double>(ggml_time_us()) * 1e-3;
+    }
+
     // Derived from lcpp server originally
     static llama_pos common_longest_prefix(const std::vector<llama_token>& a, const std::vector<llama_token>& b) {
         llama_pos i;
@@ -170,7 +174,7 @@ class Processor {
         }
         best_slot->gen_resources = generation_resources_ref_acquire(inference_args.gen_resources);
 
-        best_slot->slot_start_time = 1e-3 * ggml_time_us();
+        best_slot->slot_start_time = readable_ggml_time();
 
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
         best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
@@ -184,14 +188,6 @@ class Processor {
         
         if (inference_args.max_tokens_to_gen > 0 && inference_args.max_tokens_to_gen >= inference_args.min_tokens_to_gen) {
             RuleEngine::rule_max_tokens(*best_slot->rule_stream, inference_args.max_tokens_to_gen, model, ctx, *best_slot);
-        }
-    }
-
-    void defrag_kv_if_thresh_greater(const float thresh) const {
-        const auto used_cells = llama_kv_self_used_cells(ctx);
-        const auto total_cells = llama_n_ctx(ctx);
-        if (static_cast<float>(used_cells) > thresh * static_cast<float>(total_cells) && slots.size() > 1) {
-            llama_kv_self_defrag(ctx);
         }
     }
 
@@ -286,7 +282,7 @@ class Processor {
             readback_write_to_buffer(slot.gen_resources->readback_buffer, final_piece, token);
         }
 
-        slot.generating_end_time = 1e-3 * ggml_time_us();
+        slot.generating_end_time = readable_ggml_time();
         const auto status = make_json_status_string(slot, finish_reason, stop_token);
         readback_finish(slot.gen_resources->readback_buffer, status);
         return false;
@@ -352,7 +348,7 @@ class Processor {
             if (decode_result != 0) {
                 for (auto& slot : slots) {
                     if (slot.i_batch >= 0 && slot.i_batch < batch.n_tokens) {
-                        slot.generating_end_time = 1e-3 * ggml_time_us();
+                        slot.generating_end_time = readable_ggml_time();
                         readback_finish(slot.gen_resources->readback_buffer, make_json_status_string(slot, "BatchDecode", ""));
                         slot.end(++current_job_index, ctx);
                     }
@@ -364,7 +360,7 @@ class Processor {
 
         for (auto& slot : slots) {
             if (slot.prompt_end_time == 0.0) {
-                slot.prompt_end_time =  1e-3 * ggml_time_us();
+                slot.prompt_end_time = readable_ggml_time();
             }
 
             if (slot.i_batch < 0 || slot.i_batch >= batch.n_tokens) {
@@ -386,7 +382,6 @@ class Processor {
 
     void update_slots() {
         common_batch_clear(batch);
-        defrag_kv_if_thresh_greater(.9);
 
         update_batch();
         update_gen_slots();
@@ -407,7 +402,6 @@ class Processor {
 
             if (all_idle) {
                 std::unique_lock lock(mutex_tasks);
-                defrag_kv_if_thresh_greater(0.6);
                 if (queue_tasks.empty()) {
                     cv_tasks.wait(lock, [this]() {
                         return !queue_tasks.empty() || should_exit;
@@ -492,7 +486,7 @@ public:
             if (slot.request_id == request_id_to_cancel) {
                 if (slot.gen_resources->readback_buffer) {
                     std::string last_token_piece = common_token_to_piece(ctx, slot.last_token, true);
-                    slot.generating_end_time = 1e-3 * ggml_time_us();
+                    slot.generating_end_time = readable_ggml_time();
                     readback_finish(slot.gen_resources->readback_buffer, make_json_status_string(slot, "Aborted", last_token_piece));
                 }
                 slot.end(++current_job_index, ctx);
