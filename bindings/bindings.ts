@@ -168,6 +168,7 @@ export class Model {
     // Internal pointers
     private model: Deno.PointerValue;
     private context: Deno.PointerValue;
+    private cache: Deno.PointerValue;
     private processor: Deno.PointerValue;
 
     // Concurrency
@@ -183,6 +184,7 @@ export class Model {
     private constructor(
         model: Deno.PointerValue,
         context: Deno.PointerValue,
+        cache: Deno.PointerValue,
         processor: Deno.PointerValue,
         path: Path.ParsedPath,
         tokenizer: Tokenizer,
@@ -191,6 +193,7 @@ export class Model {
     ) {
         this.model = model;
         this.context = context;
+        this.cache = cache;
         this.processor = processor;
         this.path = path;
         this.tokenizer = tokenizer;
@@ -289,9 +292,18 @@ export class Model {
         // Model-defined cache size
         cacheSize = lib.symbols.ctx_max_seq_len(context);
 
+        const cache = await lib.symbols.memory_make(context);
+
+        if (!cache) {
+            throw new Error(
+                "Model KV cache not found. Read above logs for errors.",
+            );
+        }
+
         const processor = await lib.symbols.processor_make(
             model,
             context,
+            cache,
             params.num_slots,
         );
 
@@ -300,9 +312,6 @@ export class Model {
         const maxSeqLen = params.max_seq_len == 0
             ? cacheSize
             : params.max_seq_len;
-
-        logger.info(cacheSize);
-        logger.info(maxSeqLen);
 
         const parsedModelPath = Path.parse(modelPath);
         const tokenizer = new Tokenizer(model);
@@ -361,6 +370,7 @@ export class Model {
         return new Model(
             model,
             context,
+            cache,
             processor,
             parsedModelPath,
             tokenizer,
@@ -370,7 +380,7 @@ export class Model {
     }
 
     resetKVCache() {
-        lib.symbols.ctx_clear_kv(this.context);
+        lib.symbols.memory_clear(this.cache);
     }
 
     async waitForJobs(skipWait: boolean = false) {

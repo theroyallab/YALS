@@ -60,6 +60,7 @@ extern "C" {
     Processor* processor_make(
         llama_model* model,
         llama_context* ctx,
+        llama_memory_t mem,
         int num_processor_slots);
 
     void processor_free(
@@ -131,8 +132,11 @@ extern "C" {
     void ctx_free(
         llama_context* ctx);
 
-    void ctx_clear_kv(
+    llama_memory_t memory_make(
         llama_context* ctx);
+
+    void memory_clear(
+        llama_memory_t mem);
 
     // ~~~ Readback Buffer ~~~
 

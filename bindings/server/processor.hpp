@@ -42,6 +42,7 @@ template<class... Ts> rule_action_type(Ts...) -> rule_action_type<Ts...>;
 class Processor {
     llama_model* model;
     llama_context* ctx;
+    llama_memory_t mem;
     llama_batch batch{};
     bool abort_inference = false;
 
@@ -149,7 +150,7 @@ class Processor {
 
         if (longest_prefix > 0) {
             // Reuse prefix, cut the KV to the prefix size and adjust to gen or prompt appropriately.
-            llama_kv_self_seq_rm(ctx, best_slot->slot_id, longest_prefix, -1);
+            llama_memory_seq_rm(mem, best_slot->slot_id, longest_prefix, -1);
 
             best_slot->prompt_tokens_processed = longest_prefix;
             best_slot->n_past = longest_prefix;
@@ -160,7 +161,7 @@ class Processor {
                 Slot::State::GENERATING :
                 Slot::State::PROMPT;
         } else {
-            llama_kv_self_seq_rm(ctx, best_slot->slot_id, 0, -1);
+            llama_memory_seq_rm(mem, best_slot->slot_id, 0, -1);
             best_slot->prompt_tokens_processed = 0;
             best_slot->state = Slot::State::PROMPT;
             best_slot->prompt_tokens.clear();
@@ -177,7 +178,7 @@ class Processor {
         best_slot->slot_start_time = readable_ggml_time();
 
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
-        best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, ctx, false);
+        best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, mem, false);
 
         best_slot->sampler = best_slot->gen_resources->sampler;
         best_slot->n_ctx_max = inference_args.max_slot_n_ctx;
@@ -210,7 +211,7 @@ class Processor {
             stop_token = common_token_to_piece(ctx, token, true);
         }
 
-        if (llama_kv_self_seq_pos_max(ctx, slot.slot_id) >= slot.n_ctx_max || llama_kv_self_seq_pos_max(ctx, slot.slot_id) >= llama_n_ctx(ctx)) {
+        if (llama_memory_seq_pos_max(mem, slot.slot_id) >= slot.n_ctx_max || llama_memory_seq_pos_max(mem, slot.slot_id) >= llama_n_ctx(ctx)) {
             is_complete = true;
             finish_reason = "CtxExceeded";
             stop_token = common_token_to_piece(ctx, token, true);
@@ -234,25 +235,24 @@ class Processor {
         }
 
         switch (seq_res.sequence_status) {
-            case SequenceStream::SequenceStatus::ACCEPT: {
+            case SequenceStream::SequenceStatus::ACCEPT:
                 slot.generated_text += seq_res.current_sequence;
                 slot.presampler.clear_rewind_bans(model);
-                slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, false);
+                slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, mem, false);
                 yield_final = true;
-                }
                 break;
             case SequenceStream::SequenceStatus::REWIND: {
                 //Restore the slot to whatever the last accepted snapshot was.
                 //Then delete the part of the KV we're rewinding
                 const int32_t prev_kv_pos = slot.rewind_snapshot.rewind_slot(slot);
-                llama_kv_self_seq_rm(ctx, slot.slot_id, prev_kv_pos, -1);
+                llama_memory_seq_rm(mem, slot.slot_id, prev_kv_pos, -1);
 
                 //Ban every token in the buffer.
                 const auto tokens = tokenizer.tokenize(seq_res.current_sequence, false, false);
                 slot.presampler.add_rewind_bans(model, tokens);
 
-                }
                 return true;
+            }
             case SequenceStream::SequenceStatus::STOP:
                 is_complete = true;
                 finish_reason = "StopString";
@@ -303,7 +303,7 @@ class Processor {
 
                     if (slot.prompt_tokens_processed >= slot.prompt_tokens.size()) {
                         slot.state = Slot::State::GENERATING;
-                        slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, ctx, true);
+                        slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, mem, true);
                         break;
                     }
                 }
@@ -412,8 +412,8 @@ class Processor {
     }
 
 public:
-    Processor(llama_model* model, llama_context* ctx, const int num_slots = 4)
-        : model(model), ctx(ctx), tokenizer(model, ctx) {
+    Processor(llama_model* model, llama_context* ctx, llama_memory_t mem, const int num_slots = 4)
+        : model(model), ctx(ctx), mem(mem), tokenizer(model, ctx) {
 
         batch_size = llama_n_batch(ctx);
         batch = llama_batch_init(static_cast<int32_t>(batch_size), 0, 1);

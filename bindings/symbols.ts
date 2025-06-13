@@ -63,6 +63,7 @@ export default {
         parameters: [
             "pointer", // model: llama_model*
             "pointer", // ctx: llama_context*
+            "pointer", // mem: llama_memory_t
             "i32", // num_processor_slots: int
         ],
         result: "pointer", // Processor*
@@ -169,8 +170,14 @@ export default {
         result: "void",
     },
 
-    ctx_clear_kv: {
+    memory_make: {
         parameters: ["pointer"], // ctx: llama_context*
+        result: "pointer", // llama_memory_t
+        nonblocking: true,
+    },
+
+    memory_clear: {
+        parameters: ["pointer"], // mem: llama_memory_t
         result: "void",
     },
 
