@@ -278,7 +278,7 @@ class Processor {
             if (!remaining.empty()) final_piece += remaining;
         }
 
-        if (yield_final && !final_piece.empty()) {
+        if (yield_final && !final_piece.empty() && !is_eos) {
             readback_write_to_buffer(slot.gen_resources->readback_buffer, final_piece, token);
         }
 
