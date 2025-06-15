@@ -20,6 +20,10 @@ export type LoggingConfig = z.infer<typeof LoggingConfig>;
 export const ModelConfig = z.object({
     model_dir: z.string().nullish().coalesce("models"),
     inline_model_loading: z.boolean().nullish().coalesce(false),
+    use_dummy_models: z.boolean().nullish().coalesce(false),
+    dummy_model_names: z.array(z.string()).nullish().coalesce([
+        "gpt-3.5-turbo",
+    ]),
     model_name: z.string().nullish(),
     use_as_default: z.array(z.string()).nullish().coalesce([]),
     max_seq_len: z.number().nullish()

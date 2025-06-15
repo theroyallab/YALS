@@ -60,6 +60,16 @@ router.on(
     authMiddleware("api"),
     async (c) => {
         const modelCards: ModelCard[] = [];
+
+        // Handle dummy models
+        if (config.model.use_dummy_models) {
+            const dummyModelCards = config.model.dummy_model_names.map((name) =>
+                ModelCard.parse({ id: name })
+            );
+
+            modelCards.push(...dummyModelCards);
+        }
+
         for await (const file of Deno.readDir(config.model.model_dir)) {
             if (!file.name.endsWith(".gguf")) {
                 continue;

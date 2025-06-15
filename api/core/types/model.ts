@@ -9,6 +9,8 @@ export const ModelLoadRequest = z.preprocess(
     }).omit({
         model_dir: true,
         inline_model_loading: true,
+        use_dummy_models: true,
+        dummy_model_names: true,
         use_as_default: true,
     }),
 );
