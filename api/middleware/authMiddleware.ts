@@ -3,8 +3,7 @@ import { createMiddleware } from "hono/factory";
 import { AuthKeyPermission, authKeys } from "@/common/auth.ts";
 import { config } from "@/common/config.ts";
 
-// Middleware for checking if the model exists
-// Sends a validated version of the model via Hono's ctx
+// Middleware for key validation
 const authMiddleware = (permission: AuthKeyPermission) => {
     return createMiddleware(async (c, next) => {
         if (config.network.disable_auth) {

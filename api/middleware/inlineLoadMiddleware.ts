@@ -1,5 +1,10 @@
 import { HonoRequest, Next } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { AuthKeyPermission, getAuthPermission } from "@/common/auth.ts";
+import { config } from "@/common/config.ts";
+import { logger } from "@/common/logging.ts";
 import { model } from "@/common/modelContainer.ts";
+
 import { ModelLoadRequest } from "../core/types/model.ts";
 import { apiLoadModel } from "../core/utils/model.ts";
 
@@ -12,16 +17,41 @@ const inlineLoadMiddleware = async (
     newModelName?: string,
 ) => {
     if (
-        newModelName && model?.path.name !== newModelName.replace(".gguf", "")
+        !newModelName || model?.path.name === newModelName.replace(".gguf", "")
     ) {
-        console.log("Loading inline");
-
-        const modelLoadRequest = await ModelLoadRequest.parseAsync({
-            model_name: newModelName,
-        });
-
-        await apiLoadModel(modelLoadRequest, req.raw.signal);
+        await next();
+        return;
     }
+
+    const permission = getAuthPermission(req.header());
+
+    // Check if inline loading is enabled
+    if (!config.model.inline_model_loading) {
+        if (permission === AuthKeyPermission.Admin) {
+            logger.warn(
+                `Unable to switch model to ${newModelName} because ` +
+                    '"inline_model_loading" is not True in config.yml.',
+            );
+        }
+
+        await next();
+        return;
+    }
+
+    // Only allow admins to swap models
+    if (permission !== AuthKeyPermission.Admin) {
+        throw new HTTPException(401, {
+            message: `Unable to switch model to ${newModelName} ` +
+                "because an admin key isn't provided",
+        });
+    }
+
+    // Create a load request payload
+    const modelLoadRequest = await ModelLoadRequest.parseAsync({
+        model_name: newModelName,
+    });
+
+    await apiLoadModel(modelLoadRequest, req.raw.signal);
 
     await next();
 };

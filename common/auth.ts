@@ -12,8 +12,8 @@ const AuthFileSchema = z.object({
 type AuthFile = z.infer<typeof AuthFileSchema>;
 
 export enum AuthKeyPermission {
-    API = "API",
-    Admin = "Admin",
+    API = "api",
+    Admin = "admin",
 }
 
 export class AuthKeys {
@@ -87,7 +87,9 @@ export async function loadAuthKeys() {
     );
 }
 
-export function getAuthPermission(headers: Record<string, string>) {
+export function getAuthPermission(
+    headers: Record<string, string>,
+): AuthKeyPermission {
     if (config.network.disable_auth) {
         return AuthKeyPermission.Admin;
     }
@@ -104,9 +106,9 @@ export function getAuthPermission(headers: Record<string, string>) {
     }
 
     if (authKeys?.verifyKey(testKey, AuthKeyPermission.Admin)) {
-        return AuthKeyPermission.Admin.toLowerCase();
+        return AuthKeyPermission.Admin;
     } else if (authKeys?.verifyKey(testKey, AuthKeyPermission.API)) {
-        return AuthKeyPermission.API.toLowerCase();
+        return AuthKeyPermission.API;
     } else {
         throw new Error("The provided authentication key is invalid.");
     }

@@ -31,6 +31,10 @@ model:
   # Windows users, do NOT put this path in quotes!
   model_dir: models
 
+  # Allow direct loading of models from a completion or chat completion request (default: False).
+  # This method of loading is strict by default.
+  inline_model_loading: false
+
   # An initial model to load.
   # Make sure the model is located in the model directory!
   # REQUIRED: This must be filled out to load a model on startup.

@@ -8,6 +8,7 @@ export const ModelLoadRequest = z.preprocess(
         model_name: z.string(),
     }).omit({
         model_dir: true,
+        inline_model_loading: true,
         use_as_default: true,
     }),
 );
