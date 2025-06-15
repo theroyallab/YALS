@@ -25,6 +25,21 @@ const inlineLoadMiddleware = async (
 
     const permission = getAuthPermission(req.header());
 
+    // Only log dummy model error when an admin tries to pass it
+    const isDummyModel = config.model.use_dummy_models &&
+        config.model.dummy_model_names.includes(newModelName);
+
+    if (isDummyModel) {
+        if (permission === "admin") {
+            logger.warn(
+                `Dummy model ${newModelName} provided. Skipping inline load.`,
+            );
+        }
+
+        await next();
+        return;
+    }
+
     // Check if inline loading is enabled
     if (!config.model.inline_model_loading) {
         if (permission === "admin") {
@@ -39,7 +54,7 @@ const inlineLoadMiddleware = async (
     }
 
     // Only allow admins to swap models
-    if (permission !== "api") {
+    if (permission !== "admin") {
         throw new HTTPException(401, {
             message: `Unable to switch model to ${newModelName} ` +
                 "because an admin key isn't provided",
