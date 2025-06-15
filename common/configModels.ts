@@ -26,8 +26,7 @@ export const ModelConfig = z.object({
     ]),
     model_name: z.string().nullish(),
     use_as_default: z.array(z.string()).nullish().coalesce([]),
-    max_seq_len: z.number().nullish()
-        .coalesce(4096).transform((v) => v === -1 ? 0 : v),
+    max_seq_len: z.number().nullish().coalesce(4096),
     num_slots: z.number().nullish().coalesce(1),
     cache_size: z.number().nullish(),
     chunk_size: z.number().nullish().coalesce(512),
