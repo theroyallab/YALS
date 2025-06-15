@@ -17,6 +17,7 @@ import { PromptTemplate } from "@/common/templating.ts";
 
 import authMiddleware from "../middleware/authMiddleware.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
+import inlineLoadMiddleware from "../middleware/inlineLoadMiddleware.ts";
 import { CompletionRequest, CompletionResponse } from "./types/completions.ts";
 import { generateCompletion, streamCompletion } from "./utils/completion.ts";
 
@@ -32,8 +33,12 @@ router.post(
     "/v1/completions",
     completionsRoute,
     authMiddleware(AuthKeyPermission.API),
-    checkModelMiddleware,
     sValidator("json", CompletionRequest),
+    async (c, next) => {
+        const params = c.req.valid("json");
+        await inlineLoadMiddleware(c.req, next, params.model ?? undefined);
+    },
+    checkModelMiddleware,
     async (c) => {
         const params = c.req.valid("json");
 
@@ -73,8 +78,12 @@ router.post(
     "/v1/chat/completions",
     chatCompletionsRoute,
     authMiddleware(AuthKeyPermission.API),
-    checkModelMiddleware,
     sValidator("json", ChatCompletionRequest),
+    async (c, next) => {
+        const params = c.req.valid("json");
+        await inlineLoadMiddleware(c.req, next, params.model ?? undefined);
+    },
+    checkModelMiddleware,
     async (c) => {
         const params = c.req.valid("json");
 

@@ -12,6 +12,8 @@ export const ModelLoadRequest = z.preprocess(
     }),
 );
 
+export type ModelLoadRequest = z.infer<typeof ModelLoadRequest>;
+
 export const ModelCard = z.object({
     id: z.string().default("test"),
     object: z.string().default("model"),
