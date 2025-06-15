@@ -20,7 +20,7 @@ import {
     TokenEncodeRequest,
     TokenEncodeResponse,
 } from "@/api/core/types/token.ts";
-import { AuthKeyPermission, getAuthPermission } from "@/common/auth.ts";
+import { getAuthPermission } from "@/common/auth.ts";
 import { config } from "@/common/config.ts";
 import * as modelContainer from "@/common/modelContainer.ts";
 import { jsonContent, toHttpException } from "@/common/networking.ts";
@@ -57,7 +57,7 @@ router.on(
     "GET",
     ["/v1/models", "/v1/model/list"],
     modelsRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     async (c) => {
         const modelCards: ModelCard[] = [];
         for await (const file of Deno.readDir(config.model.model_dir)) {
@@ -92,7 +92,7 @@ const currentModelRoute = describeRoute({
 router.get(
     "/v1/model",
     currentModelRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     checkModelMiddleware,
     (c) => {
         const modelCard = ModelCard.parse({
@@ -114,7 +114,7 @@ const loadModelRoute = describeRoute({
 router.post(
     "/v1/model/load",
     loadModelRoute,
-    authMiddleware(AuthKeyPermission.Admin),
+    authMiddleware("admin"),
     sValidator("json", ModelLoadRequest),
     async (c) => {
         const params = c.req.valid("json");
@@ -138,7 +138,7 @@ const unloadRoute = describeRoute({
 router.post(
     "/v1/model/unload",
     unloadRoute,
-    authMiddleware(AuthKeyPermission.Admin),
+    authMiddleware("admin"),
     checkModelMiddleware,
     async (c) => {
         await modelContainer.unloadModel(true);
@@ -158,7 +158,7 @@ router.on(
     "GET",
     ["/v1/templates", "/v1/template/list"],
     templatesRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     async (c) => {
         const templates: string[] = [];
         for await (const file of Deno.readDir("templates")) {
@@ -188,7 +188,7 @@ const templateSwitchRoute = describeRoute({
 router.post(
     "/v1/template/switch",
     templateSwitchRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     checkModelMiddleware,
     sValidator("json", TemplateSwitchRequest),
     async (c) => {
@@ -213,7 +213,7 @@ const authPermissionRoute = describeRoute({
 router.get(
     "/v1/auth/permission",
     authPermissionRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     (c) => {
         try {
             const permission = getAuthPermission(c.req.header());
@@ -237,7 +237,7 @@ const tokenEncodeRoute = describeRoute({
 router.post(
     "/v1/token/encode",
     tokenEncodeRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     checkModelMiddleware,
     sValidator("json", TokenEncodeRequest),
     async (c) => {
@@ -294,7 +294,7 @@ const tokenDecodeRoute = describeRoute({
 router.post(
     "/v1/token/decode",
     tokenDecodeRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     checkModelMiddleware,
     sValidator("json", TokenDecodeRequest),
     async (c) => {

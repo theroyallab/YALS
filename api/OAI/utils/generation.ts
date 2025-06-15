@@ -1,6 +1,6 @@
 import { UsageStats } from "@/api/OAI/types/completions.ts";
 import { Model } from "@/bindings/bindings.ts";
-import { FinishChunk, ReadbackFinishReason } from "@/bindings/types.ts";
+import { FinishChunk } from "@/bindings/types.ts";
 import { logger } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { toHttpException } from "@/common/networking.ts";
@@ -22,9 +22,7 @@ export function createUsageStats(chunk: FinishChunk) {
 }
 
 export function convertFinishReason(chunk: FinishChunk) {
-    return chunk.finishReason === ReadbackFinishReason.MaxNewTokens
-        ? "length"
-        : "stop";
+    return chunk.finishReason === "MaxNewTokens" ? "length" : "stop";
 }
 
 export async function staticGenerate(

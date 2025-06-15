@@ -13,12 +13,7 @@ import { YALSGrammar } from "./grammar.ts";
 import { lib } from "./lib.ts";
 import { Job } from "./job.ts";
 import { SamplerBuilder } from "./samplers.ts";
-import {
-    FinishChunk,
-    GenerationChunk,
-    GGMLTensorSplitMode,
-    ReadbackFinishReason,
-} from "./types.ts";
+import { FinishChunk, GenerationChunk, GGMLTensorSplitMode } from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
 
 // TODO: Move this somewhere else
@@ -460,18 +455,18 @@ export class Model {
         finishResponse: FinishChunk,
     ): FinishChunk {
         switch (finishResponse.finishReason) {
-            case ReadbackFinishReason.CtxExceeded:
+            case "CtxExceeded":
                 throw new Error(
                     `Prompt exceeds max context length of ${this.maxSeqLen}`,
                 );
 
-            case ReadbackFinishReason.BatchDecode:
+            case "BatchDecode":
                 throw new Error(
                     "Internal generation state is broken due to llama_decode error. " +
                         "Please restart the server.",
                 );
 
-            case ReadbackFinishReason.TokenEncode:
+            case "TokenEncode":
                 throw new Error(
                     "Could not tokenize the provided prompt. " +
                         "Please make sure your prompt is formatted correctly.",

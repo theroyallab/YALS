@@ -11,7 +11,6 @@ import {
     generateChatCompletion,
     streamChatCompletion,
 } from "@/api/OAI/utils/chatCompletion.ts";
-import { AuthKeyPermission } from "@/common/auth.ts";
 import { jsonContent } from "@/common/networking.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 
@@ -32,7 +31,7 @@ const completionsRoute = describeRoute({
 router.post(
     "/v1/completions",
     completionsRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     sValidator("json", CompletionRequest),
     async (c, next) => {
         const params = c.req.valid("json");
@@ -77,7 +76,7 @@ const chatCompletionsRoute = describeRoute({
 router.post(
     "/v1/chat/completions",
     chatCompletionsRoute,
-    authMiddleware(AuthKeyPermission.API),
+    authMiddleware("api"),
     sValidator("json", ChatCompletionRequest),
     async (c, next) => {
         const params = c.req.valid("json");

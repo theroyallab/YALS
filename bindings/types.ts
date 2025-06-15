@@ -24,15 +24,14 @@ export interface StreamChunk {
     token: number;
 }
 
-export enum ReadbackFinishReason {
-    CtxExceeded = "CtxExceeded",
-    BatchDecode = "BatchDecode",
-    StopToken = "StopToken",
-    MaxNewTokens = "MaxNewTokens",
-    StopString = "StopString",
-    TokenEncode = "TokenEncode",
-    Aborted = "Aborted",
-}
+export type ReadbackFinishReason =
+    | "CtxExceeded"
+    | "BatchDecode"
+    | "StopToken"
+    | "MaxNewTokens"
+    | "StopString"
+    | "TokenEncode"
+    | "Aborted";
 
 export interface FinishChunk {
     kind: "finish";

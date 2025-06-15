@@ -1,6 +1,6 @@
 import { HonoRequest, Next } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { AuthKeyPermission, getAuthPermission } from "@/common/auth.ts";
+import { getAuthPermission } from "@/common/auth.ts";
 import { config } from "@/common/config.ts";
 import { logger } from "@/common/logging.ts";
 import { model } from "@/common/modelContainer.ts";
@@ -27,7 +27,7 @@ const inlineLoadMiddleware = async (
 
     // Check if inline loading is enabled
     if (!config.model.inline_model_loading) {
-        if (permission === AuthKeyPermission.Admin) {
+        if (permission === "admin") {
             logger.warn(
                 `Unable to switch model to ${newModelName} because ` +
                     '"inline_model_loading" is not True in config.yml.',
@@ -39,7 +39,7 @@ const inlineLoadMiddleware = async (
     }
 
     // Only allow admins to swap models
-    if (permission !== AuthKeyPermission.Admin) {
+    if (permission !== "api") {
         throw new HTTPException(401, {
             message: `Unable to switch model to ${newModelName} ` +
                 "because an admin key isn't provided",
