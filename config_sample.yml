@@ -53,8 +53,8 @@ model:
   # Example: ['max_seq_len', 'num_gpu_layers'].
   use_as_default: []
 
-  # Max sequence length (default: Empty).
-  # Fetched from the model's base sequence length by default.
+  # Max sequence length (default: 4096).
+  # Set to -1 to fetch from the model's config.json
   max_seq_len:
 
   # Number of slots for continuous batching (default: 1)
