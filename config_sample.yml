@@ -35,6 +35,14 @@ model:
   # This method of loading is strict by default.
   inline_model_loading: false
 
+  # Sends dummy model names when the models endpoint is queried. (default: False)
+  # Enable this if the client is looking for specific OAI models.
+  use_dummy_models: false
+
+  # A list of fake model names that are sent via the /v1/models endpoint. (default: ["gpt-3.5-turbo"])
+  # Also used as bypasses for strict mode if inline_model_loading is true.
+  dummy_model_names: ["gpt-3.5-turbo"]
+
   # An initial model to load.
   # Make sure the model is located in the model directory!
   # REQUIRED: This must be filled out to load a model on startup.
