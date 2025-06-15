@@ -43,6 +43,7 @@ export async function loadConfig(args: Record<string, unknown>) {
         };
     }
 
+    // Add load defaults before establishing the main config
     if (mergedConfig["model"]) {
         mergedConfig["model"] = await applyLoadDefaults(mergedConfig["model"]);
     }

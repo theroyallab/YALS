@@ -32,7 +32,6 @@ if (import.meta.main) {
 
     await loadConfig(args);
 
-    // console.log(config.model)
     // Load model if present
     if (config.model.model_name) {
         // Load model in bindings
