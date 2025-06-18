@@ -116,6 +116,7 @@ export function applyChatTemplate(
         bos_token: bosToken?.piece ?? "",
         eos_token: model.tokenizer.eosToken?.piece ?? "",
         add_generation_prompt: addGenerationPrompt,
+        tools: null,
     });
 
     // Remove extra BOS token at start of prompt if present
