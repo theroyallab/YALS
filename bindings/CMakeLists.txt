@@ -24,7 +24,7 @@ set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git")
 message(STATUS "Using llama.cpp repo ${LLAMACPP_REPO}")
 
 # Stable llama.cpp commit for bindings
-set(LLAMACPP_COMMIT "fb85a288d72abbd5e5daa8de96e6f8bfa7b5ab46")
+set(LLAMACPP_COMMIT "8d947136546773f6410756f37fcc5d3e65b8135d")
 message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
 
 # Optional: You can also enable mixed FP16/FP32 computation for faster processing
