@@ -7,8 +7,13 @@ export const CompletionResponseFormat = z.object({
 
 export const UsageStats = z.object({
     prompt_tokens: z.number(),
+    prompt_time: z.number().optional(),
+    prompt_tokens_per_sec: z.number().optional(),
     completion_tokens: z.number(),
+    completion_time: z.number().optional(),
+    completion_tokens_per_sec: z.number().optional(),
     total_tokens: z.number(),
+    total_time: z.number().optional(),
 });
 
 export type UsageStats = z.infer<typeof UsageStats>;

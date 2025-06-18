@@ -14,8 +14,13 @@ export enum GenerationType {
 export function createUsageStats(chunk: FinishChunk) {
     const usage = UsageStats.parse({
         prompt_tokens: chunk.promptTokens,
+        prompt_time: chunk.promptSec,
+        prompt_tokens_per_sec: chunk.promptTokensPerSec,
         completion_tokens: chunk.genTokens,
+        completion_time: chunk.genSec,
+        completion_tokens_per_sec: chunk.genTokensPerSec,
         total_tokens: chunk.promptTokens + chunk.genTokens,
+        total_time: chunk.totalSec,
     });
 
     return usage;
