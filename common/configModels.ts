@@ -60,6 +60,17 @@ export const ModelConfig = z.object({
 
 export type ModelConfig = z.infer<typeof ModelConfig>;
 
+// TODO: Maybe remove the extend and add to ModelLoadRequest
+export const StrippedModelConfig = ModelConfig.omit({
+    model_dir: true,
+    inline_model_loading: true,
+    use_dummy_models: true,
+    dummy_model_names: true,
+    use_as_default: true,
+});
+
+export type StrippedModelConfig = z.infer<typeof StrippedModelConfig>;
+
 export const SamplingConfig = z.object({
     override_preset: z.string().nullish(),
 });

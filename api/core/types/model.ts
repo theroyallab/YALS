@@ -1,17 +1,11 @@
 import * as z from "@/common/myZod.ts";
-import { ModelConfig } from "@/common/configModels.ts";
+import { StrippedModelConfig } from "@/common/configModels.ts";
 import { applyLoadDefaults } from "@/common/modelContainer.ts";
 
 export const ModelLoadRequest = z.preprocess(
     (data: unknown) => applyLoadDefaults(data),
-    ModelConfig.extend({
+    StrippedModelConfig.extend({
         model_name: z.string(),
-    }).omit({
-        model_dir: true,
-        inline_model_loading: true,
-        use_dummy_models: true,
-        dummy_model_names: true,
-        use_as_default: true,
     }),
 );
 
