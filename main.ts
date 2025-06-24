@@ -1,4 +1,6 @@
 import { createApi } from "@/api/server.ts";
+import { loadYalsBindings } from "@/bindings/lib.ts";
+import { runAction } from "@/common/actions.ts";
 import { loadAuthKeys } from "@/common/auth.ts";
 import { parseArgs } from "@/common/args.ts";
 import { config, loadConfig } from "@/common/config.ts";
@@ -6,7 +8,6 @@ import { logger } from "@/common/logging.ts";
 import { loadModel } from "@/common/modelContainer.ts";
 import { elevateProcessPriority, getYalsVersion } from "@/common/utils.ts";
 import { overridesFromFile } from "@/common/samplerOverrides.ts";
-import { loadYalsBindings } from "@/bindings/lib.ts";
 
 if (import.meta.main) {
     // Use Promise resolution to avoid nested try/catch
@@ -21,7 +22,7 @@ if (import.meta.main) {
     // Load bindings
     loadYalsBindings();
 
-    //Parse CLI args
+    // Parse CLI args
     const { args, usage } = parseArgs();
 
     // Display help message if needed
@@ -32,9 +33,14 @@ if (import.meta.main) {
 
     await loadConfig(args);
 
+    // Defer to an action if specified in invocation
+    const ranAction = await runAction(args);
+    if (ranAction) {
+        Deno.exit();
+    }
+
     // Load model if present
     if (config.model.model_name) {
-        // Load model in bindings
         await loadModel(config.model);
     }
 

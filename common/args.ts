@@ -108,14 +108,42 @@ export function parseArgs() {
         raw: true,
     };
 
+    // For subcommands
+    const actionDefs: commandLineUsage.OptionDefinition[] = [
+        { name: "subcommand", defaultOption: true, group: "actions" },
+    ];
+
+    const actionGroup: commandLineUsage.Section = {
+        header: "Positional arguments",
+        content: [
+            {
+                name: "gen-inline-config",
+                description: "Creates an inline config yaml from " +
+                    "args and main config.yml",
+            },
+        ],
+    };
+
+    // Fetch arg groups for config
     const configGroups = configToArgs();
-    const optionGroups = [...configGroups, helpGroup];
-    const usage = commandLineUsage([...optionGroups, epilog]);
-    const cliOptions: commandLineUsage.OptionDefinition[] = optionGroups
-        .flatMap((option) => option.optionList ?? []);
+
+    // Combine help sections and create help menu
+    const usageSections = [actionGroup, helpGroup, ...configGroups];
+    const usage = commandLineUsage([...usageSections, epilog]);
+
+    // Filter help sections to parseable options
+    const cliOptions: commandLineUsage.OptionDefinition[] = [
+        ...actionDefs,
+        ...usageSections.flatMap((section) =>
+            "optionList" in section ? section.optionList ?? [] : []
+        ),
+    ];
 
     // Parse the options
-    const args = commandLineArgs(cliOptions, { argv: Deno.args });
+    const args = commandLineArgs(cliOptions, {
+        argv: Deno.args,
+        stopAtFirstUnknown: true,
+    });
 
     // Replace keys with underscores for config parsing
     for (const groupName of Object.keys(args)) {
