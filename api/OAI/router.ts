@@ -35,7 +35,7 @@ router.post(
     sValidator("json", CompletionRequest),
     async (c, next) => {
         const params = c.req.valid("json");
-        await inlineLoadMiddleware(c.req, next, params.model ?? undefined);
+        await inlineLoadMiddleware(c.req, next, params.model);
     },
     checkModelMiddleware,
     async (c) => {
@@ -80,7 +80,7 @@ router.post(
     sValidator("json", ChatCompletionRequest),
     async (c, next) => {
         const params = c.req.valid("json");
-        await inlineLoadMiddleware(c.req, next, params.model ?? undefined);
+        await inlineLoadMiddleware(c.req, next, params.model);
     },
     checkModelMiddleware,
     async (c) => {

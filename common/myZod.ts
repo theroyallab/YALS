@@ -14,6 +14,19 @@ function coalesce<T extends z.ZodType, D extends NonNullable<z.output<T>>>(
 
 z.ZodType.prototype.coalesce = coalesce;
 
+// cleanOptional
+
+// Coerces a nullish value to undefined
+// This allows null + undefined to be accepted
+// but follows TS's rule of undefined being an absence of a value
+function cleanOptional<T extends z.ZodType>(
+    this: T,
+) {
+    return this.nullish().transform((val) => val ?? undefined);
+}
+
+z.ZodType.prototype.cleanOptional = cleanOptional;
+
 // Sampler overrides
 
 // Store the sampler override default function to prevent circular import
@@ -106,6 +119,8 @@ declare module "zod/v4" {
         coalesce<D extends NonNullable<z.output<this>>>(
             defaultValue: D,
         ): ReturnType<typeof coalesce<this, D>>;
+
+        cleanOptional(): ReturnType<typeof cleanOptional<this>>;
 
         samplerOverride(
             key: string,

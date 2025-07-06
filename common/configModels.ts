@@ -24,17 +24,17 @@ export const ModelConfig = z.object({
     dummy_model_names: z.array(z.string()).nullish().coalesce([
         "gpt-3.5-turbo",
     ]),
-    model_name: z.string().nullish(),
+    model_name: z.string().cleanOptional(),
     use_as_default: z.array(z.string()).nullish().coalesce([]),
     max_seq_len: z.number().nullish().coalesce(4096),
     num_slots: z.number().nullish().coalesce(1),
-    cache_size: z.number().nullish(),
+    cache_size: z.number().cleanOptional(),
     chunk_size: z.number().nullish().coalesce(512),
     num_gpu_layers: z.number().nullish().coalesce(0),
     gpu_split: z.array(z.number()).nullish().coalesce([]),
     tensor_parallel: z.boolean().nullish().coalesce(false),
     num_threads: z.number().nullish().coalesce(-1),
-    prompt_template: z.string().nullish(),
+    prompt_template: z.string().cleanOptional(),
     flash_attention: z.boolean().nullish().coalesce(true),
     rope_freq_base: z.number().nullish().coalesce(0),
     enable_yarn: z.boolean().nullish().coalesce(false),
@@ -54,7 +54,7 @@ export const ModelConfig = z.object({
     ])
         .nullish()
         .coalesce(GGMLType.f16),
-    override_tensor: z.string().nullish(),
+    override_tensor: z.string().cleanOptional(),
     mmap: z.boolean().nullish().coalesce(true),
 });
 
@@ -72,7 +72,7 @@ export const StrippedModelConfig = ModelConfig.omit({
 export type StrippedModelConfig = z.infer<typeof StrippedModelConfig>;
 
 export const SamplingConfig = z.object({
-    override_preset: z.string().nullish(),
+    override_preset: z.string().cleanOptional(),
 });
 
 export type SamplingConfig = z.infer<typeof SamplingConfig>;

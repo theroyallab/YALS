@@ -102,8 +102,9 @@ export function forcedSamplerOverrides(params: BaseSamplerRequest) {
 export function getSamplerDefault(key: string) {
     const defaultValue = overridesContainer.overrides[key]?.override;
 
+    // Return undefined if the default value isn't present
     if (defaultValue === undefined || defaultValue === null) {
-        return defaultValue;
+        return undefined;
     }
 
     return defaultValue;

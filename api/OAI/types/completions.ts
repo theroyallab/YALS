@@ -19,17 +19,17 @@ export const UsageStats = z.object({
 export type UsageStats = z.infer<typeof UsageStats>;
 
 export const CommonCompletionRequest = z.object({
-    model: z.string().nullish(),
+    model: z.string().cleanOptional(),
     stream: z.boolean().nullish().coalesce(false),
     logprobs: z.number().gte(0).nullish().coalesce(0),
     response_format: CompletionResponseFormat.nullish().coalesce(
         CompletionResponseFormat.parse({}),
     ),
     n: z.number().gte(1).nullish().coalesce(1),
-    best_of: z.number().nullish(),
+    best_of: z.number().cleanOptional(),
     echo: z.boolean().nullish().coalesce(false),
-    suffix: z.string().nullish(),
-    user: z.string().nullish(),
+    suffix: z.string().cleanOptional(),
+    user: z.string().cleanOptional(),
 })
     .and(BaseSamplerRequest)
     .transform((obj) => {

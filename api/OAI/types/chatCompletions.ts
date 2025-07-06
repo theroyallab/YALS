@@ -11,8 +11,8 @@ const ChatCompletionImageUrl = z.object({
 
 const ChatCompletionMessagePart = z.object({
     type: z.string().nullish().coalesce("text"),
-    text: z.string().nullish(),
-    image_url: ChatCompletionImageUrl.nullish(),
+    text: z.string().cleanOptional(),
+    image_url: ChatCompletionImageUrl.cleanOptional(),
 });
 
 export type ChatCompletionMessagePart = z.infer<
@@ -33,9 +33,9 @@ const ChatCompletionStreamOptions = z.object({
 export const ChatCompletionRequest = z.aliasedObject(
     z.object({
         messages: z.array(ChatCompletionMessage).nullish().coalesce([]),
-        stream_options: ChatCompletionStreamOptions.nullish(),
+        stream_options: ChatCompletionStreamOptions.cleanOptional(),
         add_generation_prompt: z.boolean().nullish().coalesce(true),
-        prompt_template: z.string().nullish(),
+        prompt_template: z.string().cleanOptional(),
         template_vars: z.record(z.string(), z.unknown()).nullish().coalesce({}),
     }),
     [
