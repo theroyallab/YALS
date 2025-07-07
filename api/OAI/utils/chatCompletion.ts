@@ -93,6 +93,7 @@ export function applyChatTemplate(
     model: Model,
     promptTemplate: PromptTemplate,
     messages: ChatCompletionMessage[],
+    responsePrefix?: string,
     options: TemplateFormatOptions = {},
 ): string {
     const {
@@ -118,6 +119,17 @@ export function applyChatTemplate(
         add_generation_prompt: addGenerationPrompt,
         tools: null,
     });
+
+    if (responsePrefix) {
+        if (addGenerationPrompt) {
+            prompt += responsePrefix;
+        } else {
+            logger.warn(
+                "Could not add response prefix because " +
+                    "add_generation_prompt is False",
+            );
+        }
+    }
 
     // Remove extra BOS token at start of prompt if present
     // Some model templates don't respect their own add_bos_token setting
@@ -174,6 +186,7 @@ export async function streamChatCompletion(
         model,
         promptTemplate,
         params.messages,
+        params.response_prefix,
         {
             addGenerationPrompt: params.add_generation_prompt,
             templateVars: params.template_vars,
@@ -240,6 +253,7 @@ export async function generateChatCompletion(
         model,
         promptTemplate,
         params.messages,
+        params.response_prefix,
         {
             addGenerationPrompt: params.add_generation_prompt,
             templateVars: params.template_vars,

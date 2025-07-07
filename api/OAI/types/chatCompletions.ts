@@ -37,6 +37,7 @@ export const ChatCompletionRequest = z.aliasedObject(
         add_generation_prompt: z.boolean().nullish().coalesce(true),
         prompt_template: z.string().cleanOptional(),
         template_vars: z.record(z.string(), z.unknown()).nullish().coalesce({}),
+        response_prefix: z.string().cleanOptional(),
     }),
     [
         { field: "template_vars", aliases: ["chat_template_kwargs"] },
