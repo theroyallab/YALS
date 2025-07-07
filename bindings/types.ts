@@ -51,4 +51,5 @@ export interface FinishChunk {
 
     finishReason: ReadbackFinishReason;
     stopToken: string;
+    toolCalls?: string;
 }

@@ -5,6 +5,8 @@ import {
 } from "@/api/OAI/types/completions.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 
+import { ToolCall, ToolSpec } from "./tools.ts";
+
 const ChatCompletionImageUrl = z.object({
     url: z.string(),
 });
@@ -21,7 +23,10 @@ export type ChatCompletionMessagePart = z.infer<
 
 export const ChatCompletionMessage = z.object({
     role: z.string().default("user"),
-    content: z.union([z.string(), z.array(ChatCompletionMessagePart)]),
+    content: z.union([z.string(), z.array(ChatCompletionMessagePart)])
+        .cleanOptional(),
+    tool_calls: z.array(ToolCall).cleanOptional(),
+    tool_call_id: z.string().cleanOptional(),
 });
 
 export type ChatCompletionMessage = z.infer<typeof ChatCompletionMessage>;
@@ -38,6 +43,7 @@ export const ChatCompletionRequest = z.aliasedObject(
         prompt_template: z.string().cleanOptional(),
         template_vars: z.record(z.string(), z.unknown()).nullish().coalesce({}),
         response_prefix: z.string().cleanOptional(),
+        tools: z.array(ToolSpec).cleanOptional(),
     }),
     [
         { field: "template_vars", aliases: ["chat_template_kwargs"] },

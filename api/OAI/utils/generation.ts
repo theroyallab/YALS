@@ -27,7 +27,13 @@ export function createUsageStats(chunk: FinishChunk) {
 }
 
 export function convertFinishReason(chunk: FinishChunk) {
-    return chunk.finishReason === "MaxNewTokens" ? "length" : "stop";
+    if (chunk.toolCalls) {
+        return "tool_calls";
+    } else if (chunk.finishReason === "MaxNewTokens") {
+        return "length";
+    } else {
+        return "stop";
+    }
 }
 
 export async function staticGenerate(

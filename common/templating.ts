@@ -28,7 +28,6 @@ export function range(start: number, stop?: number, step = 1): number[] {
 const TemplateMetadataSchema = z.object({
     stop_strings: z.array(z.string()).default([]),
     tool_start: z.string().optional(),
-    tool_start_token: z.number().optional(),
 });
 
 type TemplateMetadata = z.infer<typeof TemplateMetadataSchema>;

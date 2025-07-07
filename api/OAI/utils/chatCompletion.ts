@@ -22,12 +22,16 @@ import {
 } from "../types/chatCompletions.ts";
 import { CancellationError } from "@/common/errors.ts";
 import { logger } from "@/common/logging.ts";
+import { ToolSpec } from "../types/tools.ts";
+import { TOOL_CALL_SCHEMA, ToolCallProcessor } from "./tools.ts";
 
 interface TemplateFormatOptions {
     addBosToken?: boolean;
     banEosToken?: boolean;
     addGenerationPrompt?: boolean;
     templateVars?: Record<string, unknown>;
+    tools?: ToolSpec[];
+    responsePrefix?: string;
 }
 
 function createResponse(chunk: FinishChunk, modelName: string) {
@@ -35,6 +39,10 @@ function createResponse(chunk: FinishChunk, modelName: string) {
         role: "assistant",
         content: chunk.text,
     });
+
+    if (chunk.toolCalls) {
+        message.tool_calls = ToolCallProcessor.fromJson(chunk.toolCalls);
+    }
 
     const choice = ChatCompletionRespChoice.parse({
         message: message,
@@ -93,7 +101,6 @@ export function applyChatTemplate(
     model: Model,
     promptTemplate: PromptTemplate,
     messages: ChatCompletionMessage[],
-    responsePrefix?: string,
     options: TemplateFormatOptions = {},
 ): string {
     const {
@@ -117,12 +124,12 @@ export function applyChatTemplate(
         bos_token: bosToken?.piece ?? "",
         eos_token: model.tokenizer.eosToken?.piece ?? "",
         add_generation_prompt: addGenerationPrompt,
-        tools: null,
+        tools: options.tools ?? null,
     });
 
-    if (responsePrefix) {
+    if (options.responsePrefix) {
         if (addGenerationPrompt) {
-            prompt += responsePrefix;
+            prompt += options.responsePrefix;
         } else {
             logger.warn(
                 "Could not add response prefix because " +
@@ -152,6 +159,10 @@ function addTemplateMetadata(
 
     if (metadata.stop_strings) {
         params.stop.push(...metadata.stop_strings);
+    }
+
+    if (metadata.tool_start) {
+        params.stop.push(metadata.tool_start);
     }
 }
 
@@ -186,10 +197,10 @@ export async function streamChatCompletion(
         model,
         promptTemplate,
         params.messages,
-        params.response_prefix,
         {
             addGenerationPrompt: params.add_generation_prompt,
             templateVars: params.template_vars,
+            responsePrefix: params.response_prefix,
         },
     );
 
@@ -253,10 +264,11 @@ export async function generateChatCompletion(
         model,
         promptTemplate,
         params.messages,
-        params.response_prefix,
         {
             addGenerationPrompt: params.add_generation_prompt,
             templateVars: params.template_vars,
+            tools: params.tools,
+            responsePrefix: params.response_prefix,
         },
     );
 
@@ -271,7 +283,66 @@ export async function generateChatCompletion(
         model,
         requestSignal,
     );
+
+    // Check for tool calls
+    await generateToolCalls(
+        requestId,
+        prompt,
+        gen,
+        params,
+        model,
+        promptTemplate,
+        requestSignal,
+    );
+
+    if (gen.toolCalls) {
+        ToolCallProcessor.fromJson(gen.toolCalls);
+    }
+
     const response = createResponse(gen, model.path.name);
 
     return response;
+}
+
+async function generateToolCalls(
+    requestId: string,
+    prompt: string,
+    gen: FinishChunk,
+    params: ChatCompletionRequest,
+    model: Model,
+    promptTemplate: PromptTemplate,
+    requestSignal: AbortSignal,
+) {
+    const toolStart = promptTemplate.metadata.tool_start;
+    if (!toolStart) {
+        return gen;
+    }
+
+    const toolParams = structuredClone(params);
+    toolParams.json_schema = TOOL_CALL_SCHEMA;
+
+    if (!gen.stopToken.startsWith(toolStart)) {
+        return gen;
+    }
+
+    logger.info(`Tool call detected for request ${requestId}`);
+
+    const precursorText = gen.text;
+    if (precursorText) {
+        prompt += prompt + precursorText;
+    }
+
+    const toolRequestid = `${requestId}-tool`;
+    const toolGen = await staticGenerate(
+        toolRequestid,
+        GenerationType.ChatCompletion,
+        prompt,
+        toolParams,
+        model,
+        requestSignal,
+    );
+
+    gen.toolCalls = toolGen.text;
+
+    return gen;
 }
