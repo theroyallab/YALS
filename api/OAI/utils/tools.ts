@@ -1,3 +1,5 @@
+import * as z from "@/common/myZod.ts";
+
 import { ToolCall } from "../types/tools.ts";
 
 export const TOOL_CALL_SCHEMA = {
@@ -26,7 +28,11 @@ export const TOOL_CALL_SCHEMA = {
 
 export class ToolCallProcessor {
     static fromJson(toolCallsString: string) {
-        const toolCalls = JSON.parse(toolCallsString) as ToolCall[];
+        const rawToolObject = JSON.parse(toolCallsString);
+
+        // Parse from deserialized object
+        const ToolListSchema = z.array(ToolCall);
+        const toolCalls = ToolListSchema.parse(rawToolObject);
         const updatedToolCalls = toolCalls.map((toolCall) => {
             toolCall.function.arguments = JSON.stringify(
                 toolCall.function.arguments,
