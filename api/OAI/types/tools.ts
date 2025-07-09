@@ -19,9 +19,11 @@ const Tool = z.object({
 });
 
 export const ToolCall = z.object({
-    id: z.string(),
+    id: z.string().default(() => {
+        return crypto.randomUUID().replaceAll("-", "").substring(0, 9);
+    }),
     function: Tool,
-    type: z.literal("function"),
+    type: z.literal("function").default("function"),
 });
 
 export type ToolCall = z.infer<typeof ToolCall>;
