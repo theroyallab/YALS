@@ -42,10 +42,4 @@ export class ToolCallProcessor {
 
         return updatedToolCalls;
     }
-
-    static toJson() {
-    }
-
-    static dump() {
-    }
 }

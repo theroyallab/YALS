@@ -329,10 +329,6 @@ export async function generateChatCompletion(
         requestSignal,
     );
 
-    if (gen.toolCalls) {
-        ToolCallProcessor.fromJson(gen.toolCalls);
-    }
-
     const response = createResponse(gen, model.path.name);
 
     return response;
