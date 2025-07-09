@@ -79,7 +79,8 @@ export const ChatCompletionResponse = z.object({
 export const ChatCompletionStreamChoice = z.object({
     index: z.number().default(0),
     finish_reason: z.string().optional(),
-    delta: z.union([ChatCompletionMessage, z.record(z.string(), z.unknown())]),
+    delta: z.union([ChatCompletionMessage, z.record(z.string(), z.unknown())])
+        .default({}),
 });
 
 export const ChatCompletionStreamChunk = z.object({

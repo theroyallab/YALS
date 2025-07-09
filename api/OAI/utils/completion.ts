@@ -78,6 +78,7 @@ export async function streamCompletion(
         }
 
         logger.info(`Finished streaming completion request ${requestId}`);
+        await stream.writeSSE({ data: "[DONE]" });
     } catch (error) {
         await stream.writeSSE({
             data: JSON.stringify(toGeneratorError(error)),

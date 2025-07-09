@@ -70,9 +70,17 @@ function createStreamChunk(
         content: chunk.text,
     });
 
+    if (chunk.kind === "finish" && chunk.toolCalls) {
+        message.tool_calls = ToolCallProcessor.fromJson(chunk.toolCalls);
+    }
+
     const choice = ChatCompletionStreamChoice.parse({
         delta: message,
     });
+
+    if (chunk.kind === "finish") {
+        choice.finish_reason = convertFinishReason(chunk);
+    }
 
     const response = ChatCompletionStreamChunk.parse({
         id: cmplId,
@@ -177,6 +185,7 @@ export async function streamChatCompletion(
 ) {
     logger.info(`Received streaming chat completion request ${requestId}`);
 
+    const toolStart = promptTemplate.metadata.tool_start;
     const cmplId = `chatcmpl-${crypto.randomUUID().replaceAll("-", "")}`;
     const abortController = new AbortController();
     let finished = false;
@@ -200,6 +209,7 @@ export async function streamChatCompletion(
         {
             addGenerationPrompt: params.add_generation_prompt,
             templateVars: params.template_vars,
+            tools: params.tools,
             responsePrefix: params.response_prefix,
         },
     );
@@ -207,6 +217,8 @@ export async function streamChatCompletion(
     addTemplateMetadata(promptTemplate, params);
 
     try {
+        let currentGenText = "";
+
         const generator = model.generateGen(
             requestId,
             prompt,
@@ -214,7 +226,28 @@ export async function streamChatCompletion(
             abortController.signal,
         );
 
-        for await (const chunk of generator) {
+        for await (const genChunk of generator) {
+            let chunk = genChunk;
+
+            if (toolStart) {
+                if (chunk.kind === "finish" && chunk.stopToken) {
+                    const toolChunk = await generateToolCalls(
+                        requestId,
+                        prompt,
+                        chunk,
+                        params,
+                        model,
+                        promptTemplate,
+                        requestSignal,
+                        currentGenText,
+                    );
+
+                    chunk = toolChunk;
+                } else if (chunk.text) {
+                    currentGenText += chunk.text;
+                }
+            }
+
             const streamChunk = createStreamChunk(
                 chunk,
                 model.path.name,
@@ -242,6 +275,7 @@ export async function streamChatCompletion(
         }
 
         logger.info(`Finished streaming chat completion request ${requestId}`);
+        await stream.writeSSE({ data: "[DONE]" });
     } catch (error) {
         await stream.writeSSE({
             data: JSON.stringify(toGeneratorError(error)),
@@ -312,6 +346,7 @@ async function generateToolCalls(
     model: Model,
     promptTemplate: PromptTemplate,
     requestSignal: AbortSignal,
+    currentGenText?: string,
 ) {
     const toolStart = promptTemplate.metadata.tool_start;
     if (!toolStart) {
@@ -327,7 +362,7 @@ async function generateToolCalls(
 
     logger.info(`Tool call detected for request ${requestId}`);
 
-    const precursorText = gen.text;
+    const precursorText = currentGenText ?? gen.text;
     if (precursorText) {
         prompt += prompt + precursorText;
     }
