@@ -123,7 +123,8 @@ extern "C" {
         bool use_yarn,
         int k_cache_quant_type,
         int v_cache_quant_type,
-        float kv_defrag_threshold
+        float kv_defrag_threshold,
+        bool offload_kqv
     );
 
     uint32_t ctx_max_seq_len(

@@ -209,7 +209,8 @@ llama_context* ctx_make(
     const bool use_yarn,
     int k_cache_quant_type,
     int v_cache_quant_type,
-    const float kv_defrag_threshold
+    const float kv_defrag_threshold,
+    const bool offload_kqv
 ) {
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = context_length;
@@ -244,6 +245,7 @@ llama_context* ctx_make(
     ctx_params.type_k = static_cast<ggml_type>(k_cache_quant_type);
     ctx_params.type_v = static_cast<ggml_type>(v_cache_quant_type);
     ctx_params.defrag_thold = kv_defrag_threshold;
+    ctx_params.offload_kqv = offload_kqv;
     llama_context* ctx = llama_init_from_model(model, ctx_params);
 
     return ctx;

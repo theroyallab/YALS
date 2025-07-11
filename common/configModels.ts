@@ -54,6 +54,7 @@ export const ModelConfig = z.object({
     ])
         .nullish()
         .coalesce(GGMLType.f16),
+    kv_offload: z.boolean().nullish().coalesce(true),
     override_tensor: z.string().cleanOptional(),
     mmap: z.boolean().nullish().coalesce(true),
 });

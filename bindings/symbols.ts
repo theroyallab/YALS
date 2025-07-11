@@ -155,6 +155,7 @@ export default {
             "i32", // k_cache_quant_type: int
             "i32", // v_cache_quant_type: int
             "f32", // kv_defrag_threshold: float
+            "bool", // offload_kqv: bool
         ],
         result: "pointer", // llama_context*
         nonblocking: true,

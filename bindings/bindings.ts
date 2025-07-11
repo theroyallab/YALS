@@ -277,6 +277,7 @@ export class Model {
             params.cache_mode_k,
             params.cache_mode_v,
             -1.0, //kvDefrag thresehold
+            params.kv_offload,
         );
 
         if (!context) {

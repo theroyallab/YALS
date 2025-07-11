@@ -110,8 +110,14 @@ model:
   # Possible values - f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0
   cache_mode_v: f16
 
+  # Offload KV cache to GPU if available (default: true)
+  # By default, llama.cpp decides KV device per-layer based on CPU or GPU
+  # Set to false to force all KV layers to CPU
+  kv_offload: true
+
   # Override tensors to different devices (default: None)
   # Takes in a regex string. Recommended to set num_threads
+  # For multiple tensor overrides, split each one by a comma
   override_tensor: 
 
   # Lazily load the model into virtual memory. This is fast and efficient (default: true)
