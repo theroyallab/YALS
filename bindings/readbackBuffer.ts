@@ -27,7 +27,7 @@ export class ReadbackBuffer {
                     Deno.UnsafePointer.of(tokenBuf),
                 )
             ) {
-                await delay(2);
+                await delay(1);
                 continue;
             }
 
