@@ -61,7 +61,7 @@ inline std::string make_empty_json_status_string(const std::string &finish_reaso
     ss << std::fixed << std::setprecision(6) << "{";
 
     add_json_value(ss, "slotId", slot_id);
-    add_json_value(ss, "requestId", request_id);
+    add_json_value(ss, "slotRequestId", request_id);
     add_json_value(ss, "jobIndex", job_index);
 
     add_json_value(ss, "promptTokens", prompt_tokens);
@@ -98,7 +98,7 @@ inline std::string make_json_status_string(const Slot& slot, const std::string &
     ss << std::fixed << std::setprecision(2) << "{";
 
     add_json_value(ss, "slotId", slot.slot_id);
-    add_json_value(ss, "requestId", slot.request_id);
+    add_json_value(ss, "slotRequestId", slot.request_id);
     add_json_value(ss, "jobIndex", slot.job_index);
 
     add_json_value(ss, "promptTokens", slot.prompt_tokens_processed);

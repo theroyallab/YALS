@@ -16,11 +16,15 @@ export enum GGMLTensorSplitMode {
     row = 2,
 }
 
-export type GenerationChunk = StreamChunk | FinishChunk;
-
-export interface StreamChunk {
-    kind: "data";
+interface BaseChunk {
+    kind: string;
+    taskIdx: number;
+    requestId: string;
     text: string;
+}
+
+export interface StreamChunk extends BaseChunk {
+    kind: "data";
     token: number;
 }
 
@@ -33,11 +37,12 @@ export type ReadbackFinishReason =
     | "TokenEncode"
     | "Aborted";
 
-export interface FinishChunk {
+export interface FinishChunk extends BaseChunk {
     kind: "finish";
-    text: string;
+    fullText: string;
+
     slotId: number;
-    requestId: number;
+    slotRequestId: number;
     jobIndex: number;
 
     promptTokens: number;
@@ -51,5 +56,8 @@ export interface FinishChunk {
 
     finishReason: ReadbackFinishReason;
     stopToken: string;
+
     toolCalls?: string;
 }
+
+export type GenerationChunk = StreamChunk | FinishChunk;

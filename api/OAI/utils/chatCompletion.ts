@@ -1,3 +1,4 @@
+import { Queue } from "@core/asyncutil";
 import { SSEStreamingApi } from "hono/streaming";
 
 import {
@@ -5,6 +6,7 @@ import {
     createUsageStats,
     GenerationType,
     staticGenerate,
+    streamCollector,
 } from "@/api/OAI/utils/generation.ts";
 import { Model } from "@/bindings/bindings.ts";
 import { FinishChunk, GenerationChunk } from "@/bindings/types.ts";
@@ -34,25 +36,33 @@ interface TemplateFormatOptions {
     responsePrefix?: string;
 }
 
-function createResponse(chunk: FinishChunk, modelName: string) {
-    const message = ChatCompletionMessage.parse({
-        role: "assistant",
-        content: chunk.text,
-    });
+function createResponse(chunks: FinishChunk[], modelName: string) {
+    const choices: ChatCompletionRespChoice[] = [];
 
-    if (chunk.toolCalls) {
-        message.tool_calls = ToolCallProcessor.fromJson(chunk.toolCalls);
+    for (const chunk of chunks) {
+        const message = ChatCompletionMessage.parse({
+            role: "assistant",
+            content: chunk.text,
+        });
+
+        if (chunk.toolCalls) {
+            message.tool_calls = ToolCallProcessor.fromJson(chunk.toolCalls);
+        }
+
+        const choice = ChatCompletionRespChoice.parse({
+            index: chunk.taskIdx,
+            message: message,
+            finish_reason: convertFinishReason(chunk),
+        });
+
+        choices.push(choice);
     }
 
-    const choice = ChatCompletionRespChoice.parse({
-        message: message,
-        finish_reason: convertFinishReason(chunk),
-    });
-
-    const usage = createUsageStats(chunk);
+    const finalChunk = chunks.at(-1);
+    const usage = finalChunk ? createUsageStats(finalChunk) : undefined;
 
     const response = ChatCompletionResponse.parse({
-        choices: [choice],
+        choices: choices,
         model: modelName,
         usage,
     });
@@ -75,6 +85,7 @@ function createStreamChunk(
     }
 
     const choice = ChatCompletionStreamChoice.parse({
+        index: chunk.taskIdx,
         delta: message,
     });
 
@@ -217,35 +228,50 @@ export async function streamChatCompletion(
     addTemplateMetadata(promptTemplate, params);
 
     try {
-        let currentGenText = "";
+        const queue = new Queue<GenerationChunk | Error>();
+        const genTasks = [];
 
-        const generator = model.generateGen(
-            requestId,
-            prompt,
-            params,
-            abortController.signal,
-        );
+        for (let i = 0; i < params.n; i++) {
+            const task = streamCollector(
+                requestId,
+                prompt,
+                params,
+                model,
+                abortController.signal,
+                i,
+                queue,
+            );
 
-        for await (const genChunk of generator) {
-            let chunk = genChunk;
+            genTasks.push(task);
+        }
 
-            if (toolStart) {
-                if (chunk.kind === "finish" && chunk.stopToken) {
-                    const toolChunk = await generateToolCalls(
+        let completedTasks = 0;
+        while (true) {
+            // Abort if the signal is set
+            if (finished) {
+                break;
+            }
+
+            const chunk = await queue.pop({ signal: abortController.signal });
+            if (chunk instanceof Error) {
+                throw chunk;
+            }
+
+            if (chunk.kind === "finish") {
+                // Handle tools
+                if (toolStart && chunk.stopToken) {
+                    await generateToolCalls(
                         requestId,
                         prompt,
-                        chunk,
+                        [chunk],
                         params,
                         model,
                         promptTemplate,
                         requestSignal,
-                        currentGenText,
                     );
-
-                    chunk = toolChunk;
-                } else if (chunk.text) {
-                    currentGenText += chunk.text;
                 }
+
+                completedTasks++;
             }
 
             const streamChunk = createStreamChunk(
@@ -253,29 +279,31 @@ export async function streamChatCompletion(
                 model.path.name,
                 cmplId,
             );
+            await stream.writeSSE({ data: JSON.stringify(streamChunk) });
 
-            await stream.writeSSE({
-                data: JSON.stringify(streamChunk),
-            });
+            // TODO: Make usage aggregated
+            if (completedTasks === params.n && queue.size === 0) {
+                if (
+                    params.stream_options?.include_usage &&
+                    chunk.kind === "finish"
+                ) {
+                    const usageChunk = createUsageChunk(
+                        chunk,
+                        model.path.name,
+                        cmplId,
+                    );
 
-            // Write usage stats if user requests it
-            if (
-                params.stream_options?.include_usage && chunk.kind === "finish"
-            ) {
-                const usageChunk = createUsageChunk(
-                    chunk,
-                    model.path.name,
-                    cmplId,
+                    await stream.writeSSE({ data: JSON.stringify(usageChunk) });
+                }
+
+                logger.info(
+                    `Finished streaming chat completion request ${requestId}`,
                 );
+                await stream.writeSSE({ data: "[DONE]" });
 
-                await stream.writeSSE({
-                    data: JSON.stringify(usageChunk),
-                });
+                break;
             }
         }
-
-        logger.info(`Finished streaming chat completion request ${requestId}`);
-        await stream.writeSSE({ data: "[DONE]" });
     } catch (error) {
         await stream.writeSSE({
             data: JSON.stringify(toGeneratorError(error)),
@@ -309,7 +337,7 @@ export async function generateChatCompletion(
     addTemplateMetadata(promptTemplate, params);
 
     // Handle generation in the common function
-    const gen = await staticGenerate(
+    const generations = await staticGenerate(
         requestId,
         GenerationType.ChatCompletion,
         prompt,
@@ -322,58 +350,76 @@ export async function generateChatCompletion(
     await generateToolCalls(
         requestId,
         prompt,
-        gen,
+        generations,
         params,
         model,
         promptTemplate,
         requestSignal,
     );
 
-    const response = createResponse(gen, model.path.name);
+    const response = createResponse(generations, model.path.name);
 
+    logger.info(`Finished chat completion request ${requestId}`);
     return response;
 }
 
 async function generateToolCalls(
     requestId: string,
     prompt: string,
-    gen: FinishChunk,
+    gens: FinishChunk[],
     params: ChatCompletionRequest,
     model: Model,
     promptTemplate: PromptTemplate,
     requestSignal: AbortSignal,
-    currentGenText?: string,
 ) {
+    const toolGenTasks = [];
     const toolStart = promptTemplate.metadata.tool_start;
     if (!toolStart) {
-        return gen;
+        return;
     }
+
+    const toolIdx = [];
 
     const toolParams = structuredClone(params);
     toolParams.json_schema = TOOL_CALL_SCHEMA;
 
-    if (!gen.stopToken.startsWith(toolStart)) {
-        return gen;
+    for (const [index, gen] of gens.entries()) {
+        if (!gen.stopToken.startsWith(toolStart)) {
+            continue;
+        }
+
+        const genRequestId = params.n > 1
+            ? `${requestId}-${gen.taskIdx}`
+            : requestId;
+        logger.info(`Tool call detected for request ${genRequestId}`);
+
+        if (gen.fullText) {
+            prompt += prompt + gen.fullText;
+        }
+
+        const toolRequestid = `${genRequestId}-tool`;
+        const toolTask = staticGenerate(
+            toolRequestid,
+            GenerationType.ChatCompletion,
+            prompt,
+            toolParams,
+            model,
+            requestSignal,
+        );
+
+        toolGenTasks.push(toolTask);
+        toolIdx.push(index);
     }
 
-    logger.info(`Tool call detected for request ${requestId}`);
+    if (toolIdx.length > 0) {
+        const toolGenResults = await Promise.allSettled(toolGenTasks);
 
-    const precursorText = currentGenText ?? gen.text;
-    if (precursorText) {
-        prompt += prompt + precursorText;
+        for (const [i, genIdx] of toolIdx.entries()) {
+            const toolResult = toolGenResults[i];
+            if (toolResult.status === "fulfilled" && toolResult.value[0]) {
+                const toolGen = toolResult.value[0];
+                gens[genIdx].toolCalls = toolGen.text;
+            }
+        }
     }
-
-    const toolRequestid = `${requestId}-tool`;
-    const toolGen = await staticGenerate(
-        toolRequestid,
-        GenerationType.ChatCompletion,
-        prompt,
-        toolParams,
-        model,
-        requestSignal,
-    );
-
-    gen.toolCalls = toolGen.text;
-
-    return gen;
 }

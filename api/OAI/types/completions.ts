@@ -42,6 +42,8 @@ export const CommonCompletionRequest = z.object({
         return obj;
     });
 
+export type CommonCompletionRequest = z.infer<typeof CommonCompletionRequest>;
+
 export const CompletionRequest = z.object({
     prompt: z.union([
         z.string(),
@@ -58,6 +60,8 @@ export const CompletionRespChoice = z.object({
     finish_reason: z.string().optional(),
     text: z.string(),
 });
+
+export type CompletionRespChoice = z.infer<typeof CompletionRespChoice>;
 
 export const CompletionResponse = z.object({
     id: z.string().default(`cmpl-${crypto.randomUUID().replaceAll("-", "")}`),

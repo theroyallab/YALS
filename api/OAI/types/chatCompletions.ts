@@ -65,6 +65,8 @@ export const ChatCompletionRespChoice = z.object({
     message: ChatCompletionMessage,
 });
 
+export type ChatCompletionRespChoice = z.infer<typeof ChatCompletionRespChoice>;
+
 export const ChatCompletionResponse = z.object({
     id: z.string().default(
         `chatcmpl-${crypto.randomUUID().replaceAll("-", "")}`,

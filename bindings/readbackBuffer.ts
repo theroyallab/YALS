@@ -2,7 +2,6 @@ import { delay } from "@std/async/delay";
 
 import { logger } from "@/common/logging.ts";
 import { lib } from "./lib.ts";
-import { FinishChunk } from "@/bindings/types.ts";
 
 /**
  * ReadbackBuffer provides an interface to read generated tokens and text
@@ -46,9 +45,10 @@ export class ReadbackBuffer {
 
     /**
      * Reads the status information from the buffer
-     * @returns A ReadbackFinish object or null if status couldn't be read
+     * Returns any due to JSON.parse
+     * Validation handled in job.stream
      */
-    async readStatus(): Promise<FinishChunk | null> {
+    async readStatus() {
         const statusPtr = await lib.symbols.readback_read_status(
             this.rawPtr,
         );
@@ -61,11 +61,7 @@ export class ReadbackBuffer {
 
         try {
             const status = JSON.parse(statusStr);
-            return {
-                ...status,
-                kind: "finish",
-                text: "",
-            };
+            return status;
         } catch (e) {
             logger.error("Failed to parse status JSON:", e);
             return null;

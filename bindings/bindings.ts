@@ -420,21 +420,22 @@ export class Model {
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
+        taskIdx: number = 0,
     ): Promise<FinishChunk> {
         let result: FinishChunk | undefined;
-        const textParts: string[] = [];
 
         const generator = this.generateGen(
             requestId,
             prompt,
             params,
             abortSignal,
+            taskIdx,
         );
+
         for await (const chunk of generator) {
             if (chunk.kind === "finish") {
                 result = chunk;
-            } else {
-                textParts.push(chunk.text);
+                break;
             }
         }
 
@@ -446,15 +447,18 @@ export class Model {
             );
         }
 
+        // Static text is the full text
+        // Do this here since streaming can output the fullText again
         return {
             ...result,
-            text: textParts.join(""),
+            text: result.fullText,
         };
     }
 
     handleReadbackFinish(
         requestId: string,
         finishResponse: FinishChunk,
+        fullText: string,
     ): FinishChunk {
         switch (finishResponse.finishReason) {
             case "CtxExceeded":
@@ -490,6 +494,7 @@ export class Model {
 
         return {
             ...finishResponse,
+            fullText: fullText,
         };
     }
 
@@ -498,6 +503,7 @@ export class Model {
         prompt: string,
         params: BaseSamplerRequest,
         abortSignal: AbortSignal,
+        taskIdx: number = 0,
     ): AsyncGenerator<GenerationChunk> {
         // Get out if the model is shutting down
         if (this.closing) {
@@ -688,19 +694,23 @@ export class Model {
         );
         this.activeJobIds.set(requestId, job);
 
+        let fullText = "";
+
         // Read from the read buffer
-        for await (const chunk of job.stream()) {
+        for await (const chunk of job.stream(requestId, taskIdx)) {
             if (abortSignal.aborted) {
                 job.cancel();
                 abortSignal.throwIfAborted();
             }
+
+            fullText += chunk.text;
 
             switch (chunk.kind) {
                 case "data":
                     yield chunk;
                     break;
                 case "finish":
-                    yield this.handleReadbackFinish(requestId, chunk);
+                    yield this.handleReadbackFinish(requestId, chunk, fullText);
                     break;
             }
         }

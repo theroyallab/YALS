@@ -20,14 +20,23 @@ export class Job {
         this.processor = processor;
     }
 
-    async *stream(): AsyncGenerator<GenerationChunk> {
+    async *stream(
+        requestId: string,
+        taskIdx: number,
+    ): AsyncGenerator<GenerationChunk> {
         for await (const { text, token } of this.readbackBuffer.read()) {
-            yield { kind: "data", text, token };
+            yield { kind: "data", taskIdx, requestId, text, token };
         }
 
         const status = await this.readbackBuffer.readStatus();
         if (status) {
-            yield status;
+            yield {
+                ...status,
+                kind: "finish",
+                taskIdx,
+                requestId,
+                text: "",
+            };
         }
     }
 

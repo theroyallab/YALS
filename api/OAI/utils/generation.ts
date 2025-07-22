@@ -1,10 +1,12 @@
-import { UsageStats } from "@/api/OAI/types/completions.ts";
+import {
+    CommonCompletionRequest,
+    UsageStats,
+} from "@/api/OAI/types/completions.ts";
 import { Model } from "@/bindings/bindings.ts";
-import { FinishChunk } from "@/bindings/types.ts";
-import { logger } from "@/common/logging.ts";
-import { BaseSamplerRequest } from "@/common/sampling.ts";
+import { FinishChunk, GenerationChunk } from "@/bindings/types.ts";
 import { toHttpException } from "@/common/networking.ts";
 import { CancellationError } from "@/common/errors.ts";
+import { Queue } from "@core/asyncutil/queue";
 
 export enum GenerationType {
     Completion = "Completion",
@@ -40,7 +42,7 @@ export async function staticGenerate(
     requestId: string,
     genType: GenerationType,
     prompt: string,
-    params: BaseSamplerRequest,
+    params: CommonCompletionRequest,
     model: Model,
     requestSignal: AbortSignal,
 ) {
@@ -59,18 +61,69 @@ export async function staticGenerate(
     });
 
     try {
-        const result = await model.generate(
-            requestId,
-            prompt,
-            params,
-            abortController.signal,
-        );
+        const genTasks: Promise<FinishChunk>[] = [];
 
-        logger.info(`Finished ${genType.toLowerCase()} request ${requestId}`);
+        for (let i = 0; i < params.n; i++) {
+            const genRequestId = params.n > 1 ? `${requestId}-${i}` : requestId;
+            console.log(i);
+            const task = model.generate(
+                genRequestId,
+                prompt,
+                params,
+                requestSignal,
+                i,
+            );
+
+            genTasks.push(task);
+        }
+
+        const genResults = await Promise.allSettled(genTasks);
+        const generations = genResults.reduce((acc, result) => {
+            if (result.status === "rejected") {
+                return acc;
+            }
+
+            acc.push(result.value);
+            return acc;
+        }, [] as FinishChunk[]);
 
         finished = true;
-        return result;
+        return generations;
     } catch (error) {
         throw toHttpException(error);
+    }
+}
+
+export async function streamCollector(
+    requestId: string,
+    prompt: string,
+    params: CommonCompletionRequest,
+    model: Model,
+    requestSignal: AbortSignal,
+    taskIdx: number,
+    genQueue: Queue<GenerationChunk | Error>,
+) {
+    try {
+        const genRequestId = params.n > 1
+            ? `${requestId}-${taskIdx}`
+            : requestId;
+        const generator = model.generateGen(
+            genRequestId,
+            prompt,
+            params,
+            requestSignal,
+            taskIdx,
+        );
+
+        for await (const chunk of generator) {
+            genQueue.push(chunk);
+
+            // Break on finish
+            if (chunk.kind === "finish") {
+                break;
+            }
+        }
+    } catch (ex) {
+        genQueue.push(ex as Error);
     }
 }
