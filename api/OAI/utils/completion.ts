@@ -8,7 +8,6 @@ import {
     staticGenerate,
     streamCollector,
 } from "@/api/OAI/utils/generation.ts";
-import { Model } from "@/bindings/bindings.ts";
 import { GenerationChunk } from "@/bindings/types.ts";
 import { CancellationError } from "@/common/errors.ts";
 import { toGeneratorError } from "@/common/networking.ts";
@@ -18,6 +17,7 @@ import {
     CompletionRespChoice,
     CompletionResponse,
 } from "../types/completions.ts";
+import { OAIContext } from "../types/context.ts";
 
 function createResponse(chunks: GenerationChunk[], modelName: string) {
     const choices: CompletionRespChoice[] = [];
@@ -50,23 +50,21 @@ function createResponse(chunks: GenerationChunk[], modelName: string) {
 }
 
 export async function streamCompletion(
-    requestId: string,
-    stream: SSEStreamingApi,
+    ctx: OAIContext,
     params: CompletionRequest,
-    model: Model,
-    requestSignal: AbortSignal,
+    stream: SSEStreamingApi,
 ) {
-    logger.info(`Received streaming completion request ${requestId}`);
+    logger.info(`Received streaming completion request ${ctx.requestId}`);
 
-    const abortController = new AbortController();
+    const genAbortController = new AbortController();
     let finished = false;
 
     // If an abort happens before streaming starts
-    requestSignal.addEventListener("abort", () => {
+    ctx.cancellationSignal.addEventListener("abort", () => {
         if (!finished) {
-            abortController.abort(
+            genAbortController.abort(
                 new CancellationError(
-                    `Streaming completion ${requestId} cancelled by user.`,
+                    `Streaming completion ${ctx.requestId} cancelled by user.`,
                 ),
             );
             finished = true;
@@ -79,11 +77,10 @@ export async function streamCompletion(
 
         for (let i = 0; i < params.n; i++) {
             const task = streamCollector(
-                requestId,
+                ctx,
                 params.prompt,
                 params,
-                model,
-                abortController.signal,
+                genAbortController.signal,
                 i,
                 queue,
             );
@@ -98,13 +95,15 @@ export async function streamCompletion(
                 break;
             }
 
-            const chunk = await queue.pop({ signal: abortController.signal });
+            const chunk = await queue.pop({
+                signal: genAbortController.signal,
+            });
             if (chunk instanceof Error) {
-                abortController.abort();
+                genAbortController.abort();
                 throw chunk;
             }
 
-            const streamChunk = createResponse([chunk], model.path.name);
+            const streamChunk = createResponse([chunk], ctx.model.path.name);
             await stream.writeSSE({ data: JSON.stringify(streamChunk) });
 
             if (chunk.kind === "finish") {
@@ -113,7 +112,7 @@ export async function streamCompletion(
 
             if (completedTasks === params.n && queue.size === 0) {
                 logger.info(
-                    `Finished streaming completion request ${requestId}`,
+                    `Finished streaming completion request ${ctx.requestId}`,
                 );
                 await stream.writeSSE({ data: "[DONE]" });
 
@@ -130,25 +129,21 @@ export async function streamCompletion(
 }
 
 export async function generateCompletion(
-    requestId: string,
+    ctx: OAIContext,
     params: CompletionRequest,
-    model: Model,
-    requestSignal: AbortSignal,
 ) {
-    logger.info(`Received completion request ${requestId}`);
+    logger.info(`Received completion request ${ctx.requestId}`);
 
     // Handle generation in the common function
     const generations = await staticGenerate(
-        requestId,
+        ctx,
         GenerationType.Completion,
         params.prompt,
         params,
-        model,
-        requestSignal,
     );
 
-    const response = createResponse(generations, model.path.name);
+    const response = createResponse(generations, ctx.model.path.name);
 
-    logger.info(`Finished completion request ${requestId}`);
+    logger.info(`Finished completion request ${ctx.requestId}`);
     return response;
 }

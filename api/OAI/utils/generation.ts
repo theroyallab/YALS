@@ -2,11 +2,11 @@ import {
     CommonCompletionRequest,
     UsageStats,
 } from "@/api/OAI/types/completions.ts";
-import { Model } from "@/bindings/bindings.ts";
 import { FinishChunk, GenerationChunk } from "@/bindings/types.ts";
 import { toHttpException } from "@/common/networking.ts";
 import { CancellationError } from "@/common/errors.ts";
 import { Queue } from "@core/asyncutil/queue";
+import { OAIContext } from "../types/context.ts";
 
 export enum GenerationType {
     Completion = "Completion",
@@ -39,21 +39,19 @@ export function convertFinishReason(chunk: FinishChunk) {
 }
 
 export async function staticGenerate(
-    requestId: string,
+    ctx: OAIContext,
     genType: GenerationType,
     prompt: string,
     params: CommonCompletionRequest,
-    model: Model,
-    requestSignal: AbortSignal,
 ) {
     const abortController = new AbortController();
     let finished = false;
 
-    requestSignal.addEventListener("abort", () => {
+    ctx.cancellationSignal.addEventListener("abort", () => {
         if (!finished) {
             abortController.abort(
                 new CancellationError(
-                    `${genType} ${requestId} cancelled by user.`,
+                    `${genType} ${ctx.requestId} cancelled by user.`,
                 ),
             );
             finished = true;
@@ -64,8 +62,11 @@ export async function staticGenerate(
         const genTasks: Promise<FinishChunk>[] = [];
 
         for (let i = 0; i < params.n; i++) {
-            const genRequestId = params.n > 1 ? `${requestId}-${i}` : requestId;
-            const task = model.generate(
+            const genRequestId = params.n > 1
+                ? `${ctx.requestId}-${i}`
+                : ctx.requestId;
+
+            const task = ctx.model.generate(
                 genRequestId,
                 prompt,
                 params,
@@ -95,23 +96,23 @@ export async function staticGenerate(
 }
 
 export async function streamCollector(
-    requestId: string,
+    ctx: OAIContext,
     prompt: string,
     params: CommonCompletionRequest,
-    model: Model,
-    requestSignal: AbortSignal,
+    genAbortSignal: AbortSignal,
     taskIdx: number,
     genQueue: Queue<GenerationChunk | Error>,
 ) {
     try {
         const genRequestId = params.n > 1
-            ? `${requestId}-${taskIdx}`
-            : requestId;
-        const generator = model.generateGen(
+            ? `${ctx.requestId}-${taskIdx}`
+            : ctx.requestId;
+
+        const generator = ctx.model.generateGen(
             genRequestId,
             prompt,
             params,
-            requestSignal,
+            genAbortSignal,
             taskIdx,
         );
 

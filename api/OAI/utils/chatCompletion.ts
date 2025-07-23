@@ -26,6 +26,7 @@ import { CancellationError } from "@/common/errors.ts";
 import { logger } from "@/common/logging.ts";
 import { ToolSpec } from "../types/tools.ts";
 import { TOOL_CALL_SCHEMA, ToolCallProcessor } from "./tools.ts";
+import { OAIContext } from "../types/context.ts";
 
 interface TemplateFormatOptions {
     addBosToken?: boolean;
@@ -187,26 +188,24 @@ function addTemplateMetadata(
 
 // TODO: Possibly rewrite this to unify with completions
 export async function streamChatCompletion(
-    requestId: string,
-    stream: SSEStreamingApi,
+    ctx: OAIContext,
     params: ChatCompletionRequest,
-    model: Model,
+    stream: SSEStreamingApi,
     promptTemplate: PromptTemplate,
-    requestSignal: AbortSignal,
 ) {
-    logger.info(`Received streaming chat completion request ${requestId}`);
+    logger.info(`Received streaming chat completion request ${ctx.requestId}`);
 
     const toolStart = promptTemplate.metadata.tool_start;
     const cmplId = `chatcmpl-${crypto.randomUUID().replaceAll("-", "")}`;
-    const abortController = new AbortController();
+    const genAbortController = new AbortController();
     let finished = false;
 
     // If an abort happens before streaming starts
-    requestSignal.addEventListener("abort", () => {
+    ctx.cancellationSignal.addEventListener("abort", () => {
         if (!finished) {
-            abortController.abort(
+            genAbortController.abort(
                 new CancellationError(
-                    `Streaming chat completion ${requestId} cancelled by user.`,
+                    `Streaming chat completion ${ctx.requestId} cancelled by user.`,
                 ),
             );
             finished = true;
@@ -214,7 +213,7 @@ export async function streamChatCompletion(
     });
 
     const prompt = applyChatTemplate(
-        model,
+        ctx.model,
         promptTemplate,
         params.messages,
         {
@@ -233,11 +232,10 @@ export async function streamChatCompletion(
 
         for (let i = 0; i < params.n; i++) {
             const task = streamCollector(
-                requestId,
+                ctx,
                 prompt,
                 params,
-                model,
-                abortController.signal,
+                genAbortController.signal,
                 i,
                 queue,
             );
@@ -252,9 +250,11 @@ export async function streamChatCompletion(
                 break;
             }
 
-            const chunk = await queue.pop({ signal: abortController.signal });
+            const chunk = await queue.pop({
+                signal: genAbortController.signal,
+            });
             if (chunk instanceof Error) {
-                abortController.abort();
+                genAbortController.abort();
                 throw chunk;
             }
 
@@ -262,13 +262,11 @@ export async function streamChatCompletion(
                 // Handle tools
                 if (toolStart && chunk.stopToken) {
                     await generateToolCalls(
-                        requestId,
+                        ctx,
                         prompt,
                         [chunk],
                         params,
-                        model,
                         promptTemplate,
-                        requestSignal,
                     );
                 }
 
@@ -277,7 +275,7 @@ export async function streamChatCompletion(
 
             const streamChunk = createStreamChunk(
                 chunk,
-                model.path.name,
+                ctx.model.path.name,
                 cmplId,
             );
             await stream.writeSSE({ data: JSON.stringify(streamChunk) });
@@ -290,7 +288,7 @@ export async function streamChatCompletion(
                 ) {
                     const usageChunk = createUsageChunk(
                         chunk,
-                        model.path.name,
+                        ctx.model.path.name,
                         cmplId,
                     );
 
@@ -298,7 +296,7 @@ export async function streamChatCompletion(
                 }
 
                 logger.info(
-                    `Finished streaming chat completion request ${requestId}`,
+                    `Finished streaming chat completion request ${ctx.requestId}`,
                 );
                 await stream.writeSSE({ data: "[DONE]" });
 
@@ -315,16 +313,14 @@ export async function streamChatCompletion(
 }
 
 export async function generateChatCompletion(
-    requestId: string,
+    ctx: OAIContext,
     params: ChatCompletionRequest,
-    model: Model,
     promptTemplate: PromptTemplate,
-    requestSignal: AbortSignal,
 ) {
-    logger.info(`Received chat completion request ${requestId}`);
+    logger.info(`Received chat completion request ${ctx.requestId}`);
 
     const prompt = applyChatTemplate(
-        model,
+        ctx.model,
         promptTemplate,
         params.messages,
         {
@@ -339,39 +335,33 @@ export async function generateChatCompletion(
 
     // Handle generation in the common function
     const generations = await staticGenerate(
-        requestId,
+        ctx,
         GenerationType.ChatCompletion,
         prompt,
         params,
-        model,
-        requestSignal,
     );
 
     // Check for tool calls
     await generateToolCalls(
-        requestId,
+        ctx,
         prompt,
         generations,
         params,
-        model,
         promptTemplate,
-        requestSignal,
     );
 
-    const response = createResponse(generations, model.path.name);
+    const response = createResponse(generations, ctx.model.path.name);
 
-    logger.info(`Finished chat completion request ${requestId}`);
+    logger.info(`Finished chat completion request ${ctx.requestId}`);
     return response;
 }
 
 async function generateToolCalls(
-    requestId: string,
+    ctx: OAIContext,
     prompt: string,
     gens: FinishChunk[],
     params: ChatCompletionRequest,
-    model: Model,
     promptTemplate: PromptTemplate,
-    requestSignal: AbortSignal,
 ) {
     const toolGenTasks = [];
     const toolStart = promptTemplate.metadata.tool_start;
@@ -389,23 +379,22 @@ async function generateToolCalls(
             continue;
         }
 
-        const genRequestId = params.n > 1
-            ? `${requestId}-${gen.taskIdx}`
-            : requestId;
-        logger.info(`Tool call detected for request ${genRequestId}`);
+        logger.info(`Tool call detected for request ${gen.requestId}`);
 
         if (gen.fullText) {
             prompt += prompt + gen.fullText;
         }
 
-        const toolRequestid = `${genRequestId}-tool`;
+        const toolCtx = {
+            ...ctx,
+            requestId: `${gen.requestId}-tool`,
+        };
+
         const toolTask = staticGenerate(
-            toolRequestid,
+            toolCtx,
             GenerationType.ChatCompletion,
             prompt,
             toolParams,
-            model,
-            requestSignal,
         );
 
         toolGenTasks.push(toolTask);

@@ -17,6 +17,7 @@ import { PromptTemplate } from "@/common/templating.ts";
 import authMiddleware from "../middleware/authMiddleware.ts";
 import checkModelMiddleware from "../middleware/checkModelMiddleware.ts";
 import inlineLoadMiddleware from "../middleware/inlineLoadMiddleware.ts";
+import oaiContextMiddleware from "../middleware/oaiContextMiddleware.ts";
 import { CompletionRequest, CompletionResponse } from "./types/completions.ts";
 import { generateCompletion, streamCompletion } from "./utils/completion.ts";
 
@@ -38,25 +39,22 @@ router.post(
         await inlineLoadMiddleware(c.req, next, params.model);
     },
     checkModelMiddleware,
+    oaiContextMiddleware,
     async (c) => {
         const params = c.req.valid("json");
 
         if (params.stream) {
             return streamSSE(c, async (stream) => {
                 await streamCompletion(
-                    c.var.requestId,
-                    stream,
+                    c.var.oaiCtx,
                     params,
-                    c.var.model,
-                    c.req.raw.signal,
+                    stream,
                 );
             });
         } else {
             const completionResult = await generateCompletion(
-                c.var.requestId,
+                c.var.oaiCtx,
                 params,
-                c.var.model,
-                c.req.raw.signal,
             );
 
             return c.json(completionResult);
@@ -83,6 +81,7 @@ router.post(
         await inlineLoadMiddleware(c.req, next, params.model);
     },
     checkModelMiddleware,
+    oaiContextMiddleware,
     async (c) => {
         const params = c.req.valid("json");
 
@@ -99,21 +98,17 @@ router.post(
         if (params.stream) {
             return streamSSE(c, async (stream) => {
                 await streamChatCompletion(
-                    c.var.requestId,
-                    stream,
+                    c.var.oaiCtx,
                     params,
-                    c.var.model,
+                    stream,
                     promptTemplate,
-                    c.req.raw.signal,
                 );
             });
         } else {
             const chatCompletionResult = await generateChatCompletion(
-                c.var.requestId,
+                c.var.oaiCtx,
                 params,
-                c.var.model,
                 promptTemplate,
-                c.req.raw.signal,
             );
             return c.json(chatCompletionResult);
         }
