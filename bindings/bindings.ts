@@ -13,7 +13,12 @@ import { YALSGrammar } from "./grammar.ts";
 import { lib } from "./lib.ts";
 import { Job } from "./job.ts";
 import { SamplerBuilder } from "./samplers.ts";
-import { FinishChunk, GenerationChunk, GGMLTensorSplitMode } from "./types.ts";
+import {
+    FinishChunk,
+    GenerationChunk,
+    GGMLTensorSplitMode,
+    ReadbackFinishChunk,
+} from "./types.ts";
 import { adjustCacheSize, pointerArrayFromStrings } from "./utils.ts";
 
 // TODO: Move this somewhere else
@@ -457,8 +462,9 @@ export class Model {
 
     handleReadbackFinish(
         requestId: string,
-        finishResponse: FinishChunk,
+        finishResponse: ReadbackFinishChunk,
         fullText: string,
+        taskIdx: number,
     ): FinishChunk {
         switch (finishResponse.finishReason) {
             case "CtxExceeded":
@@ -494,7 +500,10 @@ export class Model {
 
         return {
             ...finishResponse,
-            fullText: fullText,
+            text: "",
+            fullText,
+            taskIdx,
+            requestId,
         };
     }
 
@@ -697,20 +706,29 @@ export class Model {
         let fullText = "";
 
         // Read from the read buffer
-        for await (const chunk of job.stream(requestId, taskIdx)) {
+        for await (const chunk of job.stream()) {
             if (abortSignal.aborted) {
                 job.cancel();
                 abortSignal.throwIfAborted();
             }
 
-            fullText += chunk.text;
-
             switch (chunk.kind) {
                 case "data":
-                    yield chunk;
+                    fullText += chunk.text;
+
+                    yield {
+                        ...chunk,
+                        taskIdx,
+                        requestId,
+                    };
                     break;
                 case "finish":
-                    yield this.handleReadbackFinish(requestId, chunk, fullText);
+                    yield this.handleReadbackFinish(
+                        requestId,
+                        chunk,
+                        fullText,
+                        taskIdx,
+                    );
                     break;
             }
         }

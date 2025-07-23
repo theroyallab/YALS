@@ -254,6 +254,7 @@ export async function streamChatCompletion(
 
             const chunk = await queue.pop({ signal: abortController.signal });
             if (chunk instanceof Error) {
+                abortController.abort();
                 throw chunk;
             }
 

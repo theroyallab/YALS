@@ -16,18 +16,6 @@ export enum GGMLTensorSplitMode {
     row = 2,
 }
 
-interface BaseChunk {
-    kind: string;
-    taskIdx: number;
-    requestId: string;
-    text: string;
-}
-
-export interface StreamChunk extends BaseChunk {
-    kind: "data";
-    token: number;
-}
-
 export type ReadbackFinishReason =
     | "CtxExceeded"
     | "BatchDecode"
@@ -37,13 +25,50 @@ export type ReadbackFinishReason =
     | "TokenEncode"
     | "Aborted";
 
-export interface FinishChunk extends BaseChunk {
+// MARK: C++ chunks
+export interface ReadbackStreamChunk {
+    kind: "data";
+    text: string;
+    token: number;
+}
+
+export interface ReadbackFinishChunk {
     kind: "finish";
-    fullText: string;
 
     slotId: number;
     slotRequestId: number;
     jobIndex: number;
+
+    promptTokens: number;
+    genTokens: number;
+    promptSec: number;
+    genSec: number;
+    totalSec: number;
+
+    genTokensPerSec: number;
+    promptTokensPerSec: number;
+    finishReason: ReadbackFinishReason;
+    stopToken: string;
+}
+
+export type ReadbackGenerationChunk = ReadbackStreamChunk | ReadbackFinishChunk;
+
+// MARK: API chunks
+
+interface BaseChunk {
+    kind: string;
+    taskIdx: number;
+    requestId: string;
+    text: string;
+}
+
+export interface StreamChunk extends BaseChunk {
+    kind: "data";
+}
+
+export interface FinishChunk extends BaseChunk {
+    kind: "finish";
+    fullText: string;
 
     promptTokens: number;
     genTokens: number;

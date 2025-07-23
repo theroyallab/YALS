@@ -65,12 +65,11 @@ export async function staticGenerate(
 
         for (let i = 0; i < params.n; i++) {
             const genRequestId = params.n > 1 ? `${requestId}-${i}` : requestId;
-            console.log(i);
             const task = model.generate(
                 genRequestId,
                 prompt,
                 params,
-                requestSignal,
+                abortController.signal,
                 i,
             );
 
@@ -80,7 +79,8 @@ export async function staticGenerate(
         const genResults = await Promise.allSettled(genTasks);
         const generations = genResults.reduce((acc, result) => {
             if (result.status === "rejected") {
-                return acc;
+                console.log(result.reason);
+                throw new Error(result.reason);
             }
 
             acc.push(result.value);

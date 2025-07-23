@@ -1,6 +1,6 @@
 import { lib } from "@/bindings/lib.ts";
 import { ReadbackBuffer } from "./readbackBuffer.ts";
-import { GenerationChunk } from "./types.ts";
+import { ReadbackGenerationChunk } from "./types.ts";
 
 export class Job {
     // Private references
@@ -20,23 +20,14 @@ export class Job {
         this.processor = processor;
     }
 
-    async *stream(
-        requestId: string,
-        taskIdx: number,
-    ): AsyncGenerator<GenerationChunk> {
-        for await (const { text, token } of this.readbackBuffer.read()) {
-            yield { kind: "data", taskIdx, requestId, text, token };
+    async *stream(): AsyncGenerator<ReadbackGenerationChunk> {
+        for await (const readbackChunk of this.readbackBuffer.read()) {
+            yield readbackChunk;
         }
 
         const status = await this.readbackBuffer.readStatus();
         if (status) {
-            yield {
-                ...status,
-                kind: "finish",
-                taskIdx,
-                requestId,
-                text: "",
-            };
+            yield status;
         }
     }
 

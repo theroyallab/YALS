@@ -2,6 +2,7 @@ import { delay } from "@std/async/delay";
 
 import { logger } from "@/common/logging.ts";
 import { lib } from "./lib.ts";
+import { ReadbackFinishChunk, ReadbackGenerationChunk } from "./types.ts";
 
 /**
  * ReadbackBuffer provides an interface to read generated tokens and text
@@ -14,7 +15,7 @@ export class ReadbackBuffer {
         this.rawPtr = readbackPtr;
     }
 
-    async *read() {
+    async *read(): AsyncGenerator<ReadbackGenerationChunk> {
         while (!lib.symbols.readback_is_buffer_finished(this.rawPtr)) {
             const charBuf = new Uint8Array(8);
             const tokenBuf = new Int32Array(1);
@@ -37,6 +38,7 @@ export class ReadbackBuffer {
             if (!charPtr) continue;
 
             yield {
+                kind: "data",
                 text: new Deno.UnsafePointerView(charPtr).getCString(),
                 token: tokenBuf[0],
             };
@@ -48,7 +50,7 @@ export class ReadbackBuffer {
      * Returns any due to JSON.parse
      * Validation handled in job.stream
      */
-    async readStatus() {
+    async readStatus(): Promise<ReadbackFinishChunk | null> {
         const statusPtr = await lib.symbols.readback_read_status(
             this.rawPtr,
         );
@@ -61,7 +63,10 @@ export class ReadbackBuffer {
 
         try {
             const status = JSON.parse(statusStr);
-            return status;
+            return {
+                ...status,
+                kind: "finish",
+            };
         } catch (e) {
             logger.error("Failed to parse status JSON:", e);
             return null;
