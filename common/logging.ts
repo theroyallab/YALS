@@ -42,13 +42,11 @@ export const logger = winston.createLogger({
     transports: [new winston.transports.Console({ level: "info" })],
 });
 
-export function logPrompt(prompt: string) {
-    // Log prompt to console
-    // Prompts can be very large, so make the newline log a console.log instead
-    if (config.logging.log_prompt) {
-        logger.info(`Prompt:`);
-        console.log(prompt);
-    }
+// Simple header + content logging
+// Good for large text
+export function logSection(header: string, content: string) {
+    logger.info(`${header}:`);
+    console.log(content);
 }
 
 export function logGenParams(requestId: string, params: BaseSamplerRequest) {

@@ -3,7 +3,7 @@ import { delay } from "@std/async/delay";
 
 import { config } from "@/common/config.ts";
 import { ModelConfig } from "@/common/configModels.ts";
-import { logGenParams, logger, logPrompt } from "@/common/logging.ts";
+import { logGenParams, logger, logSection } from "@/common/logging.ts";
 import { BaseSamplerRequest } from "@/common/sampling.ts";
 import { PromptTemplate } from "@/common/templating.ts";
 import { defer } from "@/common/utils.ts";
@@ -674,9 +674,12 @@ export class Model {
             ? this.tokenizer.bosToken?.piece
             : "";
 
-        logPrompt(
-            promptBosToken + prompt,
-        );
+        if (config.logging.log_prompt) {
+            logSection(
+                "Prompt",
+                promptBosToken + prompt,
+            );
+        }
 
         const jobId = lib.symbols.processor_submit_work(
             this.processor,
@@ -723,6 +726,10 @@ export class Model {
                     };
                     break;
                 case "finish":
+                    if (config.logging.log_prompt) {
+                        logSection("Response", fullText);
+                    }
+
                     yield this.handleReadbackFinish(
                         requestId,
                         chunk,
