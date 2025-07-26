@@ -87,6 +87,20 @@ public:
         eos_biases.clear();
         rebuild_presampler(model);
     }
+
+    // Fully resets the presampler state
+    void reset() {
+        rewind_biases.clear();
+        eos_biases.clear();
+
+        // Might not be needed, but just in case
+        should_presample = false;
+
+        if (sampler) {
+            llama_sampler_free(sampler);
+            sampler = nullptr;
+        }
+    }
 };
 
 #endif //PRESAMPLER_HPP

@@ -117,6 +117,7 @@ struct Slot {
         generating_end_time = 0.0;
         generated_text.clear();
         detokenizer->reset();
+        presampler.reset();
     }
 
     State previous_state{State::IDLE};
