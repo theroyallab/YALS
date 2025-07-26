@@ -33,7 +33,7 @@ struct Slot {
         std::string previous_seq_stream_buffer;
         int32_t previous_kv_pos{};
 
-        static SlotSnapshot snapshot_slot(const Slot& slot, llama_memory_t mem) {
+        static SlotSnapshot snapshot_slot(const Slot& slot, llama_memory_t mem, const bool during_prompt) {
             SlotSnapshot snapshot;
             snapshot.prompt_tokens_processed = slot.prompt_tokens_processed;
             snapshot.tokens_generated = slot.tokens_generated;
@@ -42,8 +42,8 @@ struct Slot {
             snapshot.last_token = slot.last_token;
             snapshot.previous_seq_stream_buffer = slot.sequence_stream->sequence_buffer;
 
-            // Use n_past instead of llama_memory_pos_seq_max as a single source of truth and desync issues
-            snapshot.previous_kv_pos = slot.n_past;
+            // During the prompt because we do not call decode, we need a special case to update the kv pos for prompt
+            snapshot.previous_kv_pos = during_prompt ? slot.n_past : llama_memory_seq_pos_max(mem, slot.slot_id);
             return snapshot;
         }
 

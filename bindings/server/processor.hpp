@@ -178,7 +178,7 @@ class Processor {
         best_slot->slot_start_time = readable_ggml_time();
 
         best_slot->sequence_stream->bind_sequences(inference_args.stopping_strings, inference_args.rewind_strings);
-        best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, mem);
+        best_slot->rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(*best_slot, mem, false);
 
         best_slot->sampler = best_slot->gen_resources->sampler;
         best_slot->n_ctx_max = inference_args.max_slot_n_ctx;
@@ -238,7 +238,7 @@ class Processor {
             case SequenceStream::SequenceStatus::ACCEPT:
                 slot.generated_text += seq_res.current_sequence;
                 slot.presampler.clear_rewind_bans(model);
-                slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, mem);
+                slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, mem, false);
                 yield_final = true;
                 break;
             case SequenceStream::SequenceStatus::REWIND: {
@@ -303,7 +303,7 @@ class Processor {
 
                     if (slot.prompt_tokens_processed >= slot.prompt_tokens.size()) {
                         slot.state = Slot::State::GENERATING;
-                        slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, mem);
+                        slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, mem, true);
                         break;
                     }
                 }
