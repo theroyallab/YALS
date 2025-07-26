@@ -15,16 +15,27 @@ elseif (UNIX)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 endif()
 
-if (DEFINED LLAMACPP_REPO OR DEFINED LLAMACPP_COMMIT)
+set(USE_CUSTOM_LLAMA OFF)
+
+# Do not cache these variables with subsequent builds
+if (DEFINED LLAMACPP_REPO)
+    set(USE_CUSTOM_LLAMA ON)
+else()
+    set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git")
+endif()
+
+# Stable llama.cpp commit for bindings
+if (DEFINED LLAMACPP_COMMIT)
+    set(USE_CUSTOM_LLAMA ON)
+else()
+    set(LLAMACPP_COMMIT "66906cd82a4a1fd10151707cee3f66cb61fc4055")
+endif()
+
+if (USE_CUSTOM_LLAMA)
     message(STATUS "Using a custom commit or repo for llama.cpp. Build might not work as expected. Here be dragons!")
 endif()
 
-# Do not cache these variables with subsequent builds
-set(LLAMACPP_REPO "https://github.com/ggerganov/llama.cpp.git")
 message(STATUS "Using llama.cpp repo ${LLAMACPP_REPO}")
-
-# Stable llama.cpp commit for bindings
-set(LLAMACPP_COMMIT "8c988fa41db4d9dbc05abfd666c04def1259c645")
 message(STATUS "Using llama.cpp tag ${LLAMACPP_COMMIT}")
 
 # Optional: You can also enable mixed FP16/FP32 computation for faster processing
