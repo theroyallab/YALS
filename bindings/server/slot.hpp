@@ -43,7 +43,7 @@ struct Slot {
             snapshot.previous_seq_stream_buffer = slot.sequence_stream->sequence_buffer;
 
             // During the prompt because we do not call decode, we need a special case to update the kv pos for prompt
-            snapshot.previous_kv_pos = during_prompt ? slot.n_past : llama_memory_seq_pos_max(mem, slot.slot_id);
+            snapshot.previous_kv_pos = during_prompt ? slot.n_past : llama_memory_seq_pos_max(mem, slot.slot_id) + 1;
             return snapshot;
         }
 
