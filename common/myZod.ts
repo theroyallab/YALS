@@ -1,4 +1,4 @@
-import * as z from "zod/v4";
+import * as z from "zod";
 
 // Coalesce function
 
@@ -112,9 +112,9 @@ export function aliasedObject<
 }
 
 // Export all types
-export * from "zod/v4";
+export * from "zod";
 
-declare module "zod/v4" {
+declare module "zod" {
     interface ZodType {
         coalesce<D extends NonNullable<z.output<this>>>(
             defaultValue: D,
