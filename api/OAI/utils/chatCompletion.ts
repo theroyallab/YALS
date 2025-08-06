@@ -138,7 +138,7 @@ export function applyChatTemplate(
     });
 
     const bosToken = model.tokenizer.bosToken;
-    let prompt = promptTemplate.render({
+    let prompt = promptTemplate.template.render({
         ...templateVars,
         messages: messages,
         bos_token: bosToken?.piece ?? "",

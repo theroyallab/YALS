@@ -1,9 +1,7 @@
 // @ts-types="@/types/jinja.d.ts"
 import {
     ArrayLiteral,
-    Environment,
     Identifier,
-    Interpreter,
     Literal,
     SetStatement,
     Template,
@@ -46,33 +44,6 @@ export class PromptTemplate {
         this.rawTemplate = rawTemplate;
         this.template = new Template(rawTemplate);
         this.metadata = this.extractMetadata(this.template);
-    }
-
-    // Overrides the template's render function to expose the env
-    public render(context: Record<string, unknown> = {}): string {
-        const env = new Environment();
-
-        // Environment vars
-        env.set("false", false);
-        env.set("true", true);
-
-        // Function vars
-        env.set("raise_exception", (args: string) => {
-            throw new Error(args);
-        });
-        env.set("range", range);
-
-        // Add custom template vars
-        for (const [key, value] of Object.entries(context)) {
-            env.set(key, value);
-        }
-
-        // Run the template
-        const interpreter = new Interpreter(env);
-        const response = interpreter.run(this.template.parsed);
-
-        // Value is always a string here
-        return response.value as string;
     }
 
     private assignMetadataValue<K extends keyof TemplateMetadata>(
