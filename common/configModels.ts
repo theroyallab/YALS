@@ -55,7 +55,8 @@ export const ModelConfig = z.object({
         .nullish()
         .coalesce(GGMLType.f16),
     kv_offload: z.boolean().nullish().coalesce(true),
-    override_tensor: z.string().cleanOptional(),
+    override_tensor: z.array(z.string()).nullish().coalesce([]),
+    n_cpu_moe: z.union([z.number(), z.literal("all")]).cleanOptional(),
     mmap: z.boolean().nullish().coalesce(true),
 });
 

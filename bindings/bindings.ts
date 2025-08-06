@@ -240,8 +240,21 @@ export class Model {
         }
 
         const tensorSplitPtr = new Float32Array(params.gpu_split);
-        const overrideTensor = params.override_tensor
-            ? new TextEncoder().encode(params.override_tensor + "\0")
+
+        // MoE tensor overrides
+        const tensorOverrides = new Set(params.override_tensor);
+        if (params.n_cpu_moe) {
+            if (params.n_cpu_moe === "all") {
+                tensorOverrides.add("\\.ffn_(up|down|gate)_exps");
+            } else {
+                for (let i = 0; i < params.n_cpu_moe; i++) {
+                    tensorOverrides.add(`blk\\.${i}\\.ffn_(up|down|gate)_exps`);
+                }
+            }
+        }
+
+        const tensorOverrideString = tensorOverrides.size > 0
+            ? new TextEncoder().encode([...tensorOverrides].join(",") + "\0")
             : null;
 
         const model = await lib.symbols.model_load(
@@ -250,7 +263,7 @@ export class Model {
             gpu_split_mode,
             tensorSplitPtr,
             callback?.pointer ?? null,
-            overrideTensor,
+            tensorOverrideString,
             params.mmap,
             config.developer.realtime_process_priority,
         );

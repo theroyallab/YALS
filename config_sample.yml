@@ -115,10 +115,14 @@ model:
   # Set to false to force all KV layers to CPU
   kv_offload: true
 
-  # Override tensors to different devices (default: None)
+  # Override tensors to different devices (default: [])
   # Takes in a regex string. Recommended to set num_threads
-  # For multiple tensor overrides, split each one by a comma
-  override_tensor: 
+  # Make a new array element for multiple overrides
+  override_tensor: []
+
+  # Keep MoE weights of n layers in CPU (default: 0)
+  # Provide "all" to put MoE weights for all layers in CPU
+  n_cpu_moe: "all"
 
   # Lazily load the model into virtual memory. This is fast and efficient (default: true)
   # Turning mmap off will take longer to load, but will reduce the risk of pageouts
