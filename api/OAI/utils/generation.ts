@@ -80,8 +80,9 @@ export async function staticGenerate(
         const genResults = await Promise.allSettled(genTasks);
         const generations = genResults.reduce((acc, result) => {
             if (result.status === "rejected") {
-                console.log(result.reason);
-                throw new Error(result.reason);
+                throw result.reason instanceof Error
+                    ? result.reason
+                    : new Error(result.reason);
             }
 
             acc.push(result.value);
