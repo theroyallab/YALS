@@ -416,7 +416,7 @@ public:
         : model(model), ctx(ctx), mem(mem), tokenizer(model, ctx) {
 
         batch_size = llama_n_batch(ctx);
-        batch = llama_batch_init(static_cast<int32_t>(batch_size), 0, 1);
+        batch = llama_batch_init(static_cast<int32_t>(batch_size), 0, num_slots);
 
         slots.reserve(num_slots);
         for (int i = 0; i < num_slots; i++) {

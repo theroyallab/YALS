@@ -287,6 +287,7 @@ export class Model {
             model,
             cacheSize,
             params.chunk_size,
+            params.num_slots,
             params.num_gpu_layers,
             params.num_threads,
             params.flash_attention,
