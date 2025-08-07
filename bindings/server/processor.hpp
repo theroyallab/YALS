@@ -359,15 +359,17 @@ class Processor {
         }
 
         for (auto& slot : slots) {
-            if (slot.prompt_end_time == 0.0) {
-                slot.prompt_end_time = readable_ggml_time();
-            }
-
+            // Do nothing if slot isn't part of the current batch
             if (slot.i_batch < 0 || slot.i_batch >= batch.n_tokens) {
                 continue;
             }
 
             if (slot.is_generating()) {
+                // Triggered right when generation starts = prompt process ended
+                if (slot.prompt_end_time == 0.0) {
+                    slot.prompt_end_time = readable_ggml_time();
+                }
+
                 const llama_token token = sample(slot);
                 slot.last_token = token;
                 slot.i_batch = -1;
