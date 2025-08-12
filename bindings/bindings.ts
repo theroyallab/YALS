@@ -248,7 +248,9 @@ export class Model {
                 tensorOverrides.add("\\.ffn_(up|down|gate)_exps=cpu");
             } else {
                 for (let i = 0; i < params.n_cpu_moe; i++) {
-                    tensorOverrides.add(`blk\\.${i}\\.ffn_(up|down|gate)_exps=cpu`);
+                    tensorOverrides.add(
+                        `blk\\.${i}\\.ffn_(up|down|gate)_exps=cpu`,
+                    );
                 }
             }
         }
