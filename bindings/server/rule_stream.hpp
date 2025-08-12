@@ -22,9 +22,10 @@ enum class TriggerState {
 struct RuleContext {
     const llama_token current_token;
     const SequenceStream::SequenceContext& sequence_ctx;
+    SequenceStream* sequence_stream;
 
-    explicit RuleContext(const llama_token token, const SequenceStream::SequenceContext& seq_ctx)
-        : current_token(token), sequence_ctx(seq_ctx) {
+    explicit RuleContext(const llama_token token, const SequenceStream::SequenceContext& seq_ctx, SequenceStream* seq_stream)
+        : current_token(token), sequence_ctx(seq_ctx), sequence_stream(seq_stream) {
     }
 };
 
@@ -32,6 +33,9 @@ struct TriggerOnToken {
     llama_token token;
 
     explicit TriggerOnToken(const llama_token t) : token(t) {}
+
+    void initialize(const llama_model*, const llama_context*, const Slot&, const RuleContext*) {
+    }
 
     bool should_activate(const llama_model*, const llama_context*, const Slot&, const RuleContext* const rctx) {
         if (!rctx) return false;
@@ -44,40 +48,90 @@ struct TriggerOnTokenCount {
 
     explicit TriggerOnTokenCount(const int n) : threshold(n) {}
 
+    void initialize(const llama_model*, const llama_context*, const Slot&, const RuleContext*) {
+    }
+
     bool should_activate(const llama_model*, const llama_context*, const Slot& slot, const RuleContext* const) {
         return slot.tokens_generated >= threshold;
     }
 };
 
 struct TriggerAlways {
+    void initialize(const llama_model*, const llama_context*, const Slot&, const RuleContext*) {
+    }
+
     bool should_activate(const llama_model*, const llama_context*, const Slot&, const RuleContext* const) {
         return true;
     }
 };
 
 struct TriggerNever {
+    void initialize(const llama_model*, const llama_context*, const Slot&, const RuleContext*) {
+    }
+
     bool should_activate(const llama_model*, const llama_context*, const Slot&, const RuleContext* const) {
         return false;
     }
 };
 
 struct TriggerOnSequences {
-    SequenceStream match_stream;
+    std::vector<std::string> sequences;
+    std::vector<int> match_ids;
     bool latches_until_reset;
-    bool latched = false;
+    bool activated = false;
+    bool registered = false;
 
     explicit TriggerOnSequences(
         const std::vector<std::string> &sequences,
         const bool should_latch_until_reset = true):
-    latches_until_reset(should_latch_until_reset) {
-        match_stream.bind_sequences(sequences, {});
+    sequences(sequences), latches_until_reset(should_latch_until_reset) {
+    }
+
+    void register_sequences(SequenceStream* stream) {
+        if (!stream || registered) return;
+
+        std::cout << "Registered: ";
+        match_ids.clear();
+        for (const auto& seq : sequences) {
+            int match_id = stream->bind_sequence({seq});
+            std::cout << seq << " == ";
+            match_ids.push_back(match_id);
+        }
+        std::cout << std::endl;
+        registered = true;
+    }
+
+    void unregister_sequences(SequenceStream* stream) {
+        if (!stream || !registered) return;
+
+        for (int match_id : match_ids) {
+            stream->remove_sequence(match_id);
+        }
+        match_ids.clear();
+        registered = false;
+    }
+
+    void initialize(const llama_model*, const llama_context*, const Slot&, const RuleContext* const rctx) {
+        if (rctx && rctx->sequence_stream) {
+            register_sequences(rctx->sequence_stream);
+        }
     }
 
     bool should_activate(const llama_model*, const llama_context*, const Slot&, const RuleContext* const rctx) {
-        if (!rctx) return false;
-        const auto result = match_stream.append(rctx->sequence_ctx.current_text_piece);
-        if (result.sequence_status != SequenceStream::STOP) return false;
-        return true;
+       if (!rctx || activated) return false;
+
+        for (int match_id : match_ids) {
+            if (rctx->sequence_ctx.matched_ids.count(match_id)) {
+                activated = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void reset() {
+        activated = false;
     }
 };
 
@@ -133,13 +187,16 @@ struct ActionRecordToCallback {
 
     void running(const llama_model*, llama_context*, Slot&, const RuleContext* const rctx) {
         if (rctx && rctx->sequence_ctx.sequence_status & sequence_status_accept_on_flags) {
-            buffer += rctx->sequence_ctx.current_text_piece;
+            buffer += rctx->sequence_ctx.current_sequence;
         }
     }
 
     void end(const llama_model*, llama_context*, Slot&, const RuleContext* const rctx) {
         if (rctx && rctx->sequence_ctx.sequence_status & sequence_status_accept_on_flags) {
             buffer += rctx->sequence_ctx.current_text_piece;
+        } else if (rctx)
+        {
+            buffer += rctx->sequence_ctx.unmatched_sequence;
         }
         callback(std::move(buffer));
         buffer = "";
@@ -195,17 +252,31 @@ struct Rule {
     Rule(Trigger start, Trigger end, Action a, const bool can_reuse = false)
         : start_trigger(std::move(start)), end_trigger(std::move(end)), actions{std::move(a)}, reusable(can_reuse) {}
 
+    void cleanup_sequences(SequenceStream* stream) {
+        auto cleanup_trigger = [stream](Trigger& trigger) {
+            if (auto* seq_trigger = std::get_if<TriggerOnSequences>(&trigger)) {
+                seq_trigger->unregister_sequences(stream);
+            }
+        };
+
+        cleanup_trigger(start_trigger);
+        cleanup_trigger(end_trigger);
+    }
+
     std::vector<std::reference_wrapper<const Action>> process(const llama_model* model, llama_context* ctx, Slot& slot, const RuleContext* const context) {
         const TriggerState prev_state = state;
         std::vector<std::reference_wrapper<const Action>> completed_actions;
 
         if (state == TriggerState::INACTIVE) {
+            std::visit([&](auto& t) { t.initialize(model, ctx, slot, context); }, start_trigger);
+
             const bool should_activate = std::visit([&](auto& t) -> bool {
                 return t.should_activate(model, ctx, slot, context);
             }, start_trigger);
 
             if (should_activate) {
                 state = TriggerState::ACTIVE;
+                std::visit([&](auto& t) { t.initialize(model, ctx, slot, context); }, end_trigger);
             }
         }
         else if (state == TriggerState::ACTIVE) {
@@ -241,6 +312,13 @@ struct Rule {
 
             if (reusable) {
                 state = TriggerState::INACTIVE;
+                auto reset_trigger = [](Trigger& trigger) {
+                    if (auto* seq_trigger = std::get_if<TriggerOnSequences>(&trigger)) {
+                        seq_trigger->reset();
+                    }
+                };
+                reset_trigger(start_trigger);
+                reset_trigger(end_trigger);
             }
         }
 
@@ -270,6 +348,18 @@ class RuleStream {
     }
 
 public:
+    void initialize_all_triggers(SequenceStream* sequence_stream, const llama_model* model, llama_context* ctx, Slot& slot) {
+        SequenceStream::SequenceContext dummy_seq_ctx{};
+        RuleContext dummy_context{0, dummy_seq_ctx, sequence_stream};
+
+        for (auto& [id, rule_list] : rules_by_id) {
+            for (auto& rule : rule_list) {
+                std::visit([&](auto& t) { t.initialize(model, ctx, slot, &dummy_context); }, rule.start_trigger);
+                std::visit([&](auto& t) { t.initialize(model, ctx, slot, &dummy_context); }, rule.end_trigger);
+            }
+        }
+    }
+
     unsigned add_rules(std::vector<Rule> rules,
                       const llama_model* model,
                       llama_context* ctx,
@@ -282,8 +372,16 @@ public:
         return rule_id;
     }
 
-    void remove_id(const unsigned id) {
-        rules_by_id.erase(id);
+    void remove_id(const unsigned id, SequenceStream* stream = nullptr) {
+        auto it = rules_by_id.find(id);
+        if (it != rules_by_id.end()) {
+            if (stream) {
+                for (auto& rule : it->second) {
+                    rule.cleanup_sequences(stream);
+                }
+            }
+            rules_by_id.erase(it);
+        }
     }
 
     const std::vector<Rule>* get_rules(const unsigned id) const {
@@ -296,12 +394,13 @@ public:
     std::vector<std::reference_wrapper<const Action>> apply_engine(
         const llama_token token,
         const SequenceStream::SequenceContext& seq_ctx,
+        SequenceStream* sequence_stream,
         const llama_model* model,
         llama_context* ctx,
         Slot& slot
     ) {
         std::vector<std::reference_wrapper<const Action>> all_triggered_actions;
-        const RuleContext context_obj{token, seq_ctx};
+        const RuleContext context_obj{token, seq_ctx, sequence_stream};
         const RuleContext* const context = &context_obj;
 
         for (auto& [id, rule_list] : rules_by_id) {
@@ -316,7 +415,14 @@ public:
         return all_triggered_actions;
     }
 
-    void reset() {
+    void reset(SequenceStream* stream = nullptr) {
+        if (stream) {
+            for (auto& [id, rule_list] : rules_by_id) {
+                for (auto& rule : rule_list) {
+                    rule.cleanup_sequences(stream);
+                }
+            }
+        }
         rules_by_id.clear();
         current_id = 0;
     }

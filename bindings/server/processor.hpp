@@ -190,6 +190,8 @@ class Processor {
         if (inference_args.max_tokens_to_gen > 0 && inference_args.max_tokens_to_gen >= inference_args.min_tokens_to_gen) {
             RuleEngine::rule_max_tokens(*best_slot->rule_stream, inference_args.max_tokens_to_gen, model, ctx, *best_slot);
         }
+
+        best_slot->rule_stream->initialize_all_triggers(best_slot->sequence_stream, model, ctx, *best_slot);
     }
 
     // Processes the next sequence token. Finalizes the request if gen is finished.
@@ -218,7 +220,7 @@ class Processor {
         }
 
         const auto seq_res = slot.sequence_stream->append(piece);
-        const auto triggered_actions = slot.rule_stream->apply_engine(token, seq_res, model, ctx, slot);
+        const auto triggered_actions = slot.rule_stream->apply_engine(token, seq_res, slot.sequence_stream, model, ctx, slot);
         for (const auto& actionWrapper : triggered_actions) {
             std::visit(rule_action_type {
 
@@ -235,6 +237,7 @@ class Processor {
         }
 
         switch (seq_res.sequence_status) {
+            case SequenceStream::SequenceStatus::RULE:
             case SequenceStream::SequenceStatus::ACCEPT:
                 slot.generated_text += seq_res.current_sequence;
                 slot.presampler.clear_rewind_bans(model);
