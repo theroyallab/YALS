@@ -236,10 +236,13 @@ class Processor {
 
         switch (seq_res.sequence_status) {
             case SequenceStream::SequenceStatus::ACCEPT:
-                slot.generated_text += seq_res.current_sequence;
+                if (!seq_res.current_sequence.empty()) {
+                    slot.generated_text += seq_res.current_sequence;
+                    readback_write_to_buffer(slot.gen_resources->readback_buffer, seq_res.current_sequence, token);
+                }
+
                 slot.presampler.clear_rewind_bans(model);
                 slot.rewind_snapshot = Slot::SlotSnapshot::snapshot_slot(slot, mem, false);
-                yield_final = true;
                 break;
             case SequenceStream::SequenceStatus::REWIND: {
                 //Restore the slot to whatever the last accepted snapshot was.
@@ -258,28 +261,31 @@ class Processor {
                 finish_reason = "StopString";
                 stop_token = seq_res.current_sequence;
                 piece = seq_res.unmatched_sequence;
-                yield_final = true;
+
+                // Write the unmatched sequence to buffer
+                if (!seq_res.unmatched_sequence.empty()) {
+                    slot.generated_text += seq_res.unmatched_sequence;
+                    readback_write_to_buffer(slot.gen_resources->readback_buffer, seq_res.unmatched_sequence, token);
+                }
+
                 break;
             case SequenceStream::SequenceStatus::BUFFER:
                 break;
         }
 
-
         if (!is_complete) {
-            if (!piece.empty()) {
-                readback_write_to_buffer(slot.gen_resources->readback_buffer, piece, token);
-            }
             return !is_eos;
         }
 
+        // Write any remaining text from detokenizer
         std::string final_piece = piece;
         if (slot.detokenizer->has_incomplete()) {
             const std::string remaining = slot.detokenizer->flush();
-            if (!remaining.empty()) final_piece += remaining;
-        }
 
-        if (yield_final && !final_piece.empty() && !is_eos) {
-            readback_write_to_buffer(slot.gen_resources->readback_buffer, final_piece, token);
+            if (!remaining.empty()) {
+                slot.generated_text += remaining;
+                readback_write_to_buffer(slot.gen_resources->readback_buffer, remaining, token);
+            }
         }
 
         slot.generating_end_time = readable_ggml_time();
