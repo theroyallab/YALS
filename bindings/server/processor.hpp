@@ -278,7 +278,6 @@ class Processor {
         }
 
         // Write any remaining text from detokenizer
-        std::string final_piece = piece;
         if (slot.detokenizer->has_incomplete()) {
             const std::string remaining = slot.detokenizer->flush();
 
