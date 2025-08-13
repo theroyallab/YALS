@@ -355,7 +355,7 @@ class Processor {
                     if (slot.i_batch >= 0 && slot.i_batch < batch.n_tokens) {
                         slot.generating_end_time = readable_ggml_time();
                         readback_finish(slot.gen_resources->readback_buffer, make_json_status_string(slot, "BatchDecode", ""));
-                        slot.end(++current_job_index, ctx);
+                        cleanup_slot(slot);
                     }
                 }
                 return;
@@ -380,7 +380,7 @@ class Processor {
                 slot.i_batch = -1;
 
                 if (const bool continue_gen = process_token(slot, token); !continue_gen) {
-                    slot.end(++current_job_index, ctx);
+                    cleanup_slot(slot);
                     //Status reported by process_token
                 }
             }
@@ -392,6 +392,12 @@ class Processor {
 
         update_batch();
         update_gen_slots();
+    }
+
+    // Required due to rule_stream circular dependency
+    void cleanup_slot(Slot& slot) {
+        slot.rule_stream->reset();
+        slot.end(++current_job_index, ctx);
     }
 
     void run() {
@@ -496,7 +502,7 @@ public:
                     slot.generating_end_time = readable_ggml_time();
                     readback_finish(slot.gen_resources->readback_buffer, make_json_status_string(slot, "Aborted", last_token_piece));
                 }
-                slot.end(++current_job_index, ctx);
+                cleanup_slot(slot);
                 found = true;
                 were_any_cancelled = true;
             }
