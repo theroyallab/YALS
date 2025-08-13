@@ -30,7 +30,7 @@ YALS is a friendly OAI compatible API server built with Deno, Hono, and Zod, des
 
 ## Disclaimer
 
-This project is in an alpha state. There may be bugs, possibly even ones that could cause thermonuclear war. Please note that commits happen frequently, and builds are distributed via CI.
+This project is marked as rolling release. There may be bugs and changes down the line. Please note that commits happen frequently, and builds are distributed via CI.
 
 YALS is a hobby project made for a small amount of users. It is not meant to run on production servers. For that, please look at other solutions that support those workloads.
 
