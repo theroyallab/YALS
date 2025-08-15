@@ -107,15 +107,14 @@ class Processor {
 
         const auto [id,
             prompt_tokens,
-            inference_args,
-            readback_buffer] = queue_tasks.front();
+            inference_args] = queue_tasks.front();
 
         queue_tasks.pop();
         lock.unlock();
 
         // Prompt is longer than the entire ctx length.
         if (prompt_tokens.size() > llama_n_ctx(ctx) || prompt_tokens.size() > inference_args.max_slot_n_ctx) {
-            readback_finish(readback_buffer, make_empty_json_status_string("CtxExceeded", "None"));
+            readback_finish(inference_args.gen_resources->readback_buffer, make_empty_json_status_string("CtxExceeded", "None"));
             return;
         }
 
@@ -481,9 +480,10 @@ public:
                     if (req.id != request_id_to_cancel) {
                         new_queue.push(req);
                     } else {
-                        if (req.readback_buffer) {
-                            readback_finish(req.readback_buffer, make_empty_json_status_string("Aborted", "None"));
-                        }
+                        readback_finish(
+                            req.inference_args.gen_resources->readback_buffer,
+                            make_empty_json_status_string("Aborted", "None")
+                        );
                         found = true;
                     }
                 }
