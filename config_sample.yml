@@ -70,6 +70,11 @@ model:
   # An ideal value is between 512 and 4096.
   chunk_size: 512
 
+  # Amount of tokens at a time to allocate onto a single GPU during processing (default: chunk_size)
+  # Used for pipeline parallelism, meaning the overall batch job is split in parallel between all active GPUs
+  # Only set this when num_gpus > 1. An ideal value is chunk_size / num_gpus
+  physical_chunk_size: 
+
   # Number of model layers to offload on the GPU (default: 0)
   # Set this to 999 to offload all layers to the GPU
   num_gpu_layers: 0

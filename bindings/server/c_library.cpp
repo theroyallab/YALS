@@ -202,6 +202,7 @@ llama_context* ctx_make(
     llama_model* model,
     const unsigned context_length,
     const unsigned num_batches,
+    const unsigned num_physical_batches,
     const int32_t num_slots,
     const int32_t num_gpu_layers,
     const int32_t num_threads,
@@ -216,7 +217,7 @@ llama_context* ctx_make(
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = context_length;
     ctx_params.n_batch = num_batches;
-    ctx_params.n_ubatch = num_batches;
+    ctx_params.n_ubatch = num_physical_batches;
     ctx_params.n_seq_max = num_slots;
     ctx_params.no_perf = false;
     ctx_params.flash_attn = flash_attn;

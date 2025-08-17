@@ -147,6 +147,7 @@ export default {
             "pointer", // model: llama_model*
             "u32", // cache_size: unsigned
             "u32", // num_batches: unsigned
+            "u32", // num_physical_batches: unsigned
             "i32", // num_slots: int32_t
             "i32", // num_gpu_layers: int32_t
             "i32", // num_threads: int32_t

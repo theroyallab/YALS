@@ -285,10 +285,15 @@ export class Model {
         // Adjust cache size param to multiple of 256
         cacheSize = adjustCacheSize(cacheSize, maxSeqLen);
 
+        console.log(
+            `Chunk size: ${params.chunk_size}, Phys chunk size: ${params.physical_chunk_size}`,
+        );
+
         const context = await lib.symbols.ctx_make(
             model,
             cacheSize,
             params.chunk_size,
+            params.physical_chunk_size ?? params.chunk_size,
             params.num_slots,
             params.num_gpu_layers,
             params.num_threads,

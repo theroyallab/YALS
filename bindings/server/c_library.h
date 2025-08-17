@@ -116,6 +116,7 @@ extern "C" {
         llama_model* model,
         unsigned context_length,
         unsigned num_batches,
+        unsigned num_physical_batches,
         int32_t num_slots,
         int32_t num_gpu_layers,
         int32_t num_threads,

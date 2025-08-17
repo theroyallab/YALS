@@ -30,6 +30,7 @@ export const ModelConfig = z.object({
     num_slots: z.number().nullish().coalesce(1),
     cache_size: z.number().cleanOptional(),
     chunk_size: z.number().nullish().coalesce(512),
+    physical_chunk_size: z.number().cleanOptional(),
     num_gpu_layers: z.number().nullish().coalesce(0),
     gpu_split: z.array(z.number()).nullish().coalesce([]),
     tensor_parallel: z.boolean().nullish().coalesce(false),
