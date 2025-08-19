@@ -83,10 +83,11 @@ model:
   # Going over the max amount of GPUs will crash when loading the model
   gpu_split: []
 
-  # Enables row tensor split mode (default: false)
-  # This is referenced as "tensor parallelism" in lcpp, so mark the arg as such
-  # for clarity
-  tensor_parallel: false
+  # GPU split mode (default: layer)
+  # Possible values - layer, row
+  # Row: Splits layers evenly across GPUs. Saves VRAM, but can hurt performance.
+  # Layer: Preferred. Fills layers
+  gpu_split_mode: layer
 
   # Number of CPU threads to use during processing/generation (default: -1)
   # NOTE: Does not apply if model is fully offloaded to GPU

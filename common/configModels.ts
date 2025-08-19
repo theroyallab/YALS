@@ -1,5 +1,5 @@
 import * as z from "@/common/myZod.ts";
-import { GGMLType } from "@/bindings/types.ts";
+import { GGMLTensorSplitMode, GGMLType } from "@/bindings/types.ts";
 
 export const NetworkConfig = z.object({
     host: z.string().nullish().coalesce("127.0.0.1"),
@@ -33,7 +33,16 @@ export const ModelConfig = z.object({
     physical_chunk_size: z.number().cleanOptional(),
     num_gpu_layers: z.number().nullish().coalesce(0),
     gpu_split: z.array(z.number()).nullish().coalesce([]),
-    tensor_parallel: z.boolean().nullish().coalesce(false),
+    gpu_split_mode: z.union([
+        z.enum(["layer", "row"]).transform((str) =>
+            GGMLTensorSplitMode[
+                str.toLowerCase() as keyof typeof GGMLTensorSplitMode
+            ]
+        ),
+        z.number(),
+    ])
+        .nullish()
+        .coalesce(GGMLTensorSplitMode.layer),
     num_threads: z.number().nullish().coalesce(-1),
     prompt_template: z.string().cleanOptional(),
     flash_attention: z.boolean().nullish().coalesce(true),
