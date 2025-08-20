@@ -140,7 +140,7 @@ sampling:
   # Select a sampler override preset (default: None).
   # Find this in the sampler_overrides folder.
   # This overrides default fallbacks for sampler values that are passed to the API.
-  override_preset:
+  override_preset: safe_defaults
 
 developer:
   # Set process to use a higher priority.
