@@ -235,7 +235,7 @@ class Processor {
 
         switch (seq_res.sequence_status) {
             case SequenceStream::SequenceStatus::ACCEPT:
-                if (!seq_res.current_sequence.empty()) {
+                if (!seq_res.current_sequence.empty() && !is_eos) {
                     slot.generated_text += seq_res.current_sequence;
                     readback_write_to_buffer(slot.gen_resources->readback_buffer, seq_res.current_sequence, token);
                 }
@@ -280,7 +280,7 @@ class Processor {
         if (slot.detokenizer->has_incomplete()) {
             const std::string remaining = slot.detokenizer->flush();
 
-            if (!remaining.empty()) {
+            if (!remaining.empty() && !is_eos) {
                 slot.generated_text += remaining;
                 readback_write_to_buffer(slot.gen_resources->readback_buffer, remaining, token);
             }
