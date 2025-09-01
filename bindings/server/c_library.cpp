@@ -220,7 +220,7 @@ llama_context* ctx_make(
     ctx_params.n_ubatch = num_physical_batches;
     ctx_params.n_seq_max = num_slots;
     ctx_params.no_perf = false;
-    ctx_params.flash_attn = flash_attn;
+    ctx_params.flash_attn_type = flash_attn ? LLAMA_FLASH_ATTN_TYPE_ENABLED : LLAMA_FLASH_ATTN_TYPE_DISABLED;
 
     ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
     const float freqBaseTrain = model_get_freq_base(model);
