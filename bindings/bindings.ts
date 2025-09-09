@@ -243,11 +243,11 @@ export class Model {
         const tensorOverrides = new Set(params.override_tensor);
         if (params.n_cpu_moe) {
             if (params.n_cpu_moe === "all") {
-                tensorOverrides.add("\\.ffn_(up|down|gate)_exps=cpu");
+                tensorOverrides.add("\\.ffn_(up|down|gate)_exps=CPU");
             } else {
                 for (let i = 0; i < params.n_cpu_moe; i++) {
                     tensorOverrides.add(
-                        `blk\\.${i}\\.ffn_(up|down|gate)_exps=cpu`,
+                        `blk\\.${i}\\.ffn_(up|down|gate)_exps=CPU`,
                     );
                 }
             }
