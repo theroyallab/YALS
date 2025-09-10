@@ -133,6 +133,11 @@ export default {
         result: "bool", // bool
     },
 
+    model_n_layer: {
+        parameters: ["pointer"], // model: const llama_model*
+        result: "i32", // int32_t
+    },
+
     model_vocab_token_to_string: {
         parameters: [
             "pointer", // model: const llama_model*
@@ -149,7 +154,6 @@ export default {
             "u32", // num_batches: unsigned
             "u32", // num_physical_batches: unsigned
             "i32", // num_slots: int32_t
-            "i32", // num_gpu_layers: int32_t
             "i32", // num_threads: int32_t
             "bool", // flash_attn: bool
             "f32", // rope_freq_base: float

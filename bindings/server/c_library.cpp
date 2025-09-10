@@ -194,6 +194,11 @@ bool model_vocab_add_bos(const llama_model* model)
     return llama_vocab_get_add_bos(&model->vocab);
 }
 
+int32_t model_n_layer(const llama_model* model)
+{
+    return llama_model_n_layer(model);
+}
+
 const char* model_vocab_token_to_string(const llama_model* model, const llama_token token) {
     return llama_vocab_get_text(&model->vocab, token);
 }
@@ -204,7 +209,6 @@ llama_context* ctx_make(
     const unsigned num_batches,
     const unsigned num_physical_batches,
     const int32_t num_slots,
-    const int32_t num_gpu_layers,
     const int32_t num_threads,
     const bool flash_attn,
     const float rope_freq_base,
@@ -234,15 +238,6 @@ llama_context* ctx_make(
         ctx_params.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_LINEAR;
         ctx_params.rope_freq_base = rope_freq_base;
         ctx_params.rope_freq_scale = 0;
-    }
-
-    // Use only one thread if model is fully offloaded on GPU
-    if (num_gpu_layers >= llama_model_n_layer(model) || num_gpu_layers == -1) {
-        ctx_params.n_threads = 1;
-        ctx_params.n_threads_batch = 1;
-    } else {
-        ctx_params.n_threads = num_threads;
-        ctx_params.n_threads_batch = num_threads;
     }
 
     ctx_params.type_k = static_cast<ggml_type>(k_cache_quant_type);

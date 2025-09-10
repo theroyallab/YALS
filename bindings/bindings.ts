@@ -273,6 +273,17 @@ export class Model {
             return;
         }
 
+        // Use only one thread if model is fully offloaded on GPU
+        const num_model_layers = lib.symbols.model_n_layer(model);
+        const model_on_gpu = params.num_gpu_layers >= num_model_layers ||
+            params.num_gpu_layers === -1;
+
+        // Don't use one thread if tensor overrides are present
+        if (model_on_gpu && tensorOverrides.size == 0) {
+            params.num_threads = 1;
+            logger.warn("Model fully on GPU, setting num_threads to 1");
+        }
+
         // Cast to fill the entire model
         // llamacpp uses 0 instead of -1, but this isn't user intuitive
         let maxSeqLen = params.max_seq_len === -1 ? 0 : params.max_seq_len;
@@ -293,7 +304,6 @@ export class Model {
             params.chunk_size,
             params.physical_chunk_size ?? params.chunk_size,
             params.num_slots,
-            params.num_gpu_layers,
             params.num_threads,
             params.flash_attention,
             params.rope_freq_base,

@@ -104,6 +104,9 @@ extern "C" {
     bool model_vocab_add_bos(
         const llama_model* model);
 
+    int32_t model_n_layer(
+        const llama_model* model);
+
     // LEAKABLE! Ensure you use endpoint_free_string to clean up.
     const char* model_vocab_token_to_string(
         const llama_model* model,
@@ -118,7 +121,6 @@ extern "C" {
         unsigned num_batches,
         unsigned num_physical_batches,
         int32_t num_slots,
-        int32_t num_gpu_layers,
         int32_t num_threads,
         bool flash_attn,
         float rope_freq_base,
