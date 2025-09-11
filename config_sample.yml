@@ -79,7 +79,7 @@ model:
   # Set this to 999 to offload all layers to the GPU
   num_gpu_layers: 0
 
-  # An integer array of GBs of VRAM to split between GPUs (default: []).
+  # An integer array defining the ratio of VRAM to split for each GPU (default: []).
   # Going over the max amount of GPUs will crash when loading the model
   gpu_split: []
 
