@@ -1,9 +1,9 @@
 import { logger } from "@/common/logging.ts";
 
 export function pointerArrayFromStrings(strings: string[]): {
-    inner: BigUint64Array;
+    inner: BigUint64Array<ArrayBuffer>;
     // Return the buffer so it stays alive
-    buffer: Uint8Array;
+    buffer: Uint8Array<ArrayBuffer>;
 } {
     const encoder = new TextEncoder();
 
