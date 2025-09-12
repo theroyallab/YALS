@@ -8,3 +8,7 @@ temperature:
 top_p:
   override: 0.9
   force: false
+
+top_k:
+  override: 1000
+  force: false
