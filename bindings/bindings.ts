@@ -498,7 +498,7 @@ export class Model {
         switch (finishResponse.finishReason) {
             case "CtxExceeded":
                 throw new Error(
-                    `Prompt exceeds max context length of ${this.maxSeqLen}`,
+                    `Prompt + max_tokens exceeds max context length of ${this.maxSeqLen}`,
                 );
 
             case "BatchDecode":

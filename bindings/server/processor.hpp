@@ -112,8 +112,9 @@ class Processor {
         queue_tasks.pop();
         lock.unlock();
 
-        // Prompt is longer than the entire ctx length.
-        if (prompt_tokens.size() > llama_n_ctx(ctx) || prompt_tokens.size() > inference_args.max_slot_n_ctx) {
+        // Prompt + max tokens to gen is longer than the entire ctx length.
+        const auto total_tokens = prompt_tokens.size() + inference_args.max_tokens_to_gen;
+        if (total_tokens > llama_n_ctx(ctx) || total_tokens > inference_args.max_slot_n_ctx) {
             readback_finish(inference_args.gen_resources->readback_buffer, make_empty_json_status_string("CtxExceeded", "None"));
             return;
         }
