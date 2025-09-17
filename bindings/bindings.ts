@@ -498,7 +498,7 @@ export class Model {
         switch (finishResponse.finishReason) {
             case "CtxExceeded":
                 throw new Error(
-                    `Prompt + max_tokens exceeds max context length of ${this.maxSeqLen}`,
+                    `Prompt + generated tokens exceeds max context length of ${this.maxSeqLen}`,
                 );
 
             case "BatchDecode":
@@ -550,6 +550,22 @@ export class Model {
             );
         }
 
+        // Fallback to the model's preference
+        // Ideally, this shouldn't be exposed, but frontends want it.
+        const addBosToken = params.add_bos_token ?? this.tokenizer.addBosToken;
+
+        const promptTokens = await this.tokenizer.tokenize(prompt, addBosToken, true);
+        const availableTokens = this.maxSeqLen - promptTokens.length;
+        const maxTokens = params.max_tokens === 0 ? availableTokens : params.max_tokens;
+
+        if (promptTokens.length + maxTokens > this.maxSeqLen) {
+            throw new Error(
+                `Prompt (${promptTokens.length} tokens) + max_tokens (${maxTokens} tokens) ` +
+                    `exceeds max context length of ${this.maxSeqLen} tokens`
+            );
+        }
+
+        // Initialize generation resources
         const genResources = new GenerationResources();
 
         using _ = defer(() => {
@@ -696,9 +712,7 @@ export class Model {
         const stopTokensPtr = new Int32Array(stopTokens);
         const stopStringsPtr = pointerArrayFromStrings(stopStrings);
 
-        // Fallback to the model's preference
-        // Ideally, this shouldn't be exposed, but frontends want it.
-        const addBosToken = params.add_bos_token ?? this.tokenizer.addBosToken;
+        // Log prompt with BOS token
         const promptBosToken = addBosToken
             ? this.tokenizer.bosToken?.piece
             : "";
@@ -707,17 +721,6 @@ export class Model {
             logSection(
                 "Prompt",
                 promptBosToken + prompt,
-            );
-        }
-
-        const promptTokens = await this.tokenizer.tokenize(prompt, addBosToken, true);
-        const availableTokens = this.maxSeqLen - promptTokens.length;
-        const maxTokens = params.max_tokens === 0 ? params.max_tokens : availableTokens;
-
-        if (promptTokens.length + maxTokens > this.maxSeqLen) {
-            throw new Error(
-                `Prompt (${promptTokens}) + max_tokens (${maxTokens}) ` +
-                    `exceeds max context length of ${this.maxSeqLen}`
             );
         }
 
