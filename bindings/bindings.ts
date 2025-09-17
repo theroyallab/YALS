@@ -710,12 +710,23 @@ export class Model {
             );
         }
 
+        const promptTokens = await this.tokenizer.tokenize(prompt, addBosToken, true);
+        const availableTokens = this.maxSeqLen - promptTokens.length;
+        const maxTokens = params.max_tokens === 0 ? params.max_tokens : availableTokens;
+
+        if (promptTokens.length + maxTokens > this.maxSeqLen) {
+            throw new Error(
+                `Prompt (${promptTokens}) + max_tokens (${maxTokens}) ` +
+                    `exceeds max context length of ${this.maxSeqLen}`
+            );
+        }
+
         const jobId = lib.symbols.processor_submit_work(
             this.processor,
             promptPtr,
             genResources.rawPtr,
-            params.max_tokens,
-            params.min_tokens, // min_tokens
+            maxTokens,
+            params.min_tokens,
             this.maxSeqLen,
             seed,
             rewindPtrArray.inner,
