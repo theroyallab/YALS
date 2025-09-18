@@ -403,6 +403,7 @@ class Processor {
     void run() {
         while (!should_exit) {
             process_tasks();
+            std::unique_lock lock(mutex_tasks);
             update_slots();
 
             bool all_idle = true;
@@ -414,7 +415,6 @@ class Processor {
             }
 
             if (all_idle) {
-                std::unique_lock lock(mutex_tasks);
                 if (queue_tasks.empty()) {
                     cv_tasks.wait(lock, [this]() {
                         return !queue_tasks.empty() || should_exit;
