@@ -94,10 +94,6 @@ class Processor {
         for (auto& slot : slots) {
             if (slot.cancelled) {
                 cleanup_slot(slot);
-
-                // Mark the slot as idle since it's cleaned up
-                slot.cancelled = false;
-                slot.state = Slot::State::IDLE;
             }
         }
 
@@ -531,9 +527,10 @@ public:
           return false;
         }
 
+        // A cancelled slot is "idle"
         bool all_idle = true;
         for (auto& slot : slots) {
-            if (slot.is_processing()) {
+            if (slot.is_processing() && !slot.cancelled) {
                 all_idle = false;
             }
         }

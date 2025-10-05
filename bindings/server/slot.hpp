@@ -120,6 +120,7 @@ struct Slot {
         generated_text.clear();
         detokenizer->reset();
         presampler.reset();
+        cancelled = false;
     }
 
     State previous_state{State::IDLE};
