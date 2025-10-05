@@ -89,6 +89,8 @@ struct Slot {
     GenerationResources* gen_resources{nullptr};
     class RuleStream* rule_stream{nullptr};
 
+    bool cancelled{false};
+
     explicit Slot(const llama_model* model, llama_context* ctx): presampler() {
         detokenizer = new TokenStreamDetokenizer(ctx);
         sequence_stream = new SequenceStream();

@@ -88,6 +88,20 @@ class Processor {
     //A task assigned to a slot sticks to it until finished to avoid shuffling the cache.
     //This is not a fair processing scheme, however it is more optimal
     void process_tasks() {
+
+        // Cleanup cancelled slots
+        // TODO: This is not optimal due to the extra for loop
+        for (auto& slot : slots) {
+            if (slot.cancelled) {
+                cleanup_slot(slot);
+
+                // Mark the slot as idle since it's cleaned up
+                slot.cancelled = false;
+                slot.state = Slot::State::IDLE;
+            }
+        }
+
+        // Check if an idle slot is present
         bool has_idle_slot = false;
         for (const auto& slot : slots) {
             if (slot.state == Slot::State::IDLE) {
@@ -140,6 +154,7 @@ class Processor {
                 }
             }
         }
+
         //If we do not have any prefix matches, pick the oldest idle slot.
         if (longest_prefix == 0) {
             best_slot = oldest_idle_slot;
@@ -495,7 +510,6 @@ public:
 
         bool were_any_cancelled = false;
 
-        // Check all slots for the job just in case of a race.
         for (auto& slot : slots) {
             if (slot.request_id == request_id_to_cancel) {
                 if (slot.gen_resources->readback_buffer) {
@@ -503,7 +517,10 @@ public:
                     slot.generating_end_time = readable_ggml_time();
                     readback_finish(slot.gen_resources->readback_buffer, make_json_status_string(slot, "Aborted", last_token_piece));
                 }
-                cleanup_slot(slot);
+                
+                // Mark for cancellation rather than direct cleanup
+                slot.cancelled = true;
+
                 found = true;
                 were_any_cancelled = true;
             }
