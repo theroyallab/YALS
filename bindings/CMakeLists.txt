@@ -28,7 +28,7 @@ endif()
 if (DEFINED LLAMACPP_COMMIT)
     set(USE_CUSTOM_LLAMA ON)
 else()
-    set(LLAMACPP_COMMIT "c8dedc9999eccf7821a9fe5b29f10e8d075e2217")
+    set(LLAMACPP_COMMIT "a23b9bdbd3b64ce172f9962249f432d01aea7437")
 endif()
 
 if (USE_CUSTOM_LLAMA)
