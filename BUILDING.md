@@ -58,6 +58,7 @@ Optionally, environment variables can be set for certain architectures when buil
 - `GGML_VULKAN=1`: Enables Vulkan Support
 - `GGML_HIP=1`: Enables HIP ROCM Support (Requires specifying DAMDGPU_TARGETS, Linux only)
 - `AMDGPU_TARGETS`: Specify ROCM target (example: `gfx1030`)
+- `GGML_SYCL=1`: Enables SYCL support for Intel ARC GPUs (Make sure to run `source /opt/intel/oneapi/setvars.sh` to setup the build environment)
 - `LLGUIDANCE=1`: (Recommended) Enable llguidance for grammars. Requires Rust on the system. (default `0`)
 
 ## Running

@@ -42,6 +42,11 @@ if [ "$GGML_CUDA" = "1" ]; then
     fi
 fi
 
+if [ -n "$GGML_SYCL" ]; then
+    EXTRA_CMAKE_ARGS+=("-DGGML_SYCL=ON -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx")
+    echo "SYCL enabled, including in build"
+fi
+
 if [ "$GGML_VULKAN" = "1" ]; then
     EXTRA_CMAKE_ARGS+=("-DGGML_VULKAN=ON")
     echo "Vulkan enabled, including in build"
